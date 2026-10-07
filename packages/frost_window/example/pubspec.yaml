@@ -1,0 +1,20 @@
+name: frost_window_example
+description: Manual test bench for the frost_window plugin.
+publish_to: none
+
+environment:
+  sdk: ^3.12.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  frost_ui:
+    path: ../../frost_ui
+  frost_window:
+    path: ../
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

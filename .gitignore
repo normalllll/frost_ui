@@ -1,0 +1,15 @@
+# Flutter/Dart
+.dart_tool/
+build/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+
+# Lock files are never tracked (see docs/PLAN.md §3).
+pubspec.lock
+Cargo.lock
+
+# Local path overrides for joint development; never committed.
+pubspec_overrides.yaml
