@@ -1,0 +1,9 @@
+name: frost_library_health
+description: Library health gate for frost_ui. Run through tool/check_library_health.dart.
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  analyzer: ^14.7.0
