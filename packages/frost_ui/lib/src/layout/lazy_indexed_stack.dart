@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+/// An [IndexedStack] that builds each child when it is first shown. Hidden
+/// children keep their state, take no focus or taps, and their tickers stop.
 class FrostLazyIndexedStack extends StatefulWidget {
   final int index;
   final List<Widget> children;
@@ -67,7 +69,7 @@ class _LazyIndexedStackState extends State<FrostLazyIndexedStack> {
     final List<Widget> list = <Widget>[];
     for (int i = 0; i < widget.children.length; i++) {
       if (_hasInit(i)) {
-        list.add(widget.children[i]);
+        list.add(TickerMode(enabled: i == index, child: widget.children[i]));
       } else {
         list.add(const SizedBox.shrink());
       }

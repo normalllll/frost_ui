@@ -1,80 +1,295 @@
 import 'package:flutter/material.dart';
-import 'package:frost_ui/src/layout/auto_scaffold.dart';
-import 'package:frost_ui/src/foundation/metrics.dart';
-import 'package:frost_ui/src/foundation/tokens.dart';
-import 'package:frost_ui/src/layout/grouped_settings_list.dart';
+import 'package:flutter/services.dart';
 
-/// Settings split into sections: a section list beside the selected group on
-/// wide windows, every group in one list otherwise.
+import '../foundation/icon_data.dart';
+import '../foundation/metrics.dart';
+import '../foundation/spacing.dart';
+import '../navigation/_navigation_tile.dart';
+import '../primitives/_page_outline.dart';
+import '_column_split.dart';
+import '_local_back.dart';
+import 'content_viewport.dart';
+
+/// What a narrow [FrostSettingsSections] shows instead of the split panes.
+@immutable
+class FrostSectionsCompact {
+  const FrostSectionsCompact({this.navigationBuilder, this.section, this.onClose, this.onNavigate});
+
+  /// Replaces only the narrow navigation. Compose grouped settings rows
+  /// with current values and badges, and use the same controlled onSelected
+  /// callback held by the caller to open each section. Receives finite height.
+  final WidgetBuilder? navigationBuilder;
+
+  /// The routed section page, displayed when the split panes cannot fit.
+  /// Its own header replaces the shared header. Wide windows keep the
+  /// selected pane.
+  final Widget? section;
+
+  /// Closes [section] and returns to the narrow navigation. While the section
+  /// shows, the shell's Back, system back and the section header's Back (when
+  /// the shell does not own Back) call it. When null, Back is left to the
+  /// app's routes, as for a section pushed as its own route.
+  final VoidCallback? onClose;
+
+  /// Narrow navigation opens a section route instead of replacing a pane.
+  /// When omitted, the controlled onSelected callback is used.
+  final ValueChanged<int>? onNavigate;
+}
+
+/// The next layer inside the selected section on wide windows, such as one
+/// source's detail opened from its list. It replaces the selected pane with a
+/// pane-only transition while the navigation column stays still; the section
+/// content stays mounted underneath and returns with its scroll offset.
+/// Narrow windows never show it: there the section is a routed page
+/// ([FrostSectionsCompact.section]) and its next layer is a pushed route.
+@immutable
+class FrostSectionsDetail {
+  const FrostSectionsDetail({required this.child, required this.onClose});
+  final Widget child;
+
+  /// Closes the detail. The shell's Back, system back and the page header's
+  /// Back (when the shell does not own Back) call it while the detail shows,
+  /// and so does choosing any section in the navigation column, before
+  /// onSelected.
+  final VoidCallback onClose;
+}
+
+/// A controlled section navigator. Sufficient local space builds the selected
+/// content beside a navigation pane of 22% of the width, held between 236 and
+/// 320 points, and a hairline, with a 32-point gap to the content keyline and
+/// a content limit of 640 points that grows to 800 between widths of 1200 and
+/// 1600. The section
+/// owns its full-width scroll view; put FrostContentColumn inside that viewport
+/// (or FrostSliverContentColumn around slivers) to consume the shared keyline.
+/// Its first row aligns with the first navigation row.
+/// Narrow available space shows only navigation; [onSelected] should push the
+/// corresponding section page. Content is first built on a wide window and
+/// stays mounted while that window narrows. Supply a finite-height body.
 class FrostSettingsSections extends StatefulWidget {
-  const FrostSettingsSections({required this.labels, required this.groups, this.status, super.key}) : assert(labels.length == groups.length);
+  const FrostSettingsSections({
+    required this.labels,
+    required this.selectedIndex,
+    required this.onSelected,
+    required this.sectionBuilder,
+    this.icons,
+    this.header,
+    this.status,
+    this.compact,
+    this.detail,
+    super.key,
+  }) : assert(icons == null || icons.length == labels.length),
+       assert(labels.length == 0 ? selectedIndex == 0 : selectedIndex >= 0 && selectedIndex < labels.length);
 
   final List<String> labels;
-  final List<List<Widget>> groups;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+  final IndexedWidgetBuilder sectionBuilder;
 
-  /// A row kept above the selected group on wide windows and above all
-  /// groups otherwise, such as a pending save or a sync state.
+  /// Optional navigation icons, in exactly the same order as [labels].
+  final List<FrostIconData>? icons;
+
+  /// Shared page chrome above navigation and the split panes.
+  final Widget? header;
+
+  /// A row kept above the selected section, such as a pending save or a sync
+  /// state.
   final Widget? status;
+
+  /// Narrow navigation, routed section page and navigation callback.
+  final FrostSectionsCompact? compact;
+
+  /// The next layer inside the selected section on wide windows.
+  final FrostSectionsDetail? detail;
 
   @override
   State<FrostSettingsSections> createState() => _SettingsSectionsState();
 }
 
-class _SettingsSectionsState extends State<FrostSettingsSections> {
-  static const _sectionListWidth = 200.0;
+class _SettingsSectionsState extends State<FrostSettingsSections> with SingleTickerProviderStateMixin {
+  bool _builtSection = false;
+  final List<FocusNode> _sectionFocus = [];
 
-  int _selected = 0;
+  // 0 shows the selected section, 1 its detail. The last detail stays built
+  // while it animates out.
+  late final _layer = AnimationController(vsync: this, value: widget.detail == null ? 0 : 1);
+  Widget? _shownDetail;
+
   @override
-  Widget build(BuildContext context) {
-    final tokens = FrostThemeTokens.of(context);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (!FrostAutoScaffold.usesHorizontalLayoutOf(context) || constraints.maxWidth < 720) {
-          return FrostGroupedSettingsList(
-            groups: [
-              if (widget.status case final status?) [status],
-              ...widget.groups,
-            ],
-          );
-        }
-        // The section list and the groups share the pages' content column:
-        // the list starts at the column's left edge and the groups end at its
-        // right edge, while the groups' scroll view still reaches the window
-        // edge for its scrollbar.
-        final column = FrostMetrics.columnPadding(constraints.maxWidth, maxWidth: FrostMetrics.settingsMaxWidth);
-        return SafeArea(
-          child: Row(
-            children: [
-              SizedBox(
-                width: column.left + _sectionListWidth,
-                child: ListView.builder(
-                  padding: EdgeInsets.fromLTRB(column.left, FrostMetrics.sectionGap, 0, FrostMetrics.sectionGap),
-                  itemCount: widget.labels.length,
-                  itemBuilder: (context, index) => ListTile(
-                    selected: _selected == index,
-                    selectedTileColor: tokens.selectionFill,
-                    selectedColor: tokens.selectionInk,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(FrostMetrics.controlRadius)),
-                    title: Text(widget.labels[index]),
-                    onTap: () => setState(() => _selected = index),
+  void initState() {
+    super.initState();
+    _shownDetail = widget.detail?.child;
+    _syncFocus();
+  }
+
+  void _syncFocus() {
+    while (_sectionFocus.length < widget.labels.length) {
+      _sectionFocus.add(FocusNode());
+    }
+    while (_sectionFocus.length > widget.labels.length) {
+      _sectionFocus.removeLast().dispose();
+    }
+  }
+
+  @override
+  void didUpdateWidget(FrostSettingsSections oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncFocus();
+    if (widget.detail case final detail?) _shownDetail = detail.child;
+    if ((widget.detail == null) == (oldWidget.detail == null)) return;
+    if (widget.detail != null) {
+      _layer.duration = FrostMotion.duration(context, FrostMotion.page);
+      _layer.forward();
+    } else {
+      _layer.reverseDuration = FrostMotion.duration(context, FrostMotion.exit);
+      _layer.reverse().whenCompleteOrCancel(() {
+        if (mounted && widget.detail == null && _layer.isDismissed) setState(() => _shownDetail = null);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final node in _sectionFocus) {
+      node.dispose();
+    }
+    _layer.dispose();
+    super.dispose();
+  }
+
+  void _select(int index) {
+    widget.detail?.onClose();
+    widget.onSelected(index);
+  }
+
+  /// The selected section with its detail layered above it. The section keeps
+  /// one stable slot, so it never rebuilds its State when a detail opens.
+  Widget _pane(BuildContext context, int selected) {
+    final section = KeyedSubtree(key: ValueKey(selected), child: widget.sectionBuilder(context, selected));
+    return AnimatedBuilder(
+      animation: _layer,
+      child: section,
+      builder: (context, section) {
+        final reduced = MediaQuery.disableAnimationsOf(context);
+        final progress = _layer.value;
+        // The same entering and covered motion as ordinary pointer routes,
+        // applied to the pane alone.
+        final entering = Curves.easeOutCubic.transform(progress);
+        final leaving = reduced ? progress : const Interval(0, .5, curve: Curves.easeOutCubic).transform(progress);
+        final detail = _shownDetail;
+        final opened = widget.detail != null;
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            _layerOf(section!, visible: detail == null || progress < 1, active: !opened, opacity: 1 - leaving, scale: reduced ? 1 : 1 + .02 * entering),
+            if (detail != null) _layerOf(detail, visible: progress > 0, active: opened, opacity: entering, scale: reduced ? 1 : .96 + .04 * entering),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _layerOf(Widget child, {required bool visible, required bool active, required double opacity, required double scale}) => Offstage(
+    offstage: !visible,
+    child: TickerMode(
+      enabled: visible,
+      child: ExcludeFocus(
+        excluding: !active,
+        child: IgnorePointer(
+          ignoring: !active,
+          child: Opacity(
+            opacity: opacity.clamp(0.0, 1.0),
+            child: Transform.scale(scale: scale, child: child),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  KeyEventResult _moveFocus(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) return KeyEventResult.ignored;
+    final delta = switch (event.logicalKey) {
+      LogicalKeyboardKey.arrowDown => 1,
+      LogicalKeyboardKey.arrowUp => -1,
+      _ => 0,
+    };
+    final index = _sectionFocus.indexWhere((node) => node.hasFocus);
+    if (delta == 0 || index < 0) return KeyEventResult.ignored;
+    final target = (index + delta).clamp(0, _sectionFocus.length - 1);
+    _sectionFocus[target].requestFocus();
+    if (_sectionFocus[target].context case final targetContext?) Scrollable.ensureVisible(targetContext);
+    return KeyEventResult.handled;
+  }
+
+  // A settings page is width-limited and centred; its panes keep their geometry.
+  @override
+  Widget build(BuildContext context) => Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: FrostMetrics.settingsMaxWidth),
+      child: LayoutBuilder(builder: _layout),
+    ),
+  );
+
+  Widget _layout(BuildContext context, BoxConstraints constraints) {
+    if (widget.labels.isEmpty) return const SizedBox.shrink();
+    final wide = frostColumnSplitIsWide(context, constraints.maxWidth);
+    _builtSection |= wide;
+    final gap = FrostGap.of(context);
+    final selected = widget.selectedIndex;
+    final compactNavigation = widget.compact?.navigationBuilder;
+    final panes = FrostColumnPanes(
+      wide: wide,
+      width: constraints.maxWidth,
+      navigation: !wide && compactNavigation != null
+          ? compactNavigation(context)
+          : Focus(
+              onKeyEvent: _moveFocus,
+              child: ListView.builder(
+                primary: false,
+                padding: EdgeInsets.fromLTRB(
+                  wide ? FrostGap.related : gap.page,
+                  wide ? 0 : gap.section,
+                  (wide ? FrostGap.related : gap.page) + (wide ? 0 : FrostPageOutline.channelOf(context)),
+                  wide ? 0 : gap.section,
+                ),
+                itemCount: widget.labels.length,
+                itemBuilder: (context, index) => Padding(
+                  padding: const EdgeInsets.only(bottom: FrostGap.inline),
+                  child: FrostNavigationTile(
+                    label: widget.labels[index],
+                    selected: wide && selected == index,
+                    icon: widget.icons?[index],
+                    focusNode: _sectionFocus[index],
+                    onTap: () => wide ? _select(index) : (widget.compact?.onNavigate ?? widget.onSelected)(index),
                   ),
                 ),
               ),
-              const SizedBox(width: FrostMetrics.sectionGap),
-              Expanded(
-                child: FrostGroupedSettingsList(
-                  key: PageStorageKey('settings-$_selected'),
-                  groups: [
-                    if (widget.status case final status?) [status],
-                    widget.groups[_selected],
-                  ],
-                  horizontalPadding: EdgeInsets.only(right: column.right),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+            ),
+      content: !_builtSection
+          ? null
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (widget.status case final status?) FrostContentColumn(child: status),
+                Expanded(child: _pane(context, selected)),
+              ],
+            ),
+    );
+    // Only the wide pane shows the detail and only a narrow layout the routed
+    // section, so each answers Back only while it shows.
+    final detail = wide ? widget.detail : null;
+    final section = widget.compact?.section;
+    final closeSection = wide || section == null ? null : widget.compact?.onClose;
+    Widget? header = widget.header;
+    // Without a shell-owned Back, the shared header offers it instead.
+    if (detail != null && header != null) header = FrostLocalBack.header(context, detail.onClose, header);
+    return FrostLocalBack(
+      onClose: detail?.onClose ?? closeSection,
+      child: FrostColumnBody(
+        wide: wide,
+        panes: panes,
+        header: header,
+        narrowPage: section != null && closeSection != null ? FrostLocalBack.header(context, closeSection, section) : section,
+      ),
     );
   }
 }
