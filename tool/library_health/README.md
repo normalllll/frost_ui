@@ -1,6 +1,6 @@
 # frost_ui library health gate
 
-Keeps an agent from piling things into the library just to finish a feature. Existing violations go into the list, which from then on only shrinks. The background is in `docs/V030_HEALTH_PLAN.md` (local only).
+Keeps an agent from piling things into the library just to finish a feature. Existing violations go into the list, which from then on only shrinks.
 
 There is no human confirmation step here: a person does not read the code an agent writes, so one more click of "sure" means nothing. The gate fails a list that grows, and an independent review agent that cannot see the implementer's reasons then decides.
 
@@ -35,7 +35,7 @@ Each problem is one line in the form `<rule> <file>:<line> <scope> <detail>: <gu
 
 ## Code that is checked
 
-The Dart files under `<root>/packages/frost_ui/lib/`, excluding tests. `lib/*.dart` are the public entries (currently only `frost_ui.dart`; sub-entries such as `media.dart` come later), and the `public-api` rule follows exports starting from every entry. Other rules check `lib/src/**`.
+The Dart files under `<root>/packages/frost_ui/lib/` and `<root>/packages/frost_data/lib/`, excluding tests. When `frost_data` does not exist only `frost_ui` is checked. `lib/*.dart` are the public entries (`frost_ui.dart`, the sub-entries `media.dart`, `social.dart` and `desktop.dart`, and `frost_data.dart`), and the `public-api` rule follows exports starting from every entry. The other rules check `lib/src/**` of both packages. Moving code into `frost_data` does not escape any rule.
 
 A file under `lib/` that is neither an entry nor inside `src/` is reported by `layers` as `unknown directory`, so code cannot be placed outside the scanned scope.
 
@@ -43,7 +43,7 @@ Files are parsed into an AST with `parseString` from `package:analyzer`, with no
 
 ## Rules
 
-`scope` is a named declaration: in a method it is `ClassName.methodName`, in a class's field initializers and constructors it is `ClassName`, in a top-level function it is the function name, a local function counts as the method it is in, and when there is none it is `-`. `file` is relative to `lib/src`, with forward slashes.
+`scope` is a named declaration: in a method it is `ClassName.methodName`, in a class's field initializers and constructors it is `ClassName`, in a top-level function it is the function name, a local function counts as the method it is in, and when there is none it is `-`. `file` is relative to `lib/src`, with forward slashes. Lines of `frost_data` are written `frost_data:<path relative to its lib/src>`, for example `frost_data:list_source.dart`, and its entry is written `frost_data:../frost_data.dart`.
 
 ### public-api
 
@@ -71,6 +71,8 @@ Stale: in the list but not in reality; or a `ctor` whose `detail` has fewer para
 | 2 | `controls`, `display`, `feedback`, `lists`, `overlays`, `layout`, `media` |
 | 3 | `navigation`, `social` |
 
+`frost_data` is above all layers and uses `frost_ui` through its public entries. Every `import` or `export` of a file other than a `frost_ui` entry (`package:frost_ui/src/...`) counts once, and `detail` is `frost_ui:<path relative to frost_ui's lib/src>`, so symbols that were un-exported are equally governed in this package. Its files are not divided into directories and do not report `unknown directory`, unless a file is neither an entry nor inside `src`. Its `src` files must not import its own entry. No file of `frost_ui` (entries included) may import or export `frost_data`; this is reported as a violation, with `detail` carrying the `frost_data:` prefix.
+
 Violation: an `import`, `export` or `part` of a directory with a higher layer number; or a file in `lib/src` importing any public entry (`lib/*.dart`), because that would reach every layer. The same layer is allowed. `scope` is always `-`, and `detail` is the imported file relative to `lib/src`. Imports of the form `package:frost_ui/...` are resolved and checked the same way. Other directories and files placed directly in `lib/src` are reported as violations with `detail` written `unknown directory`, and their imports are no longer checked separately.
 
 ### framework
@@ -80,15 +82,16 @@ The library does not take over framework behavior for the whole app. Each of the
 | detail | Match |
 |---|---|
 | `highlightStrategy=` | Assignment to a property named `highlightStrategy` |
-| `addEarlyKeyEventHandler`, `addLateKeyEventHandler`, `hitTestInView`, `visitAncestorElements` | Any reference to that name, including method calls and tear-offs |
+| `addEarlyKeyEventHandler`, `addLateKeyEventHandler`, `hitTestInView`, `visitAncestorElements`, `visitChildElements` | Any reference to that name, including method calls and tear-offs |
 | `HardwareKeyboard.addHandler` | An `addHandler` call whose target text contains `HardwareKeyboard` |
 | `pointerRouter` | An `addRoute`, `addGlobalRoute` or `add` call whose target text contains `pointerRouter` |
 | `MediaQuery.size` | A `copyWith` call with the named argument `size` whose target text contains `MediaQuery` or `mediaQuery`, or whose target is an identifier named `data`; and `MediaQueryData(...)` with the named argument `size` |
 | `MaterialScrollBehavior` | A class whose `extends` is `MaterialScrollBehavior` |
+| `hitTest` | A `hitTest` method with `@override` in a class. `hitTestChildren` and `hitTestSelf` do not count |
 
 ### basis
 
-Components do not decide by platform name or window size. It checks the files under `lib/src` other than `foundation/`, and `detail` is the name given here. Forms with an import prefix (`m.MediaQuery.sizeOf`) count too.
+Components do not decide by platform name or window size. It checks the files under `lib/src` other than `foundation/` (`frost_data` has no such exception), and `detail` is the name given here. Forms with an import prefix (`m.MediaQuery.sizeOf`) count too.
 
 | detail | Match |
 |---|---|
@@ -126,7 +129,7 @@ A missing environment must not be silent.
 
 ### tokens
 
-Runs `tool/check_tokens.dart --report` of this tool's repository with `<root>` as the working directory, and parses each line of the form `packages/frost_ui/lib/src/<file>:<line>: <category>: ...`. Counts by `file` and `category`, with `scope` always `-` and `detail` being `category`.
+Runs `tool/check_tokens.dart --report` of this tool's repository with `<root>` as the working directory, and parses each line of the form `packages/frost_ui/lib/src/<file>:<line>: <category>: ...` and the same format for `packages/frost_data/lib/src/...`. Counts by `file` and `category`, with `scope` always `-` and `detail` being `category`.
 
 ## Lists
 
@@ -173,14 +176,14 @@ When growth appears, the planner starts an independent review agent and gives it
 - Pass: write a `reason` beginning with `reviewed:`.
 - Fail: send it back for the code to be changed.
 
-When a public component is to be added, the reviewer judges by the admission rule in section 1 of `docs/V030_HEALTH_PLAN.md`: if it can be assembled from existing components and only one app wants it, it fails.
+When a public component is to be added, the reviewer judges by the component admission rule: if it can be assembled from existing components and only one app wants it, it fails.
 
 ## Report
 
 Does not affect the judgment, and is printed every time:
 
 - Files over 800 lines (strictly greater) and constructors with more than 15 public parameters (strictly greater) are only listed and **do not fail**. A hard limit gets bypassed by splitting files and configuration objects.
-- With `--base`: the net added lines of `lib/src`; and the added and removed lines of the two lists relative to base, including changes not yet tracked by git.
+- With `--base`: the net added lines of `lib/src`, plus one more line for the net added lines of its `lib/src` when `frost_data` exists; and the added and removed lines of the two lists relative to base, including changes not yet tracked by git.
 
 ## Known limits
 
@@ -198,3 +201,4 @@ These are covered by independent review and by how the numbers move from version
 - `affected_tests.dart` resolves `<base>` to a full commit id before passing it to the gate, so the Windows shell does not eat the `^` in `HEAD^`. When deciding whether base has the gate files, a git error counts as failure.
 - When `--base` cannot be resolved to a commit inside a git repository, the exit code is 2 and the growth check is not skipped.
 - A `catchError` with no function literal argument counts as `catch`, because it cannot be seen to handle the error.
+- Lines whose `rule` is `contract` are known failures of the contract tests, whose spec is in `packages/frost_ui/test/contract/README.md`. Case IDs of `frost_data` carry the `frost_data:` prefix. The gate does not count them against code and does not report them stale, `--prune` leaves them alone, and the contract tests judge them; adding such a line also counts as growth.

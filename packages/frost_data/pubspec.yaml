@@ -1,0 +1,20 @@
+name: frost_data
+description: Paged data sources and slivers for normalllll's apps.
+publish_to: none
+version: 0.3.0
+
+environment:
+  sdk: ^3.12.1
+  flutter: ">=3.47.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  frost_ui:
+    path: ../frost_ui
+  loading_more_list_library: ^3.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

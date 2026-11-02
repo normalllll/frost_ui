@@ -1,0 +1,27 @@
+import 'package:flutter/material.dart';
+
+import 'package:frost_ui/frost_ui.dart';
+// ignore: implementation_imports -- same checkout; each such import is a layers row of the health gate.
+import 'package:frost_ui/src/motion/layout_crossfade.dart' show FrostMotionSize, FrostTimedLayoutCrossfade;
+
+/// A phase has one live tree. The previous painted frame fades away without
+/// retaining scroll positions, provider leases, GlobalKeys or input targets.
+/// This also makes an interrupted return to a phase safe in nested tab views.
+class FrostLoadStateSwitcher extends StatelessWidget {
+  const FrostLoadStateSwitcher({required this.child, this.phase, this.animateSize = false, super.key});
+  final Object? phase;
+  final Widget child;
+  final bool animateSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final duration = FrostMotion.duration(context, FrostMotion.reveal);
+    final switcher = FrostTimedLayoutCrossfade(
+      layoutIdentity: phase ?? (child.runtimeType, child.key),
+      duration: duration,
+      settleDuration: Duration.zero,
+      child: child,
+    );
+    return animateSize ? FrostMotionSize(duration: duration, curve: Curves.easeInOutCubic, alignment: Alignment.topCenter, child: switcher) : switcher;
+  }
+}

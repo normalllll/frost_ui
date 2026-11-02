@@ -442,6 +442,8 @@ void framework() {
     ('pointerRouter', 'GestureBinding.instance.pointerRouter.add(h);', 'add'),
     ('hitTestInView', 'WidgetsBinding.instance.hitTestInView(r, Offset.zero, 1);', 'call'),
     ('visitAncestorElements', 'context.visitAncestorElements((e) => true);', 'call'),
+    ('visitChildElements', 'context.visitChildElements((e) {});', 'call'),
+    ('visitChildElements', 'final v = context.visitChildElements;', 'tear-off'),
     ('MediaQuery.size', 'final a = MediaQuery.of(context).copyWith(size: s);', 'MediaQuery target'),
     ('MediaQuery.size', 'final a = mediaQuery.copyWith(size: s);', 'mediaQuery target'),
     ('MediaQuery.size', 'final a = data.copyWith(size: s);', 'data target'),
@@ -457,6 +459,32 @@ void framework() {
       expectV(fx, 'framework', file: 'controls/probe.dart', scope: 'Probe.run', detail: detail);
     });
   }
+
+  test('framework a hitTest override on a render object', () {
+    final fx = Fx.baseline();
+    fx.write(
+      'primitives/probe.dart',
+      'class RenderProbe extends RenderProxyBox {\n'
+      '  @override\n'
+      '  bool hitTest(BoxHitTestResult result, {required Offset position}) => false;\n'
+      '}\n',
+    );
+    expectV(fx, 'framework', file: 'primitives/probe.dart', scope: 'RenderProbe.hitTest', detail: 'hitTest');
+  });
+
+  test('framework hitTestChildren, hitTestSelf and a hitTest call are not hitTest overrides', () {
+    final fx = Fx.baseline();
+    fx.write(
+      'primitives/probe.dart',
+      'class RenderProbe extends RenderProxyBox {\n'
+      '  @override\n'
+      '  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) => child!.hitTest(result, position: position);\n'
+      '  @override\n'
+      '  bool hitTestSelf(Offset position) => true;\n'
+      '}\n',
+    );
+    expectClean(fx);
+  });
 
   test('framework MaterialScrollBehavior extends', () {
     final fx = Fx.baseline();
@@ -989,6 +1017,147 @@ void layersMore() {
   }
 }
 
+// ------------------------------------------------------------- frost_data
+
+void frostData() {
+  const data = 'packages/frost_data/lib';
+  const dataSrc = '$data/src';
+  const entry = "export 'src/source.dart';\n";
+  const source = 'class FrostSource {\n  void load() {}\n}\n';
+  Fx withData([Map<String, String?> extra = const {}]) => Fx.baseline({
+    '$data/frost_data.dart': entry,
+    '$dataSrc/source.dart': source,
+    ...extra,
+  });
+
+  test('a package without frost_data stays clean', () {
+    expectClean(Fx.baseline());
+  });
+  test('--init lists frost_data symbols with the prefixed file field', () {
+    final api = withData().read(apiPath);
+    check(api.split('\n').any((l) => l.startsWith('class\tFrostSource\tfrost_data:source.dart\t-\t')), api);
+    check(api.split('\n').any((l) => l.startsWith('member\tFrostSource.load\tfrost_data:source.dart\t-\t')), api);
+  });
+  test('a new frost_data export is a public-api violation', () {
+    final fx = withData();
+    fx.edit('$dataSrc/source.dart', (s) => '${s}class FrostOther {}\n');
+    final r = fx.run();
+    check(r.code == 1, r.text);
+    check(r.lines.any((l) => l.startsWith('public-api frost_data:source.dart:') && l.contains('class FrostOther')), r.text);
+  });
+  test('a sub-entry of frost_data counts as an entry', () {
+    final fx = withData();
+    fx.write('$data/more.dart', "export 'src/more.dart';\n");
+    fx.write('$dataSrc/more.dart', 'class FrostMore {}\n');
+    final r = fx.run();
+    check(r.code == 1, r.text);
+    check(r.lines.any((l) => l.startsWith('public-api frost_data:more.dart:') && l.contains('class FrostMore')), r.text);
+  });
+  test('removing a frost_data symbol is stale and --prune removes the row', () {
+    final fx = withData();
+    fx.write('$dataSrc/source.dart', 'class FrostSource {}\n');
+    final r = fx.run();
+    check(r.code == 1 && hasStale(r, 'public-api', 'frost_data:source.dart'), r.text);
+    expectClean(fx, ['--prune']);
+    check(!fx.read(apiPath).contains('FrostSource.load'), fx.read(apiPath));
+  });
+  for (final (rule, detail, code) in [
+    ('framework', 'addEarlyKeyEventHandler', 'HardwareKeyboard.instance.addEarlyKeyEventHandler(x);'),
+    ('basis', 'defaultTargetPlatform', 'final a = defaultTargetPlatform;'),
+    ('child-type', 'Widgety', 'final a = x as Widgety;'),
+    ('silent', 'maybeOf-fallback', 'final a = Probe.maybeOf(context) ?? 1;'),
+  ]) {
+    test('$rule also scans frost_data', () {
+      final fx = withData({'$dataSrc/widgety.dart': 'class Widgety extends StatelessWidget {}\n'});
+      fx.write('$dataSrc/probe.dart', m(code));
+      expectV(fx, rule, file: 'frost_data:probe.dart', scope: 'Probe.run', detail: detail);
+    });
+  }
+  test('foundation is not an exempt directory in frost_data', () {
+    final fx = withData();
+    fx.write('$dataSrc/foundation/probe.dart', m('final a = defaultTargetPlatform;'));
+    expectV(fx, 'basis', file: 'frost_data:foundation/probe.dart', scope: 'Probe.run', detail: 'defaultTargetPlatform');
+  });
+  test('a frost_data token literal is counted under the prefixed file', () {
+    final fx = withData({'$dataSrc/tok.dart': m('const a = SizedBox(height: 3);', cls: 'Tok')});
+    final allow = fx.read(allowPath);
+    check(allow.split('\n').any((l) => l.startsWith('tokens\tfrost_data:tok.dart\t-\tspacing\t')), allow);
+    fx.write('$dataSrc/tok.dart', m('const a = SizedBox(height: 3);\nconst b = SizedBox(height: 4);', cls: 'Tok'));
+    expectV(fx, 'tokens', file: 'frost_data:tok.dart', scope: '-', detail: 'spacing');
+  });
+  for (final (label, uri) in [
+    ('package source', 'package:frost_data/src/source.dart'),
+    ('package entry', 'package:frost_data/frost_data.dart'),
+    ('relative', '../../../../frost_data/lib/src/source.dart'),
+  ]) {
+    test('frost_ui source may not import frost_data ($label)', () {
+      final fx = withData();
+      fx.write('navigation/probe.dart', "import '$uri';\n");
+      expectV(fx, 'layers', file: 'navigation/probe.dart', scope: '-', like: 'frost_data:');
+    });
+  }
+  test('a frost_ui entry may not export frost_data', () {
+    final fx = withData();
+    fx.edit('frost_ui.dart', (s) => "${s}export 'package:frost_data/frost_data.dart';\n");
+    expectV(fx, 'layers', file: '../frost_ui.dart', scope: '-', like: 'frost_data:');
+  });
+  test('frost_data may import the entries of frost_ui', () {
+    final fx = withData({'$dataSrc/probe.dart': "import 'package:frost_ui/frost_ui.dart';\n"});
+    expectClean(fx);
+    check(!fx.read(allowPath).contains('layers\t'), fx.read(allowPath));
+  });
+  for (final (label, directive, line) in [
+    ('import', "import 'package:frost_ui/src/controls/button.dart';\n", 1),
+    ('export', "export 'package:frost_ui/src/controls/button.dart';\n", 1),
+    ('relative', "import '../../../frost_ui/lib/src/controls/button.dart';\n", 1),
+    ('second', "import 'package:frost_ui/frost_ui.dart';\nimport 'package:frost_ui/src/controls/button.dart';\n", 2),
+  ]) {
+    test('a new reach into frost_ui/src is reported ($label)', () {
+      final fx = withData();
+      fx.write('$dataSrc/probe.dart', directive);
+      final r = expectV(fx, 'layers', file: 'frost_data:probe.dart', scope: '-', detail: 'frost_ui:controls/button.dart');
+      check(r.lines.any((l) => l.startsWith('layers frost_data:probe.dart:$line ')), r.text);
+    });
+  }
+  test('each file reaching into frost_ui/src is listed once per target', () {
+    final fx = withData({
+      '$dataSrc/probe.dart':
+          "import 'package:frost_ui/src/controls/button.dart';\n"
+          "import 'package:frost_ui/src/foundation/base.dart';\n",
+    });
+    final rows = fx.read(allowPath).split('\n').where((l) => l.startsWith('layers\tfrost_data:probe.dart\t-\tfrost_ui:'));
+    check(rows.length == 2, fx.read(allowPath));
+    expectClean(fx);
+  });
+  test('a removed reach into frost_ui/src is stale', () {
+    final fx = withData({'$dataSrc/probe.dart': "import 'package:frost_ui/src/controls/button.dart';\n"});
+    fx.write('$dataSrc/probe.dart', "import 'package:frost_ui/frost_ui.dart';\n");
+    final r = fx.run();
+    check(r.code == 1 && hasStale(r, 'layers', 'frost_data:probe.dart'), r.text);
+  });
+  test('frost_data source may not import its own entry', () {
+    final fx = withData();
+    fx.write('$dataSrc/probe.dart', "import 'package:frost_data/frost_data.dart';\n");
+    expectV(fx, 'layers', file: 'frost_data:probe.dart', scope: '-', detail: 'frost_data:../frost_data.dart');
+  });
+  test('a frost_data file outside src and the entries is an unknown directory', () {
+    final fx = withData();
+    fx.write('$data/other/x.dart', 'class X {}\n');
+    expectV(fx, 'layers', file: 'frost_data:../other/x.dart', scope: '-', detail: 'unknown directory');
+  });
+  test('a frost_data row is growth, whatever pending reason it has', () {
+    final fx = gitBase();
+    fx.write('$data/frost_data.dart', entry);
+    fx.write('$dataSrc/source.dart', source);
+    addRow(fx, apiPath, 'class\tFrostSource\tfrost_data:source.dart\t-\tpending-review:batch1');
+    addRow(fx, apiPath, 'member\tFrostSource.load\tfrost_data:source.dart\t-\tpending-review:batch1');
+    final r = fx.run(['--base', 'HEAD']);
+    check(r.code == 1, r.text);
+    check(hasLine(r, 'growth public-api class FrostSource frost_data:source.dart -', ''), r.text);
+    check(hasLine(r, 'report frost_data lib/src net lines since HEAD: +', ''), r.text);
+  });
+}
+
 // ------------------------------------------------------ child-type, silent (more)
 
 void rulesMore() {
@@ -1232,6 +1401,30 @@ Fx withExports(Map<String, String> files, List<String> exports) => Fx.baseline({
       '${exports.join('\n')}\n',
   ...files,
 });
+
+void contractRowsGroup() {
+  const row = 'contract\tFrostProbe\t-\tdisabled-scope\t1\t';
+
+  test('a contract row is not stale and --prune keeps it', () {
+    final fx = Fx.baseline();
+    fx.edit(allowPath, (s) => '$s${row}reviewed:20261102:known\n');
+    expectClean(fx);
+    final r = fx.run(['--prune']);
+    check(r.code == 0, 'exit ${r.code}\n${r.text}');
+    check(fx.read(allowPath).contains(row), 'row removed');
+  });
+
+  test('a new contract row is growth unless reviewed', () {
+    final fx = gitBase();
+    fx.edit(allowPath, (s) => '$s${row}my reason\n');
+    final r = fx.run(['--base', 'HEAD']);
+    check(r.code == 1, 'exit ${r.code}\n${r.text}');
+    check(hasGrowth(r, 'allowlist contract FrostProbe - disabled-scope +1'), r.text);
+    fx.edit(allowPath, (s) => s.replaceFirst('my reason', 'reviewed:20261102:known'));
+    final ok = fx.run(['--base', 'HEAD']);
+    check(ok.code == 0, 'exit ${ok.code}\n${ok.text}');
+  });
+}
 
 void reviewedGroup() {
   const oldReview = 'reviewed:20261101:ok';
@@ -1512,6 +1705,8 @@ Future<void> main() async {
   reviewedGroup();
   listingGroup();
   rulesGroup();
+  contractRowsGroup();
+  frostData();
   guidance();
 
   var failed = 0;

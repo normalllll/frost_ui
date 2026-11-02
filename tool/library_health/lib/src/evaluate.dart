@@ -4,6 +4,9 @@ import 'guidance.dart';
 import 'lists.dart';
 import 'model.dart';
 
+/// Allowlist rows for known contract test failures; see the spec.
+const contractRule = 'contract';
+
 class Outcome {
   final List<Problem> violations = [];
   final List<Problem> stale = [];
@@ -76,6 +79,8 @@ void evaluateAllowList(
       _allowlistProblem(
           outcome, entry, entry.detail, guidanceFor('allowlist', ''));
     }
+    // Known contract test failures are judged by the contract tests.
+    if (entry.rule == contractRule) continue;
     allowed[entry.key] = entry.count!;
     final actual = groups[entry.key]?.length ?? 0;
     if (actual < entry.count!) {
@@ -168,7 +173,10 @@ void pruneAllowList(AllowList list, List<Finding> findings) {
   final entries = {for (final e in list.entries) e.line.number: e};
   for (final line in list.lines) {
     final entry = entries[line.number];
-    if (entry == null || !entry.wellFormed || !seen.add(entry.key)) {
+    if (entry == null ||
+        !entry.wellFormed ||
+        !seen.add(entry.key) ||
+        entry.rule == contractRule) {
       out.add(line.raw);
       continue;
     }

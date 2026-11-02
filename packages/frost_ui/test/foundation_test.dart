@@ -126,4 +126,10 @@ void main() {
     await tester.pumpWidget(surface(reduce: true));
     expect(tester.widget<BackdropFilter>(find.byType(BackdropFilter)).enabled, isFalse);
   });
+  test('the katakana middle dot and long vowel mark do not make a text Japanese', () {
+    expect(detectContentScript('艾伦・沃克的新歌'), FrostContentScript.simplifiedChinese);
+    expect(detectContentScript('歌手ー们'), FrostContentScript.simplifiedChinese);
+    expect(detectContentScript('・ー'), isNull);
+    expect(detectContentScript('ラーメン'), FrostContentScript.japanese);
+  });
 }

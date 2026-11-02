@@ -5,18 +5,9 @@ basis	controls/date_range_picker.dart	_DateRangePickerState.build	FrostSizeClass
 basis	controls/shortcuts.dart	FrostShortcuts.build	.platform	1	baseline-20261102
 basis	controls/shortcuts.dart	_apple	TargetPlatform	2	baseline-20261102
 basis	controls/shortcuts.dart	frostShortcutLabel	.platform	1	baseline-20261102
-basis	controls/tab_bar.dart	_AppTabBarState.build	FrostSizeClass	1	baseline-20261102
-basis	controls/toast.dart	_AppToastHostState._touch	.platform	1	baseline-20261102
-basis	controls/toast.dart	_AppToastHostState._touch	TargetPlatform	3	baseline-20261102
 basis	feedback/refresh_view.dart	-	TargetPlatform	6	baseline-20261102
-basis	feedback/refresh_view.dart	_DataNestedRefreshViewState._handleNestedHeaderSnapNotification	.platform	1	baseline-20261102
-basis	feedback/refresh_view.dart	_DataNestedRefreshViewState._handleNestedHeaderSnapNotification	TargetPlatform	3	baseline-20261102
 basis	layout/auto_scaffold.dart	FrostAutoScaffold.build	MediaQuery.size	1	baseline-20261102
 basis	layout/auto_scaffold.dart	FrostLayoutScope.build	MediaQuery.size	2	baseline-20261102
-basis	layout/grouped_settings_list.dart	FrostGroupedSettingsList.build	MediaQuery.size	1	baseline-20261102
-basis	layout/shelf.dart	_ContentShelfState.build	.platform	1	baseline-20261102
-basis	layout/shelf.dart	_ContentShelfState.build	TargetPlatform	3	baseline-20261102
-basis	lists/table.dart	_TableState.build	FrostSizeClass	1	baseline-20261102
 basis	motion/layout_crossfade.dart	_FrostLayoutCrossfadeState._capture	physicalSize	1	baseline-20261102
 basis	motion/page_transition.dart	_BackGestureBridgeState.handleStartBackGesture	.platform	1	baseline-20261102
 basis	motion/page_transition.dart	_BackGestureBridgeState.handleStartBackGesture	TargetPlatform	1	baseline-20261102
@@ -27,21 +18,10 @@ basis	navigation/detail_page.dart	_FrostDetailRoute._nativeBuilder	TargetPlatfor
 basis	navigation/detail_page.dart	_FrostDetailRoute.buildTransitions	.platform	1	baseline-20261102
 basis	navigation/detail_page.dart	_FrostDetailRoute.buildTransitions	TargetPlatform	1	baseline-20261102
 basis	navigation/page_header.dart	_PageHeaderState.build	FrostSizeClass	1	baseline-20261102
-basis	navigation/pager.dart	_FrostPagerState.build	.platform	1	baseline-20261102
-basis	navigation/pager.dart	_FrostPagerState.build	TargetPlatform	3	baseline-20261102
 basis	navigation/shell/task_entry.dart	_FloatingTaskLayerState.build	FrostSizeClass	1	baseline-20261102
-basis	navigation/split_view.dart	_FrostSplitViewState.build	FrostSizeClass	1	baseline-20261102
-basis	navigation/tabs.dart	_FrostTabHostState.build	TargetPlatform	2	baseline-20261102
-basis	navigation/tabs.dart	_FrostTabHostState.build	defaultTargetPlatform	2	baseline-20261102
-basis	navigation/toolbar.dart	_FrostToolbarState.build	FrostSizeClass	1	baseline-20261102
 basis	overlays/_modal_frame.dart	FrostModalSurface.build	FrostSizeClass	1	baseline-20261102
 basis	overlays/_modal_frame.dart	_FrostModalFrameState.build	TargetPlatform	1	baseline-20261102
 basis	overlays/_modal_route.dart	pushFrostModal	FrostSizeClass	1	baseline-20261102
-basis	overlays/dialogs.dart	showFrostConfirm	FrostSizeClass	1	baseline-20261102
-basis	primitives/_text_selection_chrome.dart	_TextSelectionInputState.build	.platform	1	baseline-20261102
-basis	primitives/_text_selection_chrome.dart	_TextSelectionInputState.build	TargetPlatform	3	baseline-20261102
-basis	social/composer.dart	_ComposerState._key	.platform	1	baseline-20261102
-basis	social/composer.dart	_ComposerState._key	TargetPlatform	3	baseline-20261102
 basis	surface/_window_background.dart	FrostAmbientCardRegistry._watch	physicalSize	1	baseline-20261102
 basis	surface/ambient_backdrop.dart	_FrostAmbientBackdropHostState.didChangeDependencies	physicalSize	1	baseline-20261102
 basis	surface/ambient_backdrop.dart	_RenderAmbient.paint	physicalSize	1	baseline-20261102
@@ -49,60 +29,36 @@ child-type	controls/form.dart	_FrostFormState._gapBefore	FrostFormSection	2	base
 child-type	controls/search_input.dart	_InlineSuggestions.build	FrostKeyline	1	baseline-20261102
 child-type	controls/search_input.dart	_SuggestingSearchInputState._suggestionColumn	FrostKeyline	1	baseline-20261102
 child-type	display/section_header.dart	FrostSectionHeader._header	FrostButton	2	baseline-20261102
-child-type	feedback/list_source.dart	FrostListSource.describeError	runtimeType	1	baseline-20261102
-child-type	feedback/load_state_switcher.dart	FrostLoadStateSwitcher.build	runtimeType	1	baseline-20261102
 child-type	foundation/control_scope.dart	FrostControlScope.enabledOf	FrostControlScope	2	baseline-20261102
 child-type	foundation/control_scope.dart	FrostControlScope.sizeOf	FrostControlScope	2	baseline-20261102
 child-type	foundation/control_scope.dart	FrostControlScope.toolbarOf	FrostControlScope	2	baseline-20261102
+child-type	frost_data:list_source.dart	FrostListSource.describeError	runtimeType	1	reviewed:20261103:moved to frost_data unchanged
+child-type	frost_data:load_state_switcher.dart	FrostLoadStateSwitcher.build	runtimeType	1	reviewed:20261103:moved to frost_data unchanged
 child-type	lists/list_row.dart	_FrostListRowState.build	FrostButton	1	baseline-20261102
 child-type	navigation/page_header.dart	_PageHeaderState.build	FrostText	1	baseline-20261102
-child-type	navigation/shell/shell.dart	_FrostShellState._buildShell	FrostCaptionSearch	1	baseline-20261102
-child-type	navigation/toolbar.dart	_FrostToolbarState._iconSlot	FrostLabel	1	baseline-20261102
-child-type	navigation/toolbar.dart	_FrostToolbarState._iconSlot	FrostText	1	baseline-20261102
-child-type	navigation/toolbar.dart	_FrostToolbarState._iconSlot	FrostTitleMenu	1	baseline-20261102
-child-type	navigation/toolbar.dart	_FrostToolbarState._iconSlot	FrostToolbarMenuButton	1	baseline-20261102
-child-type	navigation/toolbar.dart	_FrostToolbarState._iconSlot	FrostToolbarTitle	1	baseline-20261102
-child-type	navigation/toolbar.dart	_FrostToolbarState._leadingChild	FrostLabel	2	baseline-20261102
-child-type	navigation/toolbar.dart	_FrostToolbarState._leadingChild	FrostText	1	baseline-20261102
-child-type	navigation/toolbar.dart	_FrostToolbarState._leadingChild	FrostTitleMenu	1	baseline-20261102
-child-type	navigation/toolbar.dart	_FrostToolbarState._leadingChild	FrostToolbarMenuButton	1	baseline-20261102
-child-type	navigation/toolbar.dart	_FrostToolbarState._leadingChild	FrostToolbarTitle	1	baseline-20261102
-child-type	navigation/toolbar.dart	_FrostToolbarState.build	FrostLabel	2	baseline-20261102
-child-type	navigation/toolbar.dart	_FrostToolbarState.build	FrostText	1	baseline-20261102
-child-type	navigation/toolbar.dart	_FrostToolbarState.build	FrostTitleMenu	3	baseline-20261102
-child-type	navigation/toolbar.dart	_FrostToolbarState.build	FrostToolbarMenuButton	3	baseline-20261102
-child-type	navigation/toolbar.dart	_FrostToolbarState.build	FrostToolbarTitle	2	baseline-20261102
-child-type	overlays/dialogs.dart	_ModalActionHostState._isInput	FrostCheckboxRow	1	baseline-20261102
-child-type	overlays/dialogs.dart	_ModalActionHostState._isInput	FrostFormFieldRegistration	1	baseline-20261102
-child-type	overlays/dialogs.dart	_ModalActionHostState._isInput	FrostInputSurface	1	baseline-20261102
-child-type	overlays/dialogs.dart	_ModalActionHostState._isInput	FrostPicker	1	baseline-20261102
-child-type	overlays/dialogs.dart	_ModalActionHostState._isInput	FrostSlider	1	baseline-20261102
-child-type	overlays/dialogs.dart	_ModalActionHostState._isInput	FrostSwitch	1	baseline-20261102
 child-type	primitives/keyline.dart	frostHasBleedBoundary	FrostBleedBoundary	1	baseline-20261102
 child-type	primitives/keyline.dart	frostHasBleedBoundary	FrostSliverBleedBoundary	1	baseline-20261102
+framework	controls/toast.dart	_RenderCardsOnlyHitTest.hitTest	hitTest	1	reviewed:20261103:existing use, listed when the rule grew
 framework	feedback/refresh_indicator.dart	_DataRefreshScrollBehavior	MaterialScrollBehavior	1	baseline-20261102
 framework	foundation/_focus_modality.dart	FrostInputModality.attach	HardwareKeyboard.addHandler	1	baseline-20261102
 framework	foundation/_focus_modality.dart	FrostInputModality.attach	pointerRouter	1	baseline-20261102
+framework	foundation/_touch_targets.dart	RenderFrostTouchTargetRoot.hitTest	hitTest	1	reviewed:20261103:root touch redirect yields to any other listener
 framework	foundation/control_scope.dart	FrostControlScope.enabledOf	visitAncestorElements	1	baseline-20261102
 framework	foundation/control_scope.dart	FrostControlScope.sizeOf	visitAncestorElements	1	baseline-20261102
 framework	foundation/control_scope.dart	FrostControlScope.toolbarOf	visitAncestorElements	1	baseline-20261102
-framework	foundation/input_feedback.dart	_FrostInputFeedbackState._onKey	highlightStrategy=	1	baseline-20261102
-framework	foundation/input_feedback.dart	_FrostInputFeedbackState._onPointer	highlightStrategy=	1	baseline-20261102
-framework	foundation/input_feedback.dart	_FrostInputFeedbackState.dispose	highlightStrategy=	1	baseline-20261102
-framework	foundation/input_feedback.dart	_FrostInputFeedbackState.initState	HardwareKeyboard.addHandler	1	baseline-20261102
-framework	foundation/input_feedback.dart	_FrostInputFeedbackState.initState	pointerRouter	1	baseline-20261102
-framework	layout/_reader_anchor.dart	FrostReaderViewport.preserveReadingPosition	visitAncestorElements	1	baseline-20261102
+framework	layout/_header_search_body.dart	_RenderHeaderSearchConcealed.hitTest	hitTest	1	reviewed:20261103:existing use, listed when the rule grew
 framework	layout/content_viewport.dart	FrostContentViewport.build	MediaQuery.size	1	baseline-20261102
 framework	layout/window_caption_scope.dart	_CaptionRegionBox.region	visitAncestorElements	1	baseline-20261102
+framework	lists/_reorder_motion.dart	FrostReorderMotionBox.hitTest	hitTest	1	reviewed:20261103:existing use, listed when the rule grew
 framework	lists/selection.dart	_SelectableItemState._pointerDown	hitTestInView	1	baseline-20261102
 framework	lists/table.dart	_TableRowState._mainTarget	hitTestInView	1	baseline-20261102
 framework	media/media_chrome.dart	_FrostMediaChromeState.initState	HardwareKeyboard.addHandler	1	baseline-20261102
+framework	motion/_frame_work.dart	FrostFrameWorkRender.hitTest	hitTest	1	reviewed:20261103:existing use, listed when the rule grew
 framework	overlays/context_menu.dart	_FrostContextMenuRegionState._pointerDown	hitTestInView	1	baseline-20261102
-framework	overlays/dialogs.dart	_ModalActionHostState._isInput	visitAncestorElements	1	baseline-20261102
-framework	overlays/dialogs.dart	_ModalActionHostState.initState	addEarlyKeyEventHandler	1	baseline-20261102
-framework	overlays/sheet.dart	_SheetScrollBehavior	MaterialScrollBehavior	1	baseline-20261102
+framework	overlays/menu_anchor.dart	_AppMenuAnchorState._contentPopScope	visitChildElements	1	reviewed:20261103:popover PopScope walk has no cleaner mechanism
 framework	primitives/_text_selection_chrome.dart	_TextSelectionInputState.initState	HardwareKeyboard.addHandler	1	baseline-20261102
 framework	primitives/click_surface.dart	_AppClickSurfaceState._updateHover	hitTestInView	1	baseline-20261102
+framework	primitives/keyline.dart	_RenderBleed.hitTest	hitTest	1	reviewed:20261103:existing use, listed when the rule grew
 framework	primitives/keyline.dart	frostHasBleedBoundary	visitAncestorElements	1	baseline-20261102
 layers	feedback/error_content.dart	-	navigation/page_header.dart	1	baseline-20261102
 layers	feedback/error_content.dart	-	navigation/shell_navigation_scope.dart	1	baseline-20261102
@@ -115,6 +71,10 @@ layers	foundation/feedback.dart	-	primitives/_focus_outline.dart	1	baseline-2026
 layers	foundation/feedback.dart	-	primitives/_on_media_chrome_scope.dart	1	baseline-20261102
 layers	foundation/metrics.dart	-	motion/_spring_simulation.dart	1	baseline-20261102
 layers	foundation/theme.dart	-	motion/page_transition.dart	1	baseline-20261102
+layers	frost_data:data_slivers.dart	-	frost_ui:layout/content_viewport.dart	1	reviewed:20261103:frost_data may read this hidden helper
+layers	frost_data:data_slivers.dart	-	frost_ui:layout/waterfall_grid.dart	1	reviewed:20261103:frost_data may read this hidden helper
+layers	frost_data:load_state_switcher.dart	-	frost_ui:motion/layout_crossfade.dart	1	reviewed:20261103:frost_data may read this hidden helper
+layers	frost_data:loading_more_indicator.dart	-	frost_ui:feedback/error_content.dart	1	reviewed:20261103:frost_data may read this hidden helper
 layers	layout/_local_back.dart	-	navigation/_shell_back_scope.dart	1	baseline-20261102
 layers	layout/_local_back.dart	-	navigation/shell_navigation_scope.dart	1	baseline-20261102
 layers	layout/settings_sections.dart	-	navigation/_navigation_tile.dart	1	baseline-20261102
@@ -132,7 +92,6 @@ layers	primitives/path_text.dart	-	feedback/_skeleton_geometry.dart	1	baseline-2
 layers	primitives/status_glyph.dart	-	feedback/activity_indicator.dart	1	baseline-20261102
 layers	primitives/status_glyph.dart	-	feedback/loading_gate.dart	1	baseline-20261102
 layers	primitives/text.dart	-	feedback/_skeleton_geometry.dart	1	baseline-20261102
-layers	primitives/text.dart	-	layout/_reader_style.dart	1	baseline-20261102
 layers	surface/_window_background.dart	-	layout/window_caption_scope.dart	1	baseline-20261102
 layers	surface/ambient_backdrop.dart	-	layout/window_caption_scope.dart	1	baseline-20261102
 silent	controls/_button_parts.dart	FrostButtonFrame._readable	maybeOf-fallback	1	baseline-20261102
@@ -151,10 +110,7 @@ silent	feedback/activity_indicator.dart	_FrostActivityIndicatorState.build	maybe
 silent	feedback/empty_state.dart	FrostStateContent.build	maybeOf-fallback	1	baseline-20261102
 silent	feedback/error_content.dart	FrostErrorContent.build	maybeOf-fallback	1	baseline-20261102
 silent	feedback/error_content.dart	FrostErrorPage.build	maybeOf-fallback	2	baseline-20261102
-silent	feedback/list_source.dart	FrostListSource.loadData	catch	1	baseline-20261102
 silent	feedback/loading_gate.dart	frostLoadingHasShown	maybeOf-fallback	1	baseline-20261102
-silent	feedback/refresh_view.dart	_DataRefreshCallbackMixin._refresh	catch	1	baseline-20261102
-silent	feedback/stale.dart	FrostStaleX.frostStale	maybeOf-fallback	1	baseline-20261102
 silent	foundation/_control_dimming.dart	FrostControlDimming.ownsOpacityOf	maybeOf-fallback	1	baseline-20261102
 silent	foundation/_layout_scope.dart	FrostAdaptiveLayoutData.horizontalOf	maybeOf-fallback	1	baseline-20261102
 silent	foundation/_layout_scope.dart	FrostSizeClass.of	maybeOf-fallback	1	baseline-20261102
@@ -162,6 +118,7 @@ silent	foundation/app.dart	FrostApp.build	maybeOf-fallback	1	baseline-20261102
 silent	foundation/feedback.dart	_frostButtonFeedbackBackground	maybeOf-fallback	1	baseline-20261102
 silent	foundation/scope.dart	FrostScope.configOf	maybeOf-fallback	1	baseline-20261102
 silent	foundation/scope.dart	FrostScope.solidSurfaces	maybeOf-fallback	1	baseline-20261102
+silent	frost_data:list_source.dart	FrostListSource._loadData	catch	1	reviewed:20261103:moved to frost_data unchanged
 silent	layout/_chrome_active_body.dart	FrostChromeActiveBody.isActive	maybeOf-fallback	1	baseline-20261102
 silent	layout/_local_back.dart	FrostLocalBack.build	maybeOf-fallback	1	baseline-20261102
 silent	layout/_section_pages.dart	_SectionPagesState._slide	catch	1	baseline-20261102
@@ -210,7 +167,6 @@ silent	primitives/keyline.dart	FrostRowTrailingAlignment.createRenderObject	mayb
 silent	primitives/keyline.dart	FrostRowTrailingAlignment.updateRenderObject	maybeOf-fallback	1	baseline-20261102
 silent	primitives/surface.dart	_FrostSurfaceState.build	maybeOf-fallback	3	baseline-20261102
 silent	primitives/text.dart	frostTextStyle	maybeOf-fallback	1	baseline-20261102
-silent	social/avatar_stack.dart	FrostAvatarStack.build	maybeOf-fallback	1	baseline-20261102
 silent	social/thread.dart	FrostThreadItem.build	maybeOf-fallback	2	baseline-20261102
 silent	social/thread.dart	_ThreadState.build	maybeOf-fallback	1	baseline-20261102
 silent	surface/_window_background.dart	FrostAmbientCardRegistry.overlaps	catch	2	baseline-20261102
@@ -236,34 +192,25 @@ tokens	display/_avatar_seed.dart	-	color	4	baseline-20261102
 tokens	display/badge.dart	-	color	2	baseline-20261102
 tokens	display/badge.dart	-	text	1	baseline-20261102
 tokens	display/count_badge.dart	-	text	1	baseline-20261102
-tokens	display/entry.dart	-	spacing	1	baseline-20261102
 tokens	display/section_header.dart	-	text	1	baseline-20261102
 tokens	display/tag.dart	-	spacing	1	baseline-20261102
-tokens	lists/conversation_row.dart	-	spacing	4	baseline-20261102
-tokens	lists/conversation_row.dart	-	text	2	baseline-20261102
 tokens	media/_cover_scrim.dart	-	color	2	baseline-20261102
 tokens	media/_video_bar.dart	-	color	3	baseline-20261102
-tokens	media/_video_bar.dart	-	spacing	1	baseline-20261102
 tokens	media/media_button.dart	-	color	3	baseline-20261102
 tokens	media/media_button.dart	-	radius	1	baseline-20261102
-tokens	media/media_button.dart	-	spacing	2	baseline-20261102
+tokens	media/media_button.dart	-	spacing	1	baseline-20261102
 tokens	media/media_card.dart	-	color	3	baseline-20261102
 tokens	media/media_card.dart	-	spacing	8	baseline-20261102
 tokens	media/media_card.dart	-	text	1	baseline-20261102
 tokens	media/media_chrome.dart	-	color	1	baseline-20261102
 tokens	media/media_chrome.dart	-	spacing	6	baseline-20261102
-tokens	media/media_metadata.dart	-	spacing	1	baseline-20261102
 tokens	media/media_row.dart	-	spacing	6	baseline-20261102
 tokens	media/media_row.dart	-	text	2	baseline-20261102
-tokens	media/media_stats.dart	-	color	1	baseline-20261102
-tokens	media/media_stats.dart	-	text	1	baseline-20261102
-tokens	media/video_frame.dart	-	spacing	6	baseline-20261102
+tokens	media/video_frame.dart	-	spacing	4	baseline-20261102
 tokens	navigation/shell/sidebar.dart	-	spacing	2	baseline-20261102
 tokens	navigation/shell/task_entry.dart	-	spacing	1	baseline-20261102
 tokens	navigation/toolbar_menu_button.dart	-	color	1	baseline-20261102
 tokens	primitives/_text_selection_chrome.dart	-	radius	1	baseline-20261102
 tokens	primitives/_text_selection_chrome.dart	-	spacing	4	baseline-20261102
-tokens	social/action_bar.dart	-	spacing	3	baseline-20261102
-tokens	social/action_count.dart	-	spacing	1	baseline-20261102
 tokens	social/thread.dart	-	spacing	2	baseline-20261102
 tokens	social/thread.dart	-	text	1	baseline-20261102
