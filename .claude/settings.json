@@ -1,0 +1,23 @@
+{
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "& \"$env:CLAUDE_PROJECT_DIR/tool/hooks/guard_full_tests.ps1\"; exit $LASTEXITCODE",
+            "timeout": 10,
+            "statusMessage": "Checking test scope"
+          }
+        ]
+      }
+    ]
+  }
+}

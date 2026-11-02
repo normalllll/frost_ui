@@ -7,9 +7,15 @@ build/
 *.iml
 .idea/
 
-# Lock files are never tracked (see docs/PLAN.md §3).
+# Lock files are never tracked.
 pubspec.lock
 Cargo.lock
 
 # Local path overrides for joint development; never committed.
 pubspec_overrides.yaml
+
+# Native Apple package-manager outputs.
+.build/
+.swiftpm/
+Package.resolved
+Podfile.lock
