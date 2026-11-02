@@ -1,6 +1,8 @@
 import 'package:flutter/physics.dart';
 import 'package:flutter/widgets.dart';
-import 'package:frost_ui/src/foundation/metrics.dart';
+
+import '../foundation/metrics.dart';
+import '_material_reveal.dart';
 
 /// A no-bounce spring's path as a [Curve] over [duration], for implicit
 /// animations that only take a curve (sizes, cross-fades). It keeps the
@@ -62,27 +64,57 @@ class _FrostSpringBuilderState extends State<FrostSpringBuilder> with SingleTick
   }
 }
 
-/// Shows [child] by growing it out of [alignment] (from [hiddenScale]) and
-/// fading it in on the standard spring; hiding runs on the quicker snappy
-/// spring. For panels that open from the button that summons them.
-class FrostSpringReveal extends StatelessWidget {
-  const FrostSpringReveal({required this.shown, required this.alignment, required this.child, this.hiddenScale = .9, super.key});
-
+/// Shows [child] by growing it out of its centre and fading it in on the
+/// standard spring; hiding runs on the quicker snappy spring. While hidden it
+/// takes no taps, focus or semantics and its tickers stop.
+class FrostSpringReveal extends StatefulWidget {
+  const FrostSpringReveal({required this.shown, required this.child, super.key});
   final bool shown;
-  final AlignmentGeometry alignment;
-  final double hiddenScale;
   final Widget child;
+  @override
+  State<FrostSpringReveal> createState() => _FrostSpringRevealState();
+}
+
+class _FrostSpringRevealState extends State<FrostSpringReveal> {
+  static const _hiddenScale = .9;
+  final _glass = FrostRevealHandle();
+  late bool _shown = widget.shown;
 
   @override
-  Widget build(BuildContext context) {
-    return FrostSpringBuilder(
-      value: shown ? 1 : 0,
-      spring: shown ? FrostMotion.standard : FrostMotion.snappy,
-      child: child,
-      builder: (context, progress, child) => Opacity(
-        opacity: progress.clamp(0.0, 1.0),
-        child: Transform.scale(scale: hiddenScale + (1 - hiddenScale) * progress, alignment: alignment.resolve(Directionality.of(context)), child: child),
-      ),
-    );
+  void didUpdateWidget(FrostSpringReveal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.shown == oldWidget.shown) return;
+    if (widget.shown) {
+      _glass.cancelClose();
+      _shown = true;
+    } else if (_glass.hasNestedGlass && _glass.nestedProgress > 0) {
+      _glass.prepareClose().then((ready) {
+        if (ready && mounted && !widget.shown) setState(() => _shown = false);
+      });
+    } else {
+      _shown = false;
+    }
   }
+
+  @override
+  Widget build(BuildContext context) => FrostSpringBuilder(
+    value: _shown ? 1 : 0,
+    spring: _shown ? FrostMotion.standard : FrostMotion.snappy,
+    child: IgnorePointer(
+      ignoring: !widget.shown,
+      child: ExcludeFocus(
+        excluding: !widget.shown,
+        child: ExcludeSemantics(
+          excluding: !widget.shown,
+          child: TickerMode(enabled: widget.shown, child: widget.child),
+        ),
+      ),
+    ),
+    builder: (context, progress, child) => FrostMaterialReveal(
+      handle: _glass,
+      contentOnly: true,
+      opacity: progress.clamp(0.0, 1.0),
+      child: Transform.scale(scale: MediaQuery.disableAnimationsOf(context) ? 1 : _hiddenScale + (1 - _hiddenScale) * progress, child: child),
+    ),
+  );
 }
