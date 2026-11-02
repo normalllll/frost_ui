@@ -1,7 +1,9 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frost_ui/desktop.dart';
 import 'package:frost_ui/frost_ui.dart';
 
 import 'support.dart';
@@ -28,12 +30,18 @@ class _CounterState extends State<_Counter> {
 
 List<String> _names(FrostTabsController<_Tab> controller) => [for (final tab in controller.tabs) tab.name];
 
-Widget _host(FrostTabsController<_Tab> controller, {VoidCallback? onNewTab}) => frostTestApp(
+Widget _host(
+  FrostTabsController<_Tab> controller, {
+  VoidCallback? onNewTab,
+  FrostDensity density = FrostDensity.comfortable,
+  double stripHeight = 40,
+  TargetPlatform platform = TargetPlatform.windows,
+}) => frostTestApp(
   Scaffold(
     body: Column(
       children: [
         SizedBox(
-          height: 40,
+          height: stripHeight,
           child: Align(
             alignment: Alignment.centerLeft,
             child: FrostTabStrip<_Tab>(
@@ -52,11 +60,110 @@ Widget _host(FrostTabsController<_Tab> controller, {VoidCallback? onNewTab}) => 
       ],
     ),
   ),
+  density: density,
+  platform: platform,
 );
 
 Rect _tabRect(WidgetTester tester, String name) => tester.getRect(find.ancestor(of: find.text('T.$name'), matching: find.byType(Positioned)).first);
 
 void main() {
+  for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
+    testWidgets('embedded close padding closes without activating the tab $platform', (tester) async {
+      final controller = FrostTabsController<_Tab>(initial: _Tab('a'));
+      addTearDown(controller.dispose);
+      controller.open(_Tab('b'), activate: false);
+      final touch = platform == TargetPlatform.android;
+      await tester.pumpWidget(_host(controller, platform: platform, stripHeight: touch ? 44 : 40));
+      await tester.pumpAndSettle();
+      final close = findFrostTooltip('L.close').last;
+      expect(tester.getSize(close), Size(touch ? 44 : 24, touch ? 44 : 40));
+      final surface = find.descendant(of: close, matching: find.byType(FrostClickSurface));
+      expect(tester.getSize(surface), const Size(20, 20));
+      await tester.tapAt(tester.getRect(close).topCenter + const Offset(0, 1));
+      await tester.pumpAndSettle();
+      expect(_names(controller), ['a']);
+      expect(controller.active.name, 'a');
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets('selected strip keeps 20px close visuals inside a narrow full-height pointer target', (tester) async {
+    final controller = FrostTabsController<_Tab>(initial: _Tab('a'));
+    addTearDown(controller.dispose);
+    controller.open(_Tab('b'), activate: false);
+    await tester.pumpWidget(_host(controller));
+    await tester.pumpAndSettle();
+    final tokens = FrostThemeTokens.of(tester.element(find.byType(FrostTabStrip<_Tab>)));
+    final background = find.ancestor(of: find.text('T.a'), matching: find.byType(AnimatedContainer)).first;
+    final decorated = find.descendant(of: background, matching: find.byType(DecoratedBox)).first;
+    expect((tester.renderObject<RenderDecoratedBox>(decorated).decoration as ShapeDecoration).color, tokens.surfaceRaised);
+    expect(tester.renderObject<RenderParagraph>(find.text('T.a')).text.style!.color, tokens.textPrimary);
+    final close = findFrostTooltip('L.close').first;
+    final surface = find.descendant(of: close, matching: find.byType(FrostClickSurface));
+    expect(tester.getSize(surface), const Size(20, 20));
+    final shape =
+        (tester.renderObject<RenderDecoratedBox>(find.descendant(of: surface, matching: find.byType(DecoratedBox)).first).decoration as ShapeDecoration).shape
+            as RoundedSuperellipseBorder;
+    expect(shape.borderRadius.resolve(TextDirection.ltr).topLeft.x, FrostRadius.forHeight(20));
+    expect(tester.widget<FrostIcon>(find.descendant(of: surface, matching: find.byType(FrostIcon))).size, 14);
+    expect(tester.getSize(close), const Size(24, 40));
+    expect(_tabRect(tester, 'a').height, 40);
+    controller.activate(1);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 70));
+    final middle = tester.renderObject<RenderParagraph>(find.text('T.b')).text.style!.color;
+    expect(middle, isNot(tokens.textPrimary));
+    expect(middle, isNot(tokens.textSecondary));
+    await tester.pumpAndSettle();
+    expect(tester.renderObject<RenderParagraph>(find.text('T.b')).text.style!.color, tokens.textPrimary);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('tab selection radius follows its actual background height', (tester) async {
+    final controller = FrostTabsController<_Tab>(initial: _Tab('a'));
+    addTearDown(controller.dispose);
+    for (final density in FrostDensity.values) {
+      for (final height in [36.0, 40.0, 48.0]) {
+        await tester.pumpWidget(_host(controller, density: density, stripHeight: height));
+        await tester.pumpAndSettle();
+        final background = find.ancestor(of: find.text('T.a'), matching: find.byType(AnimatedContainer)).first;
+        final container = tester.widget<AnimatedContainer>(background);
+        final margin = container.margin!.resolve(TextDirection.ltr);
+        final actualHeight = tester.getSize(background).height - margin.vertical;
+        expect(actualHeight, height - 8);
+        final shape = (container.decoration! as ShapeDecoration).shape;
+        final borderRadius = switch (shape) {
+          RoundedSuperellipseBorder(:final borderRadius) => borderRadius,
+          RoundedRectangleBorder(:final borderRadius) => borderRadius,
+          _ => throw StateError('Unexpected tab selection shape: $shape'),
+        }.resolve(TextDirection.ltr);
+        expect(borderRadius, BorderRadius.circular(FrostRadius.forHeight(actualHeight)));
+        for (final radius in [borderRadius.topLeft, borderRadius.topRight, borderRadius.bottomLeft, borderRadius.bottomRight]) {
+          expect(radius.x, lessThanOrEqualTo(actualHeight * .30), reason: '$density strip height $height');
+          expect(radius.y, lessThanOrEqualTo(actualHeight * .30), reason: '$density strip height $height');
+        }
+        expect(tester.takeException(), isNull);
+      }
+    }
+  });
+
+  testWidgets('background tab separators keep their fixed geometry in both densities', (tester) async {
+    final controller = FrostTabsController<_Tab>(initial: _Tab('a'));
+    addTearDown(controller.dispose);
+    controller.open(_Tab('b'), activate: false);
+    controller.open(_Tab('c'), activate: false);
+    for (final density in FrostDensity.values) {
+      await tester.pumpWidget(_host(controller, density: density));
+      await tester.pumpAndSettle();
+      final tokens = FrostThemeTokens.of(tester.element(find.byType(FrostTabStrip<_Tab>)));
+      final separator = find.descendant(
+        of: find.byType(FrostTabStrip<_Tab>),
+        matching: find.byWidgetPredicate((widget) => widget is ColoredBox && widget.color == tokens.separator),
+      );
+      expect(separator, findsOneWidget);
+      expect(tester.getSize(separator), const Size(1, 16));
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   test('background tabs open in order after the front tab; closing picks a neighbour', () {
     final removed = <String>[];
     final a = _Tab('a');
@@ -214,5 +321,24 @@ void main() {
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
     await tester.pumpAndSettle();
     expect(_names(controller), ['a']);
+  });
+  testWidgets('tab shortcuts follow the theme platform, not the build target', (tester) async {
+    final controller = FrostTabsController<_Tab>(initial: _Tab('a'));
+    addTearDown(controller.dispose);
+    controller.open(_Tab('b'), activate: false);
+    await tester.pumpWidget(_host(controller, platform: TargetPlatform.macOS));
+    await tester.pump();
+    Focus.of(tester.element(find.text('a:0'))).requestFocus();
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pump();
+    expect(controller.activeIndex, 0);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pump();
+    expect(controller.activeIndex, 1);
   });
 }
