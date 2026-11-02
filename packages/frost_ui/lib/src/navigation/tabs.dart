@@ -1,21 +1,54 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:frost_ui/src/controls/icon.dart';
-import 'package:frost_ui/src/foundation/metrics.dart';
-import 'package:frost_ui/src/foundation/scope.dart';
-import 'package:frost_ui/src/foundation/tokens.dart';
+
+import '../controls/_close_control.dart';
+import '../controls/buttons.dart';
+import '../controls/shortcuts.dart';
+import '../feedback/_skeleton_geometry.dart';
+import '../foundation/_focus_modality.dart';
+import '../foundation/control_scope.dart';
+import '../foundation/density.dart';
+import '../foundation/icon_data.dart';
+import '../foundation/metrics.dart';
+import '../foundation/radius.dart';
+import '../foundation/sizes.dart';
+import '../foundation/spacing.dart';
+import '../foundation/tokens.dart';
+import '../foundation/typography.dart';
+import '../motion/_spring_simulation.dart';
+import '../overlays/tooltip.dart';
+import '../primitives/_measured_layout_builder.dart';
+import 'shell_navigation_scope.dart';
 
 /// Browser-style tabs: their order, the one in front, and where new ones go.
 /// A tab is any object the app keeps per tab (its router, say), compared by
 /// identity. The controller never empties: the last tab cannot be closed.
 class FrostTabsController<T extends Object> extends ChangeNotifier {
-  FrostTabsController({required T initial, this.onRemoved}) : _tabs = [initial];
+  FrostTabsController({required T initial, this.onRemoved}) : baseTab = null, _tabs = [initial];
+
+  /// Opts into a permanent first tab for the shell's primary destinations.
+  /// The App owns its destination and retained page stack as for any other tab.
+  FrostTabsController.withBaseTab({required T baseTab, this.onRemoved}) : baseTab = baseTab, _tabs = [baseTab];
+
+  /// Null in the existing unrestricted mode; otherwise permanent until dispose.
+  final T? baseTab;
+
+  bool get isBaseTabActive => baseTab != null && active == baseTab;
+
+  bool canClose(int index) {
+    RangeError.checkValidIndex(index, _tabs);
+    return _tabs.length > 1 && _tabs[index] != baseTab;
+  }
+
+  bool canMove(int index) {
+    RangeError.checkValidIndex(index, _tabs);
+    return _tabs[index] != baseTab;
+  }
 
   /// Called with each tab that leaves for good, after listeners have heard
   /// of it; the tab's widgets unmount in the next frame.
@@ -36,6 +69,10 @@ class FrostTabsController<T extends Object> extends ChangeNotifier {
   /// Opens [tab] after the front tab (and after the tabs it already opened
   /// in the background), in front unless [activate] is false.
   void open(T tab, {bool activate = true}) {
+    if (tab == baseTab) {
+      if (activate) this.activate(0);
+      return;
+    }
     final index = (_lastOpened ?? _active) + 1;
     _tabs.insert(index, tab);
     if (activate) {
@@ -62,7 +99,7 @@ class FrostTabsController<T extends Object> extends ChangeNotifier {
   /// after it, or the one before at the end. False for the last tab.
   bool close(int index) {
     RangeError.checkValidIndex(index, _tabs);
-    if (_tabs.length < 2) return false;
+    if (!canClose(index)) return false;
     final removed = _tabs.removeAt(index);
     final wasActive = index == _active;
     if (index < _active || wasActive && _active == _tabs.length) _active--;
@@ -81,6 +118,8 @@ class FrostTabsController<T extends Object> extends ChangeNotifier {
   void move(int from, int to) {
     RangeError.checkValidIndex(from, _tabs);
     RangeError.checkValidIndex(to, _tabs);
+    if (!canMove(from)) return;
+    if (baseTab != null) to = math.max(1, to);
     if (from == to) return;
     final active = _tabs[_active];
     _tabs.insert(to, _tabs.removeAt(from));
@@ -89,9 +128,21 @@ class FrostTabsController<T extends Object> extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Replaces every tab with [tab].
+  /// Replaces content tabs with [tab], retaining the optional permanent base.
   void replaceAll(T tab) {
-    final removed = [..._tabs];
+    if (baseTab case final base?) {
+      final removed = _tabs.where((value) => value != base && value != tab).toList();
+      _tabs
+        ..clear()
+        ..add(base);
+      if (tab != base) _tabs.add(tab);
+      _active = _tabs.length - 1;
+      _lastOpened = null;
+      notifyListeners();
+      removed.forEach(onRemoved ?? (_) {});
+      return;
+    }
+    final removed = _tabs.where((value) => value != tab).toList();
     _tabs
       ..clear()
       ..add(tab);
@@ -129,12 +180,11 @@ class FrostTabHost<T extends Object> extends StatefulWidget {
   State<FrostTabHost<T>> createState() => _FrostTabHostState<T>();
 }
 
-class _FrostTabHostState<T extends Object> extends State<FrostTabHost<T>> with SingleTickerProviderStateMixin {
+class _FrostTabHostState<T extends Object> extends State<FrostTabHost<T>> {
   final _built = <T>{};
   final _scopes = <T, FocusScopeNode>{};
-  late final _fade = AnimationController(vsync: this, duration: FrostMotion.layoutFade, value: 1);
+  final _pages = <T, Widget>{};
   late T _shown;
-  T? _outgoing;
 
   @override
   void initState() {
@@ -167,6 +217,7 @@ class _FrostTabHostState<T extends Object> extends State<FrostTabHost<T>> with S
     final controller = widget.controller;
     final tabs = controller.tabs;
     _built.removeWhere((tab) => !tabs.contains(tab));
+    _pages.removeWhere((tab, _) => !tabs.contains(tab));
     final gone = [
       for (final MapEntry(:key, :value) in _scopes.entries)
         if (!tabs.contains(key)) value,
@@ -182,23 +233,11 @@ class _FrostTabHostState<T extends Object> extends State<FrostTabHost<T>> with S
     }
     final active = controller.active;
     if (active != _shown) {
-      final previous = _shown;
       _shown = active;
       _built.add(active);
-      _outgoing = tabs.contains(previous) && !MediaQuery.disableAnimationsOf(context) ? previous : null;
-      if (_outgoing == null) {
-        _fade.value = 1;
-      } else {
-        final outgoing = _outgoing;
-        _fade.forward(from: 0).whenCompleteOrCancel(() {
-          if (mounted && _outgoing == outgoing && !_fade.isAnimating) setState(() => _outgoing = null);
-        });
-      }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && hadFocus && _shown == active) _scopes[active]?.requestFocus();
       });
-    } else if (_outgoing != null && !tabs.contains(_outgoing)) {
-      _outgoing = null;
     }
     setState(() {});
   }
@@ -206,7 +245,6 @@ class _FrostTabHostState<T extends Object> extends State<FrostTabHost<T>> with S
   @override
   void dispose() {
     widget.controller.removeListener(_changed);
-    _fade.dispose();
     for (final node in _scopes.values) {
       node.dispose();
     }
@@ -215,28 +253,25 @@ class _FrostTabHostState<T extends Object> extends State<FrostTabHost<T>> with S
 
   Widget _slot(T tab) {
     final active = tab == _shown;
-    final visible = active || tab == _outgoing;
     final scope = _scopes.putIfAbsent(tab, () => FocusScopeNode(debugLabel: 'Tab'));
-    // The structure stays the same whether a tab is in front or not, so its
-    // state survives every switch.
+    // Cache the actual page widget, not merely its key. Controller changes must
+    // not rerun the App builder or restart glass reveal/readback animations.
+    final page = _pages.putIfAbsent(tab, () => Builder(builder: (context) => widget.builder(context, tab)));
     return KeyedSubtree(
       key: ObjectKey(tab),
       child: Offstage(
-        offstage: !visible,
-        child: FadeTransition(
-          opacity: active ? _fade : kAlwaysCompleteAnimation,
-          child: ExcludeSemantics(
-            excluding: !active,
-            child: IgnorePointer(
-              ignoring: !active,
-              child: TickerMode(
-                enabled: active,
-                child: ExcludeFocus(
-                  excluding: !active,
-                  child: FocusScope(
-                    node: scope,
-                    child: Builder(builder: (context) => widget.builder(context, tab)),
-                  ),
+        offstage: !active,
+        child: ExcludeSemantics(
+          excluding: !active,
+          child: IgnorePointer(
+            ignoring: !active,
+            child: TickerMode(
+              enabled: active,
+              child: ExcludeFocus(
+                excluding: !active,
+                child: FocusScope(
+                  node: scope,
+                  child: RepaintBoundary(child: page),
                 ),
               ),
             ),
@@ -249,8 +284,7 @@ class _FrostTabHostState<T extends Object> extends State<FrostTabHost<T>> with S
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
-    final apple = defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.iOS;
-    SingleActivator key(LogicalKeyboardKey key, {bool shift = false}) => SingleActivator(key, control: !apple, meta: apple, shift: shift);
+    FrostShortcut key(LogicalKeyboardKey key, {bool shift = false}) => FrostShortcut(key, primary: true, shift: shift);
     void select(int index) => controller.activate(math.min(index, controller.length - 1));
     const digits = [
       LogicalKeyboardKey.digit1,
@@ -262,19 +296,22 @@ class _FrostTabHostState<T extends Object> extends State<FrostTabHost<T>> with S
       LogicalKeyboardKey.digit7,
       LogicalKeyboardKey.digit8,
     ];
-    return CallbackShortcuts(
-      bindings: {
-        key(LogicalKeyboardKey.keyT): ?widget.onNewTab,
-        key(LogicalKeyboardKey.keyT, shift: true): ?widget.onReopen,
-        key(LogicalKeyboardKey.keyW): () => controller.close(controller.activeIndex),
-        key(LogicalKeyboardKey.f4): () => controller.close(controller.activeIndex),
-        key(LogicalKeyboardKey.tab): () => controller.activateRelative(1),
-        key(LogicalKeyboardKey.tab, shift: true): () => controller.activateRelative(-1),
-        key(LogicalKeyboardKey.pageDown): () => controller.activateRelative(1),
-        key(LogicalKeyboardKey.pageUp): () => controller.activateRelative(-1),
-        for (final (index, digit) in digits.indexed) key(digit): () => select(index),
-        key(LogicalKeyboardKey.digit9): () => select(controller.length - 1),
-      },
+    final enabled = FrostShellNavigationScope.maybeOf(context)?.ownsBackControl ?? true;
+    return FrostShortcuts(
+      bindings: !enabled
+          ? const {}
+          : {
+              if (controller.baseTab == null) key(LogicalKeyboardKey.keyT): ?widget.onNewTab,
+              key(LogicalKeyboardKey.keyT, shift: true): ?widget.onReopen,
+              key(LogicalKeyboardKey.keyW): () => controller.close(controller.activeIndex),
+              key(LogicalKeyboardKey.f4): () => controller.close(controller.activeIndex),
+              key(LogicalKeyboardKey.tab): () => controller.activateRelative(1),
+              key(LogicalKeyboardKey.tab, shift: true): () => controller.activateRelative(-1),
+              key(LogicalKeyboardKey.pageDown): () => controller.activateRelative(1),
+              key(LogicalKeyboardKey.pageUp): () => controller.activateRelative(-1),
+              for (final (index, digit) in digits.indexed) key(digit): () => select(index),
+              key(LogicalKeyboardKey.digit9): () => select(controller.length - 1),
+            },
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -295,13 +332,14 @@ class FrostTabLabel {
 
   final String title;
 
-  /// A 16 dp mark before the title: the page's icon or picture.
+  /// A 16 dp mark before the title, or 24 dp for the square base tab.
+  /// In a Shell, the base tab uses FrostShell.brandIcon instead.
   final Widget? leading;
 }
 
 /// The row of tabs for a [FrostTabsController], sized to its tabs and
-/// followed by a new-tab button; place it where the rest of the row is free
-/// (a window caption keeps it draggable, see [FrostCaptionContent]).
+/// followed by an optional new-tab button; place it where the rest of the row is free
+/// (the page owns the tab strip and its hit targets).
 ///
 /// Tabs share the width up to [maxTabWidth] each. Opening, closing and
 /// moving tabs animate on springs: a new tab grows from nothing in place,
@@ -316,7 +354,7 @@ class FrostTabStrip<T extends Object> extends StatefulWidget {
     required this.closeTooltip,
     required this.newTabTooltip,
     required this.newTabIcon,
-    required this.onNewTab,
+    this.onNewTab,
     this.maxTabWidth = 220,
     this.minTabWidth = 40,
     super.key,
@@ -327,7 +365,7 @@ class FrostTabStrip<T extends Object> extends StatefulWidget {
   final String closeTooltip;
   final String newTabTooltip;
   final FrostIconData newTabIcon;
-  final VoidCallback onNewTab;
+  final VoidCallback? onNewTab;
   final double maxTabWidth;
 
   /// Below this the row stops shrinking its tabs and clips the overflow.
@@ -356,7 +394,7 @@ class _Spring {
     if (to == target) return;
     final velocity = _simulation?.dx(now - _start) ?? 0;
     target = to;
-    _simulation = SpringSimulation(FrostMotion.snappy, value, to, velocity, snapToEnd: true);
+    _simulation = frostSpringSimulation(FrostMotion.snappy, value, to, velocity);
     _start = now;
   }
 
@@ -400,6 +438,7 @@ class _FrostTabStripState<T extends Object> extends State<FrostTabStrip<T>> with
   /// The width tabs keep after a pointer close, until the pointer leaves.
   double? _heldWidth;
   T? _hovered;
+  T? _pressed;
   T? _dragging;
   T? _middlePressed;
   bool _closePressed = false;
@@ -409,6 +448,17 @@ class _FrostTabStripState<T extends Object> extends State<FrostTabStrip<T>> with
     super.initState();
     _sync();
     widget.controller.addListener(_changed);
+    FrostInputModality.instance.attach();
+    FrostInputModality.instance.addListener(_inputChanged);
+  }
+
+  void _inputChanged() {
+    if (mounted && FrostInputModality.instance.touch && (_hovered != null || _heldWidth != null)) {
+      setState(() {
+        _hovered = null;
+        _heldWidth = null;
+      });
+    }
   }
 
   @override
@@ -425,6 +475,8 @@ class _FrostTabStripState<T extends Object> extends State<FrostTabStrip<T>> with
   void dispose() {
     widget.controller.removeListener(_changed);
     _ticker.dispose();
+    FrostInputModality.instance.removeListener(_inputChanged);
+    FrostInputModality.instance.detach();
     super.dispose();
   }
 
@@ -469,14 +521,20 @@ class _FrostTabStripState<T extends Object> extends State<FrostTabStrip<T>> with
     final first = _lastMaxWidth == null;
     final resized = first || _lastMaxWidth != maxWidth;
     _lastMaxWidth = maxWidth;
-    final count = _items.where((item) => !item.leaving).length;
-    final fitted = count == 0 ? 0.0 : ((maxWidth - buttonWidth) / count).clamp(widget.minTabWidth, widget.maxTabWidth);
+    final count = _items.where((item) => !item.leaving && item.tab != widget.controller.baseTab).length;
+    final baseWidth = widget.controller.baseTab == null ? 0.0 : _lastHeight;
+    final minimumWidth = math.max(widget.minTabWidth, FrostDensity.of(context).targetHeight);
+    final fitted = count == 0 ? 0.0 : ((maxWidth - buttonWidth - baseWidth) / count).clamp(minimumWidth, math.max(minimumWidth, widget.maxTabWidth)).toDouble();
     final held = _heldWidth;
-    _tabWidth = held != null && held * count <= maxWidth - buttonWidth ? held : fitted;
+    _tabWidth = held != null && held * count <= maxWidth - buttonWidth - baseWidth ? held : fitted;
     final now = _now;
     var x = 0.0;
     for (final item in _items) {
-      final width = item.leaving ? 0.0 : _tabWidth;
+      final width = item.leaving
+          ? 0.0
+          : item.tab == widget.controller.baseTab
+          ? baseWidth
+          : _tabWidth;
       if (item.fresh) {
         item.fresh = false;
         item.x.snap(x);
@@ -509,7 +567,7 @@ class _FrostTabStripState<T extends Object> extends State<FrostTabStrip<T>> with
   void _close(T tab, {required bool pointer}) {
     final controller = widget.controller;
     final index = controller.tabs.indexOf(tab);
-    if (index < 0 || controller.length < 2) return;
+    if (index < 0 || !controller.canClose(index)) return;
     // Hold the widths only while the row still has room for them.
     if (pointer && index < controller.length - 1) _heldWidth = _tabWidth;
     controller.close(index);
@@ -518,10 +576,12 @@ class _FrostTabStripState<T extends Object> extends State<FrostTabStrip<T>> with
   void _dragUpdate(_StripItem<T> item, double delta) {
     final controller = widget.controller;
     final count = controller.length;
-    final x = (item.x.value + delta).clamp(0.0, math.max(0.0, (count - 1) * _tabWidth)).toDouble();
+    final first = controller.baseTab == null ? 0 : 1;
+    final start = first == 0 ? 0.0 : _lastHeight;
+    final x = (item.x.value + delta).clamp(start, math.max(start, start + (count - first - 1) * _tabWidth)).toDouble();
     item.x.snap(x);
     final index = controller.tabs.indexOf(item.tab);
-    final target = _tabWidth <= 0 ? index : ((x + _tabWidth / 2) / _tabWidth).floor().clamp(0, count - 1);
+    final target = _tabWidth <= 0 ? index : (first + ((x - start + _tabWidth / 2) / _tabWidth).floor()).clamp(first, count - 1);
     if (index >= 0 && target != index) {
       controller.move(index, target);
     } else {
@@ -534,17 +594,25 @@ class _FrostTabStripState<T extends Object> extends State<FrostTabStrip<T>> with
     setState(() => _dragging = null);
   }
 
+  double _lastHeight = 0;
+
   @override
   Widget build(BuildContext context) {
     final reduced = MediaQuery.disableAnimationsOf(context);
-    return LayoutBuilder(
+    final control = math.max(40.0, FrostDensity.of(context).targetHeight);
+    return FrostMeasuredLayoutBuilder(
+      naturalSize: Size(
+        _items.where((item) => !item.leaving).length * widget.maxTabWidth + (widget.onNewTab != null && widget.controller.baseTab == null ? control : 0),
+        control,
+      ),
       builder: (context, constraints) {
         final height = constraints.maxHeight;
-        final buttonWidth = math.min(height, 40.0);
+        _lastHeight = height;
+        final createsTabs = widget.onNewTab != null && widget.controller.baseTab == null;
+        final buttonWidth = createsTabs ? math.min(height, math.max(40.0, FrostDensity.of(context).targetHeight)) : 0.0;
         _layout(constraints.maxWidth, buttonWidth, reduced);
         final controller = widget.controller;
         final active = controller.active;
-        final closable = controller.length > 1;
         final placed = [..._items.where((item) => item.tab != _dragging), ..._items.where((item) => item.tab == _dragging)];
         // Separators sit between two tabs that are neither in front nor
         // under the pointer, as in a browser.
@@ -572,9 +640,11 @@ class _FrostTabStripState<T extends Object> extends State<FrostTabStrip<T>> with
                           context,
                           item,
                           active: item.tab == active,
-                          closable: closable,
+                          closable: !item.leaving && controller.canClose(controller.tabs.indexOf(item.tab)),
+                          height: height,
                           separator: () {
                             final index = _items.indexOf(item);
+                            if (index > 0 && _items[index - 1].tab == controller.baseTab) return true;
                             if (index <= 0 || !plain[index]) return false;
                             for (var before = index - 1; before >= 0; before--) {
                               if (!_items[before].leaving) return plain[before];
@@ -583,21 +653,21 @@ class _FrostTabStripState<T extends Object> extends State<FrostTabStrip<T>> with
                           }(),
                         ),
                       ),
-                  Positioned(
-                    left: _newTab.value,
-                    top: 0,
-                    bottom: 0,
-                    width: buttonWidth,
-                    child: Center(
-                      child: _StripButton(
-                        icon: widget.newTabIcon,
-                        tooltip: widget.newTabTooltip,
-                        size: math.min(28, height),
-                        iconSize: 16,
-                        onPressed: widget.onNewTab,
+                  if (createsTabs)
+                    Positioned(
+                      left: _newTab.value,
+                      top: 0,
+                      bottom: 0,
+                      width: buttonWidth,
+                      child: Center(
+                        child: FrostButton.icon(
+                          icon: widget.newTabIcon,
+                          label: widget.newTabTooltip,
+                          size: FrostControlSize.compact,
+                          onPressed: widget.onNewTab,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -607,64 +677,97 @@ class _FrostTabStripState<T extends Object> extends State<FrostTabStrip<T>> with
     );
   }
 
-  Widget _tab(BuildContext context, _StripItem<T> item, {required bool active, required bool closable, required bool separator}) {
+  static const _separatorLength = 16.0; // Fixed length of the vertical separator between background tabs.
+  static const _separatorThickness = 1.0; // Thickness of the vertical separator between background tabs.
+
+  Widget _tab(BuildContext context, _StripItem<T> item, {required bool active, required bool closable, required double height, required bool separator}) {
     final tokens = FrostThemeTokens.of(context);
     final label = widget.label(context, item.tab);
+    final base = item.tab == widget.controller.baseTab;
     final width = item.width.value;
-    final opacity = _tabWidth <= 0 ? 1.0 : (width / _tabWidth).clamp(0.0, 1.0);
-    final compact = width < 72;
+    final targetWidth = base ? height : _tabWidth;
+    final opacity = targetWidth <= 0 ? 1.0 : (width / targetWidth).clamp(0.0, 1.0);
+    final compact = base || width < 72;
     final hovered = _hovered == item.tab;
+    final touch = FrostDensity.of(context).heightFor(FrostControlSize.regular) == FrostControlSize.regular.visualHeight(touch: true);
+    final closeWidth = touch ? 44.0 : 24.0;
     final close = closable && (!compact || active)
         ? Listener(
             onPointerDown: (_) => _closePressed = true,
-            child: _StripButton(
-              icon: FrostScope.configOf(context).icons.close,
-              tooltip: widget.closeTooltip,
-              size: 20,
-              iconSize: 14,
-              onPressed: () => _close(item.tab, pointer: true),
-            ),
+            child: FrostCloseControl(label: widget.closeTooltip, height: height, onPressed: () => _close(item.tab, pointer: true)),
           )
         : null;
     final leading = label.leading;
-    final textStyle = Theme.of(context).textTheme.bodySmall?.copyWith(color: active ? tokens.textPrimary : tokens.textSecondary);
+    // The base tab keeps the accent selection wash. Content tabs select with a
+    // neutral raised fill and primary ink, like the other selected controls.
+    final ink = active ? (base ? tokens.selectionInk : tokens.textPrimary) : tokens.textSecondary;
     final content = compact
-        ? Center(child: close ?? (leading == null ? null : SizedBox.square(dimension: 16, child: leading)))
+        ? Center(
+            child: close != null || leading == null
+                ? null
+                : ExcludeSemantics(
+                    child: SizedBox.square(dimension: base ? 24 : 16, child: leading),
+                  ),
+          )
         : Row(
             children: [
-              if (leading != null) ...[SizedBox.square(dimension: 16, child: leading), const SizedBox(width: 8)],
+              if (leading != null) ...[SizedBox.square(dimension: 16, child: leading), const SizedBox(width: FrostGap.related)],
               Expanded(
-                child: Text(label.title, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: textStyle),
+                child: FrostSkeletonText(child: Text(label.title, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis)),
               ),
-              if (close != null) ...[const SizedBox(width: 4), close],
+              // The desktop column uses the close and gap width budget.
+              if (close != null) SizedBox(width: closeWidth + FrostGap.inline),
             ],
           );
+    const pillMargin = EdgeInsets.symmetric(horizontal: FrostGap.inline, vertical: FrostGap.inline);
+    final pillHeight = height - pillMargin.vertical;
     final pill = AnimatedContainer(
-      duration: FrostMotion.hover,
+      duration: FrostMotion.duration(context, FrostMotion.hover),
       curve: FrostMotion.hoverCurve,
-      margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
-      padding: EdgeInsets.symmetric(horizontal: compact ? 0 : 10),
-      decoration: BoxDecoration(
-        color: active
-            ? tokens.pressedSurface
-            : hovered
-            ? tokens.hoverSurface
-            : tokens.hoverSurface.withValues(alpha: 0),
-        borderRadius: BorderRadius.circular(8),
+      margin: pillMargin,
+      padding: EdgeInsets.symmetric(horizontal: compact ? 0 : FrostGap.related),
+      decoration: ShapeDecoration(
+        color: Color.alphaBlend(
+          tokens.fill.withValues(
+            alpha: _pressed == item.tab
+                ? .08
+                : hovered
+                ? .04
+                : 0,
+          ),
+          active ? (base ? tokens.selectionFill : tokens.surfaceRaised) : tokens.fillSubtle.withValues(alpha: 0),
+        ),
+        shape: FrostRadius.shape(context, FrostRadius.forHeight(pillHeight)),
       ),
-      child: content,
+      child: TweenAnimationBuilder<Color?>(
+        tween: ColorTween(end: ink),
+        duration: FrostMotion.duration(context, FrostMotion.hover),
+        curve: FrostMotion.hoverCurve,
+        builder: (context, color, _) => DefaultTextStyle(
+          style: FrostTypography.of(context).style(FrostTextRole.footnote).copyWith(color: color),
+          child: IconTheme(
+            data: IconThemeData(color: color),
+            child: content,
+          ),
+        ),
+      ),
     );
-    return IgnorePointer(
-      ignoring: item.leaving,
+    final enabled = FrostControlScope.enabledOf(context);
+    final tile = IgnorePointer(
+      ignoring: item.leaving || !enabled,
       child: Opacity(
         opacity: opacity,
         child: Semantics(
           button: true,
           selected: active,
+          enabled: enabled ? null : false,
           label: label.title,
-          onTap: () => _activate(item.tab),
+          onTap: enabled ? () => _activate(item.tab) : null,
           child: MouseRegion(
-            onEnter: (_) => setState(() => _hovered = item.tab),
+            cursor: _dragging == item.tab ? SystemMouseCursors.grabbing : SystemMouseCursors.basic,
+            onEnter: (event) {
+              if (event.kind == PointerDeviceKind.mouse) setState(() => _hovered = item.tab);
+            },
             onExit: (_) {
               if (_hovered == item.tab) setState(() => _hovered = null);
             },
@@ -673,6 +776,7 @@ class _FrostTabStripState<T extends Object> extends State<FrostTabStrip<T>> with
                 if (event.buttons == kMiddleMouseButton) {
                   _middlePressed = item.tab;
                 } else if (event.buttons == kPrimaryMouseButton && !_closePressed) {
+                  setState(() => _pressed = item.tab);
                   _activate(item.tab);
                 }
                 _closePressed = false;
@@ -680,22 +784,38 @@ class _FrostTabStripState<T extends Object> extends State<FrostTabStrip<T>> with
               onPointerUp: (event) {
                 if (_middlePressed == item.tab) _close(item.tab, pointer: true);
                 _middlePressed = null;
+                if (_pressed == item.tab) setState(() => _pressed = null);
               },
-              onPointerCancel: (_) => _middlePressed = null,
+              onPointerCancel: (_) {
+                _middlePressed = null;
+                if (_pressed == item.tab) setState(() => _pressed = null);
+              },
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onHorizontalDragStart: (_) => setState(() => _dragging = item.tab),
-                onHorizontalDragUpdate: (details) => _dragUpdate(item, details.delta.dx),
-                onHorizontalDragEnd: (_) => _dragEnd(),
-                onHorizontalDragCancel: _dragEnd,
+                onHorizontalDragStart: base ? null : (_) => setState(() => _dragging = item.tab),
+                onHorizontalDragUpdate: base ? null : (details) => _dragUpdate(item, details.delta.dx),
+                onHorizontalDragEnd: base ? null : (_) => _dragEnd(),
+                onHorizontalDragCancel: base ? null : _dragEnd,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     pill,
+                    if (close != null)
+                      PositionedDirectional(
+                        end: compact ? (width - closeWidth) / 2 : FrostGap.inline + FrostGap.related,
+                        top: 0,
+                        bottom: 0,
+                        width: closeWidth,
+                        child: close,
+                      ),
                     if (separator)
                       Align(
                         alignment: AlignmentDirectional.centerStart,
-                        child: SizedBox(width: 1, height: 16, child: ColoredBox(color: tokens.separator)),
+                        child: SizedBox(
+                          width: _separatorThickness,
+                          height: _separatorLength,
+                          child: ColoredBox(color: tokens.separator),
+                        ),
                       ),
                   ],
                 ),
@@ -705,69 +825,11 @@ class _FrostTabStripState<T extends Object> extends State<FrostTabStrip<T>> with
         ),
       ),
     );
+    return base ? FrostTooltip(message: label.title, child: tile) : tile;
   }
 
   void _activate(T tab) {
     final index = widget.controller.tabs.indexOf(tab);
     if (index >= 0) widget.controller.activate(index);
-  }
-}
-
-/// A small round icon button in the tab row.
-class _StripButton extends StatefulWidget {
-  const _StripButton({required this.icon, required this.tooltip, required this.size, required this.iconSize, required this.onPressed});
-
-  final FrostIconData icon;
-  final String tooltip;
-  final double size;
-  final double iconSize;
-  final VoidCallback onPressed;
-
-  @override
-  State<_StripButton> createState() => _StripButtonState();
-}
-
-class _StripButtonState extends State<_StripButton> {
-  bool _hovered = false;
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = FrostThemeTokens.of(context);
-    return Tooltip(
-      message: widget.tooltip,
-      excludeFromSemantics: true,
-      child: Semantics(
-        button: true,
-        label: widget.tooltip,
-        onTap: widget.onPressed,
-        child: MouseRegion(
-          onEnter: (_) => setState(() => _hovered = true),
-          onExit: (_) => setState(() => _hovered = _pressed = false),
-          child: GestureDetector(
-            onTapDown: (_) => setState(() => _pressed = true),
-            onTapCancel: () => setState(() => _pressed = false),
-            onTapUp: (_) => setState(() => _pressed = false),
-            onTap: widget.onPressed,
-            child: AnimatedContainer(
-              duration: FrostMotion.hover,
-              curve: FrostMotion.hoverCurve,
-              width: widget.size,
-              height: widget.size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _pressed
-                    ? tokens.pressedSurface
-                    : _hovered
-                    ? tokens.hoverSurface
-                    : tokens.hoverSurface.withValues(alpha: 0),
-              ),
-              alignment: Alignment.center,
-              child: FrostIcon(widget.icon, size: widget.iconSize, color: tokens.textSecondary),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
