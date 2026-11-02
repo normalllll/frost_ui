@@ -1,0 +1,20 @@
+import 'package:frost_ui/frost_ui.dart';
+
+// label: 'Commented…'
+Widget build(String name) => Column(
+  children: [
+    FrostButton(label: 'Push…', onPressed: null),
+    FrostButton(label: 'Clone...', onPressed: null),
+    FrostText('Cloning repository…'),
+    FrostTooltip(message: 'Wait\u2026', child: x),
+    FrostDialog(title: 'Remove…'),
+    FrostSearchInput(placeholder: 'Search…'),
+    FrostButton(label: 'Push', onPressed: null),
+    FrostText('Pages 1…3'),
+    FrostText(name),
+    Other(hint: 'Loading…'),
+    FrostButton(label: name, onPressed: null),
+  ],
+);
+
+const loading = 'Loading…';

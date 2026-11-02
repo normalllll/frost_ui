@@ -53,12 +53,10 @@ Adwaita defaults and limited Breeze hover styling. Missing icons use Frost's
 vector fallback. Window dragging, resizing and actions remain native GTK/GDK
 operations; arbitrary compositor decoration themes are not reproduced.
 
-Run checks from the corresponding package directories:
+Run every package's analysis and tests from the repository root:
 
 ```sh
-cd packages/frost_window && flutter pub get && flutter test
-cd ../frost_ui && flutter pub get && flutter test
-cd ../frost_window/example && flutter pub get && flutter analyze
+dart tool/affected_tests.dart --all --run
 ```
 
 No SDK, engine or dependency patches are required.

@@ -1,0 +1,2 @@
+// frost-escape: App-specific chart drawing
+Icons.add;

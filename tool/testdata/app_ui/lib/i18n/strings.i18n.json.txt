@@ -1,0 +1,15 @@
+{
+  "about": {
+    "push": "Push",
+    "status": "Done"
+  },
+  "home": {
+    "actions": {
+      "push": "Push…",
+      "pull": "Pull"
+    },
+    "status": "Cloning...",
+    "steps": ["One", "Two…"],
+    "range": "1…3"
+  }
+}

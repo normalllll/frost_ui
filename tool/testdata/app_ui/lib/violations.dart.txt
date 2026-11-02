@@ -1,0 +1,15 @@
+import 'package:flutter/material.dart';
+ElevatedButton();
+Icons.add;
+Color(0xFF000000); Colors.red;
+BoxDecoration();
+Container(decoration: x);
+TextStyle(fontSize: 14, fontWeight: x);
+Theme.of(context);
+BorderRadius.circular(8);
+EdgeInsets.all(8); SizedBox(width: 12, height: 0);
+EdgeInsets.only(left: -FrostGap.related);
+Transform.translate(offset: position);
+foo(bleed: 8);
+Text('x'); Text.rich(span); RichText(text: span); SelectableText('x');
+Skeletonizer(child: x); Skeleton.leaf(child: x);

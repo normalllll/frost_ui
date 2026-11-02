@@ -1,0 +1,9 @@
+{
+  "@@locale": "en",
+  "push": "Push…",
+  "@push": {
+    "description": "Opens the push dialog…",
+    "placeholders": {}
+  },
+  "pull": "Pull"
+}
