@@ -66,7 +66,10 @@ class _AmbientFrame implements FrostAmbientFading {
 class FrostAmbientBackdropController extends ChangeNotifier {
   final _frames = <_AmbientFrame>[];
   _AmbientFrame? _pending;
-  final _material = ValueNotifier<FrostAmbientMaterials?>(null);
+
+  /// What the window shows surfaces: the art's background colour and how far
+  /// the art has faded in, which follows the glow frame by frame.
+  final _material = ValueNotifier<({Color background, double weight})?>(null);
   double _progress = 1;
   Size _window = Size.zero;
   double _pixelRatio = 1;
@@ -406,20 +409,28 @@ class FrostAmbientBackdropController extends ChangeNotifier {
     _dropGlowRequest();
   }
 
+  // The art's share of the picture is the glow's own weights, so surfaces
+  // change with the glow: none at the start of a fade in, all at its end, and
+  // the backgrounds of two pieces of art mixed by their weights in between.
   void _publishMaterial() {
-    final active = _frames.where((f) => f.material != null && f.intensity > 0).toList();
+    final active = [
+      for (var index = 0; index < _frames.length; index++)
+        if (_frames[index] case _AmbientFrame(:final material?, :final intensity) when intensity > 0) (material.background, _weight(index)),
+    ];
     if (active.isEmpty) {
       _material.value = null;
       return;
     }
-    final dark = _frames.last.tokens.isDark;
-    var background = active.first.material!.background;
-    for (final frame in active.skip(1)) {
-      final other = frame.material!.background;
-      double bound(double a, double b) => dark ? (a > b ? a : b) : (a < b ? a : b);
-      background = Color.from(alpha: 1, red: bound(background.r, other.r), green: bound(background.g, other.g), blue: bound(background.b, other.b));
+    final total = active.fold(0.0, (sum, entry) => sum + entry.$2);
+    var red = 0.0, green = 0.0, blue = 0.0;
+    for (final (color, weight) in active) {
+      final share = total == 0 ? 1 / active.length : weight / total;
+      red += color.r * share;
+      green += color.g * share;
+      blue += color.b * share;
     }
-    _material.value = FrostAmbientMaterials(background: background);
+    final next = (background: Color.from(alpha: 1, red: red, green: green, blue: blue), weight: total.clamp(0.0, 1.0));
+    if (next != _material.value) _material.value = next;
   }
 
   void _setProgress(double value) {
@@ -433,9 +444,9 @@ class FrostAmbientBackdropController extends ChangeNotifier {
       _frames
         ..clear()
         ..add(last);
-      _publishMaterial();
       _cardsChanged();
     }
+    _publishMaterial();
     notifyListeners();
   }
 
@@ -711,6 +722,7 @@ class _FrostAmbientBackdropHostState extends State<FrostAmbientBackdropHost> wit
       child: widget.child,
       builder: (context, child) => FrostWindowBackgroundScope(
         hasAmbient: _controller._material.value != null,
+        ambientWeight: _controller._material.value?.weight ?? 0,
         forceSolidBase: widget.intensity == 0,
         background: _controller._material.value?.background,
         child: _AmbientScope(

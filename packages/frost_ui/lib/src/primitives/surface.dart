@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../foundation/_ambient_material.dart';
 import '../foundation/_glass_material.dart';
 import '../foundation/_media_contrast.dart';
+import '../foundation/_premultiplied_lerp.dart';
 import '../foundation/density.dart';
 import '../foundation/metrics.dart';
 import '../foundation/scope.dart';
@@ -162,11 +163,14 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
     final highContrast = MediaQuery.highContrastOf(context);
     final solid = FrostScope.solidSurfaces(context);
     final translucentWindow = frostHasTranslucentWindowBase(context);
-    final actualWindow = FrostWindowBackgroundScope.maybeOf(context)?.background;
+    final actualWindow = frostWindowBackgroundOf(context, tokens);
     final behind = FrostSurfaceScope.maybeOf(context)?.background ?? actualWindow ?? tokens.canvas;
     final radius = frostSurfaceRadius(widget);
     final continuous = FrostScope.configOf(context).continuousCorners && join == FrostSurfaceJoin.none;
-    if (role == FrostSurfaceRole.base && translucentWindow) {
+    // While ambient art fades in or out, window-level fills move between the
+    // opaque base and the translucent one with the glow.
+    final windowWeight = frostWindowBaseWeight(context);
+    if (role == FrostSurfaceRole.base && translucentWindow && windowWeight >= 1) {
       return FrostSurfaceScope(
         isGlass: false,
         background: behind,
@@ -174,10 +178,11 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
       );
     }
     if (role == FrostSurfaceRole.base) {
-      final background = tokens.isDark ? tokens.canvas : Color.alphaBlend(tokens.fillSubtle, tokens.canvas);
+      final opaque = tokens.isDark ? tokens.canvas : Color.alphaBlend(tokens.fillSubtle, tokens.canvas);
+      final tint = tokens.fillSubtle.a * materialProgress * (1 - windowWeight);
       return FrostSurfaceScope(
         isGlass: false,
-        background: background,
+        background: Color.lerp(opaque, behind, windowWeight)!,
         child: FrostSurfaceGeometry(
           radius: radius,
           continuous: continuous,
@@ -191,7 +196,7 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
               ),
               if (!tokens.isDark)
                 Positioned.fill(
-                  child: ColoredBox(color: tokens.fillSubtle.withValues(alpha: tokens.fillSubtle.a * materialProgress)),
+                  child: ColoredBox(color: tokens.fillSubtle.withValues(alpha: tint)),
                 ),
               revealContent(child),
             ],
@@ -211,17 +216,16 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
     final windowFill = referenceFill == null || actualWindow == null
         ? referenceFill
         : frostReadableWindowFill(tokens, referenceFill, behind, tokens.textSecondary);
-    final surfaceColor =
-        windowFill ??
-        switch (role) {
-          FrostSurfaceRole.glassPanel || FrostSurfaceRole.overlay => tokens.surfaceRaised,
-          FrostSurfaceRole.module => _moduleFill(tokens, behind),
-          // Sidebar touch pages share the canvas used by bottom navigation,
-          // keeping light groups visibly above their page as well.
-          FrostSurfaceRole.panel when channel > 0 && !FrostDensity.of(context).usesPointer => tokens.canvas,
-          FrostSurfaceRole.onMediaChrome => frostOnMediaChromeBase(tokens),
-          _ => tokens.surface,
-        };
+    final opaqueFill = switch (role) {
+      FrostSurfaceRole.glassPanel || FrostSurfaceRole.overlay => tokens.surfaceRaised,
+      FrostSurfaceRole.module => _moduleFill(tokens, behind),
+      // Sidebar touch pages share the canvas used by bottom navigation,
+      // keeping light groups visibly above their page as well.
+      FrostSurfaceRole.panel when channel > 0 && !FrostDensity.of(context).usesPointer => tokens.canvas,
+      FrostSurfaceRole.onMediaChrome => frostOnMediaChromeBase(tokens),
+      _ => tokens.surface,
+    };
+    final surfaceColor = windowFill == null ? opaqueFill : frostLerpColorPremultiplied(opaqueFill, windowFill, windowWeight)!;
     // A nested panel must not reset a lifted module to a darker base. Compare
     // the composed fill so the same rule covers an actual translucent window.
     final color = role == FrostSurfaceRole.panel && Color.alphaBlend(surfaceColor, behind).computeLuminance() < behind.computeLuminance()
@@ -229,7 +233,7 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
         : surfaceColor;
     final glass = mediaChrome || role == FrostSurfaceRole.chrome || role == FrostSurfaceRole.glassPanel || role == FrostSurfaceRole.overlay;
     final baseAlpha =
-        windowFill?.a ??
+        (windowFill == null ? null : surfaceColor.a) ??
         (mediaChrome
             ? frostOnMediaChromeOpacity(tokens)
             : glass
@@ -422,7 +426,7 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
     final content = windowFill == null
         ? buildContent(fill)
         : TweenAnimationBuilder<Color?>(
-            tween: ColorTween(end: fill),
+            tween: FrostPremultipliedColorTween(end: fill),
             duration: FrostMotion.duration(context, FrostMotion.hover),
             curve: FrostMotion.hoverCurve,
             builder: (context, color, _) => buildContent(color!),

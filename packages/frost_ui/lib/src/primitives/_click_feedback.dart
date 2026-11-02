@@ -50,9 +50,10 @@ class FrostClickFeedbackVisual extends StatelessWidget {
       FrostClickFeedback.quiet => frostButtonStateLayer(tokens, activeStates, FrostFeedbackRole.quiet),
       FrostClickFeedback.media => Colors.transparent,
     };
-    final actualWindow = FrostWindowBackgroundScope.maybeOf(context)?.background;
+    final actualWindow = frostWindowBackgroundOf(context, tokens);
     if (actualWindow != null && color.a > 0) {
-      color = frostReadableWindowFill(tokens, color, FrostSurfaceScope.maybeOf(context)?.background ?? actualWindow, tokens.textSecondary);
+      final readable = frostReadableWindowFill(tokens, color, FrostSurfaceScope.maybeOf(context)?.background ?? actualWindow, tokens.textSecondary);
+      color = frostLerpColorPremultiplied(color, readable, FrostWindowBackgroundScope.maybeOf(context)!.ambientWeight)!;
     }
     final rectangular = fillsBounds || (clipsContent && frostNeedsClippedFill(border, Directionality.of(context)));
     Widget content = FrostInteractionDecoration(

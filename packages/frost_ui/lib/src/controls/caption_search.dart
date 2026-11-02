@@ -1,0 +1,174 @@
+import 'dart:math' as math;
+
+import 'package:flutter/rendering.dart' show OverflowBoxFit;
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:frost_window/frost_window.dart' show FrostCaptionMode;
+
+import '../foundation/_control_geometry.dart';
+import '../foundation/icon_data.dart';
+import '../foundation/sizes.dart';
+import '../layout/_caption_search_scope.dart';
+import '../layout/window_caption_scope.dart';
+import '../primitives/_measured_layout_builder.dart';
+import 'buttons.dart';
+import 'field_appearance.dart';
+import 'search_input.dart';
+import 'search_suggestion.dart';
+
+/// Editable caption search. The shell reserves 360 logical pixels at rest and
+/// expands toward the leading edge to 520, over the tabs when needed. On a
+/// narrow caption it rests as an icon and expands across available caption room.
+/// The App owns the query, history, results and tab navigation.
+class FrostCaptionSearch extends StatefulWidget {
+  const FrostCaptionSearch({
+    required this.controller,
+    required this.focusNode,
+    required this.placeholder,
+    required this.onSubmitted,
+    this.onSubmittedInNewTab,
+    this.suggestions = const [],
+    this.loading = false,
+    this.message,
+    super.key,
+  });
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final String placeholder;
+  final ValueChanged<String> onSubmitted;
+  final ValueChanged<String>? onSubmittedInNewTab;
+  final List<FrostSearchSuggestionGroup> suggestions;
+
+  /// As [FrostSearchInput.loading]: progress in the dropdown while the App
+  /// fetches suggestions for the current query, retaining shown items.
+  final bool loading;
+
+  /// As [FrostSearchInput.message]: one line in the dropdown for no
+  /// suggestions or a failed load, shown even when suggestions are empty.
+  final String? message;
+  @override
+  State<FrostCaptionSearch> createState() => _FrostCaptionSearchState();
+}
+
+class _FrostCaptionSearchState extends State<FrostCaptionSearch> {
+  FrostCaptionSearchScope? _layout;
+  @override
+  void initState() {
+    super.initState();
+    widget.focusNode.addListener(_focusChanged);
+  }
+
+  @override
+  void didUpdateWidget(FrostCaptionSearch oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode != widget.focusNode) {
+      oldWidget.focusNode.removeListener(_focusChanged);
+      widget.focusNode.addListener(_focusChanged);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _layout = FrostCaptionSearchScope.maybeOf(context);
+  }
+
+  void _focusChanged() => _layout?.onExpanded(widget.focusNode.hasFocus);
+  void _open() {
+    _layout?.onExpanded(true);
+    // The icon and editor share one stable component. Wait until the expanded
+    // editor is attached before requesting its focus; no native focus is stolen.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.focusNode.requestFocus();
+    });
+  }
+
+  void _collapse() {
+    // Restore the previous page/traversal scope so caption shortcuts remain
+    // reachable after Escape, instead of clearing the route's entire history.
+    widget.focusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    _layout?.onExpanded(false);
+  }
+
+  void _submit(String query) {
+    final keyboard = HardwareKeyboard.instance;
+    final newTab = keyboard.isControlPressed || keyboard.isMetaPressed;
+    (newTab ? widget.onSubmittedInNewTab ?? widget.onSubmitted : widget.onSubmitted)(query);
+  }
+
+  @override
+  void dispose() {
+    widget.focusNode.removeListener(_focusChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FrostMeasuredLayoutBuilder(
+    naturalSize: Size(frostCaptionSearchWidth, frostControlGeometry(context, FrostControlSize.small).height),
+    builder: (context, constraints) {
+      final iconOnly = !(_layout?.expanded ?? false) && constraints.maxWidth < 120;
+      final field = FrostSearchInput.suggesting(
+        // The title bar always anchors its panel under the field.
+        placement: FrostSuggestionPlacement.overlay,
+        controller: widget.controller,
+        focusNode: widget.focusNode,
+        placeholder: widget.placeholder,
+        onSubmitted: _submit,
+        onDismiss: _collapse,
+        appearance: FrostFieldAppearance.subtle,
+        size: FrostControlSize.small,
+        leadingIcon: true,
+        // A resting icon has no dropdown; its status returns with the field.
+        suggestions: constraints.maxWidth >= 120 ? widget.suggestions : const [],
+        loading: constraints.maxWidth >= 120 && widget.loading,
+        message: constraints.maxWidth >= 120 ? widget.message : null,
+      );
+      // The caption slot is bounded and the field fills it. Outside the caption
+      // (the shell moves title content into the page header at large text
+      // sizes) a column leaves the height unbounded: the field then keeps its
+      // own single control row, and an unbounded width takes the resting width.
+      final bounded = constraints.hasBoundedHeight;
+      final width = constraints.hasBoundedWidth ? math.max(160.0, constraints.maxWidth) : frostCaptionSearchWidth;
+      // The field keeps its own target height and is centred in the row, so
+      // its frame shares the centre line of Back, the brand and the caption
+      // buttons. AppKit places the traffic lights itself; the caption row sits
+      // at the top of the view, so their reported centre is a row offset too.
+      // The frame keeps at least two pixels of the row above and below it.
+      var shift = 0.0;
+      final caption = FrostWindowCaptionScope.stateOf(context);
+      if (_layout != null && bounded && caption != null && caption.mode == FrostCaptionMode.nativeControls && !caption.fullscreen) {
+        final lights = caption.nativeControls;
+        if (!lights.isEmpty) {
+          final half = frostControlGeometry(context, FrostControlSize.small).height / 2 + 2;
+          final row = constraints.maxHeight;
+          shift = lights.center.dy.clamp(half, math.max(half, row - half)) - row / 2;
+        }
+      }
+      return Stack(
+        fit: bounded ? StackFit.expand : StackFit.loose,
+        children: [
+          FocusTraversalGroup(
+            descendantsAreTraversable: !iconOnly,
+            child: Offstage(
+              offstage: iconOnly,
+              child: ClipRect(
+                child: OverflowBox(
+                  fit: bounded ? OverflowBoxFit.max : OverflowBoxFit.deferToChild,
+                  alignment: AlignmentDirectional.centerEnd,
+                  minWidth: width,
+                  maxWidth: width,
+                  minHeight: 0,
+                  child: Transform.translate(
+                    offset: Offset(0, shift),
+                    child: FrostCaptionFieldScope(child: field),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (iconOnly) FrostButton.icon(icon: FrostIconSet.of(context).search, label: widget.placeholder, size: FrostControlSize.compact, onPressed: _open),
+        ],
+      );
+    },
+  );
+}

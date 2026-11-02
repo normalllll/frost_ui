@@ -1,45 +1,114 @@
-import 'package:flutter/material.dart';
-import 'package:frost_ui/src/foundation/metrics.dart';
+import 'dart:math' as math;
 
-/// Native tabs with a spring for click-driven indicator motion. The supplied
-/// controller remains the sole owner of content selection and page dragging.
-class FrostTabBar extends StatefulWidget implements PreferredSizeWidget {
-  const FrostTabBar({
-    required this.tabs,
-    this.controller,
-    this.isScrollable = false,
-    this.tabAlignment,
-    this.dividerColor,
-    this.labelPadding,
-    this.onTap,
-    super.key,
-  });
+import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/material.dart' show DefaultTabController, TabController;
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 
-  final List<Widget> tabs;
+import '../feedback/_skeleton_geometry.dart';
+import '../foundation/_control_geometry.dart';
+import '../foundation/_tab_metrics.dart';
+import '../foundation/density.dart';
+import '../foundation/metrics.dart';
+import '../foundation/radius.dart';
+import '../foundation/sizes.dart';
+import '../foundation/tokens.dart';
+import '../foundation/typography.dart';
+import '../primitives/_click_feedback.dart';
+import '../primitives/_click_surface_visuals.dart';
+import '../primitives/_measured_layout_builder.dart';
+import '../primitives/click_surface.dart';
+import '../primitives/icon.dart';
+import '../primitives/keyline.dart';
+
+class FrostTab {
+  const FrostTab({required this.label, this.icon, this.secondaryLabel});
+  final String label;
+  final FrostIconData? icon;
+  final String? secondaryLabel;
+}
+
+/// Frost-painted tabs. The content controller still owns selection and dragging.
+class FrostTabBar extends StatefulWidget {
+  const FrostTabBar({required this.tabs, this.controller, this.scrollable = false, this.onTap, this.size, this.showDivider = false, super.key});
+  final List<FrostTab> tabs;
   final TabController? controller;
-  final bool isScrollable;
-  final TabAlignment? tabAlignment;
-  final Color? dividerColor;
-  final EdgeInsetsGeometry? labelPadding;
+
+  /// False shares the bar's own width equally between the tabs. When a tab does
+  /// not fit its share, the tabs keep their natural widths and scroll sideways.
+  /// True always keeps natural widths.
+  final bool scrollable;
   final ValueChanged<int>? onTap;
 
-  @override
-  Size get preferredSize => TabBar(tabs: tabs).preferredSize;
-
+  /// Null preserves the 44px navigation band; explicit sizes use the control size scale.
+  final FrostControlSize? size;
+  final bool showDivider;
   @override
   State<FrostTabBar> createState() => _AppTabBarState();
 }
 
 class _AppTabBarState extends State<FrostTabBar> with TickerProviderStateMixin {
   _IndicatorTabController? _visual;
+  final _scroll = ScrollController();
+  final _nodes = <FocusNode>[];
+  int _lastIndex = 0;
 
   void _bindController() {
     final source = widget.controller ?? DefaultTabController.of(context);
+    assert(source.length == widget.tabs.length, 'TabController length must match FrostTabBar.tabs.');
     if (_visual?.source != source) {
+      _visual?.source.removeListener(_selectionChanged);
       _visual?.dispose();
       _visual = _IndicatorTabController(source: source, vsync: this, context: () => context);
+      _lastIndex = source.index;
+      source.addListener(_selectionChanged);
+    }
+    while (_nodes.length < widget.tabs.length) {
+      _nodes.add(FocusNode());
+    }
+    while (_nodes.length > widget.tabs.length) {
+      _nodes.removeLast().dispose();
     }
     _visual!.reduceMotion = MediaQuery.disableAnimationsOf(context);
+  }
+
+  void _selectionChanged() {
+    final index = _visual!.source.index;
+    if (index == _lastIndex) return;
+    _lastIndex = index;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || index >= _nodes.length || index != _visual!.source.index) return;
+      final target = _nodes[index].context?.findRenderObject();
+      // Only the bar's own scroll moves; Scrollable.ensureVisible would also
+      // scroll every ancestor, such as a page whose collapsed header holds the bar.
+      if (target != null && target.attached && _scroll.hasClients) {
+        _scroll.position.ensureVisible(target, alignment: .5, duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : FrostMotion.hover);
+      }
+    });
+  }
+
+  void _activate(int index) {
+    _nodes[index].requestFocus();
+    _visual!.animateTo(index);
+    widget.onTap?.call(index);
+  }
+
+  KeyEventResult _key(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent || widget.tabs.isEmpty) return KeyEventResult.ignored;
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final current = _nodes.indexWhere((n) => n.hasFocus);
+    final from = current < 0 ? _visual!.source.index : current;
+    final target = switch (event.logicalKey) {
+      LogicalKeyboardKey.arrowRight => (from + (rtl ? -1 : 1)) % widget.tabs.length,
+      LogicalKeyboardKey.arrowLeft => (from + (rtl ? 1 : -1)) % widget.tabs.length,
+      LogicalKeyboardKey.home => 0,
+      LogicalKeyboardKey.end => widget.tabs.length - 1,
+      _ => null,
+    };
+    if (target == null) return KeyEventResult.ignored;
+    _nodes[target].requestFocus();
+    _activate(target);
+    return KeyEventResult.handled;
   }
 
   @override
@@ -56,23 +125,258 @@ class _AppTabBarState extends State<FrostTabBar> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _visual?.source.removeListener(_selectionChanged);
     _visual?.dispose();
+    _scroll.dispose();
+    for (final node in _nodes) {
+      node.dispose();
+    }
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => TabBar(
-    controller: _visual,
-    tabs: widget.tabs,
-    isScrollable: widget.isScrollable,
-    tabAlignment: widget.tabAlignment,
-    dividerColor: widget.dividerColor,
-    labelPadding: widget.labelPadding,
-    onTap: widget.onTap,
-    // Let Flutter derive each label's actual bounds, including RTL and
-    // horizontal scrolling. Only the progress fed to that geometry changes.
-    indicatorAnimation: TabIndicatorAnimation.linear,
+  Widget build(BuildContext context) {
+    final tokens = FrostThemeTokens.of(context), style = FrostTypography.of(context).style(FrostTextRole.callout);
+    final geometry = frostControlTextGeometry(baseHeight: widget.size?.height(context) ?? 44, style: style, textScaler: MediaQuery.textScalerOf(context));
+    // Small visuals retain the density target height through transparent layout space.
+    final hitHeight = math.max(geometry.height, FrostDensity.of(context).targetHeight);
+    final visualInset = (hitHeight - geometry.height) / 2;
+    final natural = [for (final tab in widget.tabs) _labelWidth(context, tab) + frostTabInset * 2];
+    return FrostBleed(
+      amount: frostTabInset,
+      child: Focus(
+        skipTraversal: true,
+        canRequestFocus: false,
+        onKeyEvent: _key,
+        child: FrostMeasuredLayoutBuilder(
+          naturalSize: Size(natural.fold(0.0, (a, b) => a + b), hitHeight),
+          builder: (context, constraints) {
+            final total = natural.fold(0.0, (a, b) => a + b);
+            final available = constraints.hasBoundedWidth ? constraints.maxWidth : total;
+            final scroll = widget.scrollable || total > available || natural.any((width) => width > available / natural.length);
+            final widths = [for (var i = 0; i < natural.length; i++) scroll ? natural[i] : available / natural.length];
+            final contentWidth = widths.fold(0.0, (a, b) => a + b);
+            final centers = <double>[];
+            var offset = 0.0;
+            final rtl = Directionality.of(context) == TextDirection.rtl;
+            for (var i = 0; i < widths.length; i++) {
+              final iconShift = widget.tabs[i].icon == null ? 0.0 : ((widget.size ?? FrostControlSize.regular).iconSize + frostTabIconGap) / 2;
+              final center = offset + widths[i] / 2 + iconShift;
+              centers.add(rtl ? contentWidth - center : center);
+              offset += widths[i];
+            }
+            return SizedBox(
+              height: hitHeight,
+              child: Stack(
+                children: [
+                  if (widget.showDivider)
+                    PositionedDirectional(
+                      start: 0,
+                      end: 0,
+                      bottom: visualInset,
+                      child: ColoredBox(
+                        color: tokens.separator,
+                        child: SizedBox(height: 1 / MediaQuery.devicePixelRatioOf(context)),
+                      ),
+                    ),
+                  SingleChildScrollView(
+                    controller: _scroll,
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: contentWidth,
+                      height: hitHeight,
+                      child: CustomPaint(
+                        foregroundPainter: _IndicatorPainter(tokens.keyGraphicOn(tokens.surface), _visual!.animation, centers, visualInset),
+                        child: Row(
+                          children: [
+                            for (var i = 0; i < widget.tabs.length; i++)
+                              SizedBox(
+                                width: widths[i],
+                                height: hitHeight,
+                                child: _TabLabel(
+                                  tab: widget.tabs[i],
+                                  index: i,
+                                  controller: _visual!.source,
+                                  height: geometry.height,
+                                  size: widget.size ?? FrostControlSize.regular,
+                                  focusNode: _nodes[i],
+                                  onTap: () => _activate(i),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  double _labelWidth(BuildContext context, FrostTab tab) {
+    final type = FrostTypography.of(context);
+    double measure(String text, FrostTextRole role) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: type.style(role).copyWith(fontWeight: role == FrostTextRole.callout ? FontWeight.w600 : null),
+        ),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+      )..layout();
+      final result = painter.width;
+      painter.dispose();
+      return result;
+    }
+
+    final width = measure(tab.label, FrostTextRole.callout) + (tab.secondaryLabel == null ? 0 : 4 + measure(tab.secondaryLabel!, FrostTextRole.footnote));
+    return width + (tab.icon == null ? 0 : (widget.size ?? FrostControlSize.regular).iconSize + frostTabIconGap);
+  }
+}
+
+class _TabLabel extends StatefulWidget {
+  const _TabLabel({
+    required this.tab,
+    required this.index,
+    required this.controller,
+    required this.height,
+    required this.size,
+    required this.focusNode,
+    required this.onTap,
+  });
+  final FrostTab tab;
+  final int index;
+  final TabController controller;
+  final double height;
+  final FrostControlSize size;
+  final FocusNode focusNode;
+  final VoidCallback onTap;
+  @override
+  State<_TabLabel> createState() => _TabLabelState();
+}
+
+class _TabLabelState extends State<_TabLabel> {
+  bool _hovered = false, _pressed = false, _focused = false;
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: widget.controller,
+    builder: (context, _) {
+      final t = FrostThemeTokens.of(context), type = FrostTypography.of(context);
+      final selected = widget.controller.index == widget.index;
+      final labelMeasure = TextPainter(
+        text: TextSpan(
+          text: widget.tab.label,
+          style: type.style(FrostTextRole.callout).copyWith(fontWeight: FontWeight.w600),
+        ),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+      )..layout();
+      final labelWidth = labelMeasure.width;
+      labelMeasure.dispose();
+      return MergeSemantics(
+        child: Semantics(
+          selected: selected,
+          button: true,
+          child: FrostClickSurfaceVisuals(
+            child: FrostClickSurface(
+              focusNode: widget.focusNode,
+              onTap: widget.onTap,
+              onHover: (v) => setState(() => _hovered = v),
+              onPressedChange: (v) => setState(() => _pressed = v),
+              onFocusChange: (v) => setState(() => _focused = v),
+              child: Center(
+                child: SizedBox(
+                  height: widget.height,
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: FrostClickFeedbackVisual(
+                      states: {if (_hovered) WidgetState.hovered, if (_pressed) WidgetState.pressed, if (_focused) WidgetState.focused},
+                      feedback: FrostClickFeedback.quiet,
+                      shape: FrostRadius.shape(context, FrostRadius.sm),
+                      clipsContent: false,
+                      child: SizedBox(
+                        height: widget.height - 8,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: frostTabInset - 4),
+                          child: Center(
+                            child: TweenAnimationBuilder<Color?>(
+                              tween: ColorTween(end: selected ? t.textPrimary : t.textSecondary),
+                              duration: FrostMotion.duration(context, FrostMotion.hover),
+                              curve: FrostMotion.hoverCurve,
+                              builder: (context, color, _) => Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (widget.tab.icon case final icon?) ...[
+                                    FrostIcon(icon, size: widget.size.iconSize, color: color),
+                                    const SizedBox(width: frostTabIconGap),
+                                  ],
+                                  FrostSkeletonText(
+                                    child: SizedBox(
+                                      width: labelWidth,
+                                      child: Text(
+                                        widget.tab.label,
+                                        style: type
+                                            .style(FrostTextRole.callout)
+                                            .copyWith(color: color, fontWeight: selected ? FontWeight.w600 : FontWeight.w500),
+                                      ),
+                                    ),
+                                  ),
+                                  if (widget.tab.secondaryLabel case final secondary?) ...[
+                                    const SizedBox(width: 4),
+                                    FrostSkeletonText(
+                                      child: Text(secondary, style: type.style(FrostTextRole.footnote).copyWith(color: t.textSecondary)),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
   );
+}
+
+class _IndicatorPainter extends CustomPainter {
+  _IndicatorPainter(this.color, this.progress, this.centers, this.visualInset) : super(repaint: progress);
+  final Color color;
+  final Animation<double> progress;
+  final List<double> centers;
+  final double visualInset;
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (centers.isEmpty) return;
+    final value = progress.value.clamp(0.0, centers.length - 1.0);
+    final center = centers[value.floor()] + (centers[value.ceil()] - centers[value.floor()]) * (value - value.floor());
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          center - frostTabIndicatorWidth / 2,
+          size.height - visualInset - 6 - frostTabIndicatorHeight,
+          frostTabIndicatorWidth,
+          frostTabIndicatorHeight,
+        ),
+        const Radius.circular(1.5),
+      ),
+      Paint()..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_IndicatorPainter old) =>
+      color != old.color || progress != old.progress || visualInset != old.visualInset || !listEquals(centers, old.centers);
 }
 
 class _IndicatorTabController extends TabController {

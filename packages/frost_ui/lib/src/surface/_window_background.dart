@@ -11,14 +11,28 @@ import '../layout/window_caption_scope.dart';
 
 /// Internal window-base availability, updated when an ambient image resolves.
 class FrostWindowBackgroundScope extends InheritedWidget {
-  const FrostWindowBackgroundScope({required this.hasAmbient, required super.child, this.forceSolidBase = false, this.background, super.key});
+  const FrostWindowBackgroundScope({
+    required this.hasAmbient,
+    required super.child,
+    this.forceSolidBase = false,
+    this.background,
+    this.ambientWeight = 1,
+    super.key,
+  });
   final bool hasAmbient;
+
+  /// How far the ambient art has faded in while [hasAmbient]: 0 at the start
+  /// of a fade in and the end of a fade out, 1 at rest.
+  final double ambientWeight;
   final bool forceSolidBase;
   final Color? background;
   static FrostWindowBackgroundScope? maybeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<FrostWindowBackgroundScope>();
   @override
   bool updateShouldNotify(FrostWindowBackgroundScope oldWidget) =>
-      hasAmbient != oldWidget.hasAmbient || forceSolidBase != oldWidget.forceSolidBase || background != oldWidget.background;
+      hasAmbient != oldWidget.hasAmbient ||
+      ambientWeight != oldWidget.ambientWeight ||
+      forceSolidBase != oldWidget.forceSolidBase ||
+      background != oldWidget.background;
 }
 
 bool frostHasTranslucentWindowBase(BuildContext context) =>
@@ -354,4 +368,23 @@ class FrostRenderChromeMediaGuard extends RenderProxyBox {
     }
     super.paint(context, offset);
   }
+}
+
+/// How far the translucent window base stands in for the opaque one: 0
+/// without it, 1 at rest, and the ambient art's fade progress while it comes
+/// or goes. A system backdrop is always at rest.
+double frostWindowBaseWeight(BuildContext context) {
+  if (!frostHasTranslucentWindowBase(context)) return 0;
+  if (FrostWindowCaptionScope.systemBackdropActiveOf(context)) return 1;
+  // Translucent without a system backdrop means the ambient scope said so.
+  return FrostWindowBackgroundScope.maybeOf(context)!.ambientWeight;
+}
+
+/// The colour behind a window-level surface: the ambient background mixed
+/// with the canvas by how far the art has faded in, or null without one.
+Color? frostWindowBackgroundOf(BuildContext context, FrostThemeTokens tokens) {
+  final scope = FrostWindowBackgroundScope.maybeOf(context);
+  final background = scope?.background;
+  if (scope == null || background == null) return null;
+  return Color.lerp(tokens.canvas, background, scope.ambientWeight);
 }
