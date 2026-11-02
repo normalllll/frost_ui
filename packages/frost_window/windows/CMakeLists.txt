@@ -13,6 +13,8 @@ add_library(${PLUGIN_NAME} SHARED
   "frost_window_plugin_c_api.cpp"
   "frost_window_plugin.cpp"
   "frost_window_plugin.h"
+  "window_geometry.cpp"
+  "window_geometry.h"
 )
 
 apply_standard_settings(${PLUGIN_NAME})
@@ -23,7 +25,7 @@ target_compile_definitions(${PLUGIN_NAME} PRIVATE FLUTTER_PLUGIN_IMPL)
 
 target_include_directories(${PLUGIN_NAME} INTERFACE
   "${CMAKE_CURRENT_SOURCE_DIR}/include")
-target_link_libraries(${PLUGIN_NAME} PRIVATE flutter flutter_wrapper_plugin comctl32 dwmapi)
+target_link_libraries(${PLUGIN_NAME} PRIVATE flutter flutter_wrapper_plugin comctl32 dwmapi advapi32 shcore)
 
 set(frost_window_bundled_libraries
   ""

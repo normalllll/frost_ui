@@ -1,7 +1,5 @@
-/// Flutter-drawn desktop title bar and native window behaviour.
+/// Native desktop window capabilities, state and platform operations.
 library;
 
-export 'src/back.dart';
-export 'src/caption_glyph.dart';
 export 'src/controller.dart';
-export 'src/frame.dart';
+export 'src/placement.dart';

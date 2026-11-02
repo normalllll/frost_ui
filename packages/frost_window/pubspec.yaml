@@ -1,7 +1,7 @@
 name: frost_window
-description: Flutter-drawn desktop title bar and native window behaviour for normalllll's apps.
+description: Native desktop window behaviour for normalllll's apps.
 publish_to: none
-version: 0.1.0
+version: 0.3.0
 
 environment:
   sdk: ^3.12.1
@@ -10,8 +10,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  frost_ui:
-    path: ../frost_ui
 
 dev_dependencies:
   flutter_test:
@@ -21,5 +19,9 @@ dev_dependencies:
 flutter:
   plugin:
     platforms:
+      linux:
+        pluginClass: FrostWindowPlugin
+      macos:
+        pluginClass: FrostWindowPlugin
       windows:
         pluginClass: FrostWindowPluginCApi

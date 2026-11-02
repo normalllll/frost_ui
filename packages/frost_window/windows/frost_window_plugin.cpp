@@ -1,4 +1,5 @@
 #include "frost_window_plugin.h"
+#include "window_geometry.h"
 
 #include <dwmapi.h>
 #include <flutter/standard_method_codec.h>
@@ -18,6 +19,30 @@ namespace frost_window {
 namespace {
 constexpr UINT_PTR kWindowSubclass = 0x46524f53;   // 'FROS'
 constexpr UINT_PTR kContentSubclass = 0x46524f54;  // 'FROT'
+
+// RtlGetVersion avoids compatibility-manifest version virtualization.
+bool SupportsSystemBackdrop() {
+  using GetVersion = LONG(WINAPI*)(OSVERSIONINFOW*);
+  const auto get_version = reinterpret_cast<GetVersion>(
+      GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion"));
+  OSVERSIONINFOW version{};
+  version.dwOSVersionInfoSize = sizeof(version);
+  return get_version != nullptr && get_version(&version) == 0 &&
+         version.dwMajorVersion >= 10 && version.dwBuildNumber >= 22621;
+}
+
+bool SystemTransparencyEnabled() {
+  HIGHCONTRASTW contrast{sizeof(HIGHCONTRASTW), 0, nullptr};
+  if (SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof(contrast), &contrast, 0) &&
+      (contrast.dwFlags & HCF_HIGHCONTRASTON) != 0) return false;
+  DWORD enabled = 1;
+  DWORD bytes = sizeof(enabled);
+  // Missing preference means the Windows default (enabled).
+  RegGetValueW(HKEY_CURRENT_USER,
+      L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+      L"EnableTransparency", RRF_RT_REG_DWORD, nullptr, &enabled, &bytes);
+  return enabled != 0;
+}
 
 double Number(const flutter::EncodableValue& value) {
   if (const auto* number = std::get_if<double>(&value)) return *number;
@@ -212,18 +237,33 @@ FrostWindowPlugin::FrostWindowPlugin(flutter::PluginRegistrarWindows* registrar)
 }
 
 FrostWindowPlugin::~FrostWindowPlugin() {
+  DetachWindow();
+  // Registrar destruction can follow engine destruction. The messenger owns
+  // its handlers and clears them with the engine; calling SetMethodCallHandler
+  // here dereferences that dead engine. Releasing MethodChannel itself is local.
+}
+
+void FrostWindowPlugin::DetachWindow() {
+  if (shutting_down_) return;
+  shutting_down_ = true;
+  ready_ = false;
   if (instance_ == this) instance_ = nullptr;
-  channel_->SetMethodCallHandler(nullptr);
-  if (message_hook_ != nullptr) UnhookWindowsHookEx(message_hook_);
+  if (message_hook_ != nullptr) {
+    UnhookWindowsHookEx(message_hook_);
+    message_hook_ = nullptr;
+  }
   if (content_ != nullptr && IsWindow(content_)) {
     RemoveWindowSubclass(content_, ContentProc, kContentSubclass);
   }
   if (window_ != nullptr && IsWindow(window_)) {
     RemoveWindowSubclass(window_, WindowProc, kWindowSubclass);
   }
+  content_ = nullptr;
+  window_ = nullptr;
 }
 
 bool FrostWindowPlugin::Attach() {
+  if (shutting_down_) return false;
   if (ready_) return true;
   if (content_ == nullptr || !IsWindow(content_)) return false;
   const HWND root = GetAncestor(content_, GA_ROOT);
@@ -298,14 +338,71 @@ void FrostWindowPlugin::HandleMethodCall(
     result->Success(State());
     return;
   }
+  if (method == "getEnvironment") {
+    result->Success(WindowEnvironment());
+    return;
+  }
+  if (method == "applyPlacement") {
+    if (fullscreen_ || fullscreen_transitioning_) {
+      result->Error("placement_unavailable", "Leave fullscreen before restoring placement.");
+    } else if (map == nullptr || !ApplyWindowPlacement(window_, *map, &show_maximized_)) {
+      result->Error("invalid_arguments", "Invalid placement or display no longer available.");
+    } else {
+      PublishState();
+      result->Success();
+    }
+    return;
+  }
+  if (method == "show") {
+    if (!IsWindowVisible(window_)) ShowWindow(window_, show_maximized_ ? SW_SHOWMAXIMIZED : SW_SHOWNOACTIVATE);
+    PublishState();
+    result->Success();
+    return;
+  }
+  if (method == "setFullscreen") {
+    const auto* target = call.arguments() == nullptr ? nullptr : std::get_if<bool>(call.arguments());
+    if (target == nullptr) {
+      result->Error("invalid_arguments", "Invalid fullscreen target.");
+    } else if (!SetFullscreen(*target)) {
+      result->Error("fullscreen_failed", "Native fullscreen transition failed.", Diagnostics());
+    } else {
+      result->Success(State());
+    }
+    return;
+  }
   if (method == "setRegions") {
     UpdateRegions(call.arguments());
+  } else if (method == "setResizeBorder") {
+    const double width = call.arguments() == nullptr ? 0 : Number(*call.arguments());
+    if (!std::isfinite(width) || width <= 0) {
+      result->Error("invalid_arguments", "Invalid window resize border.");
+      return;
+    }
+    resize_border_width_ = width;
   } else if (method == "setToolbar") {
     if (map == nullptr) {
       result->Error("invalid_arguments", "Invalid window toolbar.");
       return;
     }
     UpdateToolbar(*map);
+  } else if (method == "setBackdrop") {
+    if (map == nullptr) {
+      result->Error("invalid_arguments", "Invalid window backdrop.");
+      return;
+    }
+    const auto mode = map->find(flutter::EncodableValue("backdrop"));
+    const auto reduce = map->find(flutter::EncodableValue("reduceTransparency"));
+    const auto* name = mode == map->end() ? nullptr : std::get_if<std::string>(&mode->second);
+    const auto* solid = reduce == map->end() ? nullptr : std::get_if<bool>(&reduce->second);
+    if (name == nullptr || solid == nullptr ||
+        (*name != "none" && *name != "mica" && *name != "micaAlt")) {
+      result->Error("invalid_arguments", "Invalid window backdrop.");
+      return;
+    }
+    requested_backdrop_ = *name == "mica" ? 2 : *name == "micaAlt" ? 4 : 1;
+    reduce_transparency_ = *solid;
+    ApplyBackdrop();
+    PublishState();
   } else if (method == "configure") {
     const auto* list =
         call.arguments() == nullptr
@@ -371,6 +468,104 @@ flutter::EncodableValue FrostWindowPlugin::Diagnostics() const {
   });
 }
 
+bool FrostWindowPlugin::FitFullscreenMonitor() {
+  MONITORINFO monitor{sizeof(MONITORINFO)};
+  if (!GetMonitorInfo(MonitorFromWindow(window_, MONITOR_DEFAULTTONEAREST), &monitor)) return false;
+  const auto& bounds = monitor.rcMonitor;
+  const bool positioned = SetWindowPos(window_, HWND_TOP, bounds.left, bounds.top,
+               bounds.right - bounds.left, bounds.bottom - bounds.top,
+               SWP_FRAMECHANGED | SWP_NOOWNERZORDER | SWP_NOACTIVATE) != FALSE;
+  RECT actual{};
+  return positioned && GetWindowRect(window_, &actual) && EqualRect(&actual, &bounds);
+}
+
+bool FrostWindowPlugin::SetFullscreen(bool target) {
+  if (fullscreen_ == target) return true;
+  const auto old_style = GetWindowLongPtr(window_, GWL_STYLE);
+  const auto old_ex_style = GetWindowLongPtr(window_, GWL_EXSTYLE);
+  WINDOWPLACEMENT old_placement{sizeof(WINDOWPLACEMENT)};
+  if (!GetWindowPlacement(window_, &old_placement)) return false;
+  RECT old_rect{};
+  if (!GetWindowRect(window_, &old_rect)) return false;
+  MONITORINFO monitor{sizeof(MONITORINFO)};
+  if (!GetMonitorInfo(MonitorFromWindow(window_, MONITOR_DEFAULTTONEAREST), &monitor)) return false;
+  if (target) {
+    restore_style_ = old_style;
+    restore_ex_style_ = old_ex_style;
+    restore_placement_ = old_placement;
+  }
+  fullscreen_transitioning_ = true;
+  fullscreen_layout_ = target;
+  CancelButtonPress();
+  SetHover(HTNOWHERE);
+  PublishState();
+  const auto style = target ? (old_style & ~(WS_OVERLAPPEDWINDOW | WS_MAXIMIZE | WS_MINIMIZE)) | WS_POPUP : restore_style_;
+  const auto ex_style = target ? old_ex_style & ~(WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE) : restore_ex_style_;
+  auto set_style = [this](int index, LONG_PTR value) {
+    SetLastError(0);
+    return SetWindowLongPtr(window_, index, value) != 0 || GetLastError() == 0;
+  };
+  bool success = set_style(GWL_STYLE, style) && set_style(GWL_EXSTYLE, ex_style);
+  if (success && target) {
+    // Cover the monitor rectangle, including the taskbar. This is borderless
+    // native fullscreen, not the work-area rectangle used by maximize.
+    const auto& bounds = monitor.rcMonitor;
+    success = SetWindowPos(window_, HWND_TOP, bounds.left, bounds.top,
+                            bounds.right - bounds.left, bounds.bottom - bounds.top,
+                            SWP_FRAMECHANGED | SWP_NOOWNERZORDER) != FALSE;
+    RECT actual{};
+    success = success && GetWindowRect(window_, &actual) &&
+              EqualRect(&actual, &bounds);
+  } else if (success) {
+    auto placement = restore_placement_;
+    // WINDOWPLACEMENT uses workspace coordinates for ordinary windows. Clamp
+    // against the nearest surviving work area after display/DPI changes.
+    auto& normal = placement.rcNormalPosition;
+    MONITORINFO destination{sizeof(MONITORINFO)};
+    if (GetMonitorInfo(MonitorFromRect(&normal, MONITOR_DEFAULTTONEAREST), &destination)) {
+      const auto& work = destination.rcWork;
+      const LONG origin_x = work.left - destination.rcMonitor.left;
+      const LONG origin_y = work.top - destination.rcMonitor.top;
+      const LONG width = (std::min)(normal.right - normal.left, work.right - work.left);
+      const LONG height = (std::min)(normal.bottom - normal.top, work.bottom - work.top);
+      normal.left = (std::clamp)(normal.left, work.left - origin_x, work.right - origin_x - width);
+      normal.top = (std::clamp)(normal.top, work.top - origin_y, work.bottom - origin_y - height);
+      normal.right = normal.left + width;
+      normal.bottom = normal.top + height;
+    }
+    success = SetWindowPlacement(window_, &placement) != FALSE &&
+              SetWindowPos(window_, nullptr, 0, 0, 0, 0,
+                           SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE |
+                           SWP_NOZORDER | SWP_NOACTIVATE) != FALSE;
+  }
+  if (!success) {
+    fullscreen_layout_ = fullscreen_;
+    // A partial Win32 operation must leave a usable prior window for retry.
+    set_style(GWL_STYLE, old_style);
+    set_style(GWL_EXSTYLE, old_ex_style);
+    SetWindowPlacement(window_, &old_placement);
+    SetWindowPos(window_, nullptr, old_rect.left, old_rect.top,
+                 old_rect.right - old_rect.left, old_rect.bottom - old_rect.top,
+                 SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOACTIVATE);
+    // Even rollback can fail after a monitor/window disappears. Read the
+    // surviving HWND rather than publishing the prior/requested mode as fact.
+    RECT actual{};
+    MONITORINFO current{sizeof(MONITORINFO)};
+    fullscreen_ = (GetWindowLongPtr(window_, GWL_STYLE) & WS_OVERLAPPEDWINDOW) == 0 &&
+                  GetWindowRect(window_, &actual) &&
+                  GetMonitorInfo(MonitorFromWindow(window_, MONITOR_DEFAULTTONEAREST), &current) &&
+                  EqualRect(&actual, &current.rcMonitor);
+    fullscreen_layout_ = fullscreen_;
+  } else {
+    fullscreen_ = target;
+  }
+  fullscreen_transitioning_ = false;
+  ApplyBackdrop();
+  const DWM_WINDOW_CORNER_PREFERENCE corners = fullscreen_ ? DWMWCP_DONOTROUND : DWMWCP_ROUND;
+  DwmSetWindowAttribute(window_, DWMWA_WINDOW_CORNER_PREFERENCE, &corners, sizeof(corners));
+  PublishState();
+  return success;
+}
 void FrostWindowPlugin::UpdateRegions(const flutter::EncodableValue* arguments) {
   const auto* list = arguments == nullptr
                          ? nullptr
@@ -381,18 +576,67 @@ void FrostWindowPlugin::UpdateRegions(const flutter::EncodableValue* arguments) 
     const auto* row = std::get_if<flutter::EncodableList>(&value);
     if (row == nullptr || row->size() != 5) continue;
     const auto* kind = std::get_if<std::string>(&(*row)[4]);
-    if (kind == nullptr || (*kind != "caption" && *kind != "maximize")) {
+    if (kind == nullptr || (*kind != "caption" && *kind != "maximize" && *kind != "client")) {
       continue;
     }
     Region region{Number((*row)[0]), Number((*row)[1]), Number((*row)[2]),
                   Number((*row)[3]),
-                  *kind == "maximize" ? HTMAXBUTTON : HTCAPTION};
+                  *kind == "maximize" ? HTMAXBUTTON : *kind == "client" ? HTCLIENT : HTCAPTION};
     if (std::isfinite(region.left) && std::isfinite(region.top) &&
         std::isfinite(region.right) && std::isfinite(region.bottom) &&
         region.right > region.left && region.bottom > region.top) {
       regions_.push_back(region);
     }
   }
+}
+
+void FrostWindowPlugin::ApplyBackdrop() {
+  if (window_ == nullptr) return;
+  // Attribute 38 is DWMWA_SYSTEMBACKDROP_TYPE (Win11 22H2+). Older SDKs can
+  // still build the plugin; runtime support is checked before setting it.
+  const bool eligible = !fullscreen_ && !fullscreen_transitioning_ && requested_backdrop_ != 1 && !reduce_transparency_ &&
+                        SupportsSystemBackdrop() && SystemTransparencyEnabled();
+  const int mode = eligible ? requested_backdrop_ : 1;
+  const HRESULT applied = DwmSetWindowAttribute(
+      window_, static_cast<DWMWINDOWATTRIBUTE>(38), &mode, sizeof(mode));
+  backdrop_available_ = SupportsSystemBackdrop() && SystemTransparencyEnabled() && SUCCEEDED(applied);
+  const bool active = eligible && backdrop_available_;
+  // Full-client glass is required by the Flutter child swapchain. Caption
+  // painting is suppressed separately; window capabilities stay unchanged.
+  const MARGINS margins = active ? MARGINS{-1, -1, -1, -1} : MARGINS{0, 0, 0, 0};
+  const HRESULT extended = DwmExtendFrameIntoClientArea(window_, &margins);
+  backdrop_active_ = active && SUCCEEDED(extended);
+  if (!SetNativeCaptionPainting(backdrop_active_)) {
+    backdrop_active_ = false;
+    const MARGINS clear{0, 0, 0, 0};
+    DwmExtendFrameIntoClientArea(window_, &clear);
+  }
+  if (active && !backdrop_active_) {
+    const int none = 1;
+    DwmSetWindowAttribute(window_, static_cast<DWMWINDOWATTRIBUTE>(38), &none, sizeof(none));
+  }
+}
+
+bool FrostWindowPlugin::SetNativeCaptionPainting(bool hidden) {
+  if (fullscreen_ || fullscreen_transitioning_ || native_caption_hidden_ == hidden) return true;
+  const LONG_PTR style = GetWindowLongPtr(window_, GWL_STYLE);
+  // DWM paints caption glyphs whenever WS_SYSMENU is present. Keep WS_CAPTION,
+  // WS_THICKFRAME and both min/max boxes: they own animations and Snap.
+  // As in Mozilla's custom titlebar, initialize the lazy menu before hiding
+  // its native drawing. Our existing Alt+Space/right-click path still uses it.
+  if (hidden && GetSystemMenu(window_, FALSE) == nullptr) return false;
+  SetLastError(0);
+  const LONG_PTR previous = SetWindowLongPtr(
+      window_, GWL_STYLE, hidden ? style & ~WS_SYSMENU : style | WS_SYSMENU);
+  if (previous == 0 && GetLastError() != 0) return false;
+  if (!SetWindowPos(window_, nullptr, 0, 0, 0, 0,
+                    SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                        SWP_NOACTIVATE)) {
+    SetWindowLongPtr(window_, GWL_STYLE, style);
+    return false;
+  }
+  native_caption_hidden_ = hidden;
+  return true;
 }
 
 void FrostWindowPlugin::UpdateToolbar(const flutter::EncodableMap& arguments) {
@@ -422,9 +666,7 @@ void FrostWindowPlugin::UpdateToolbar(const flutter::EncodableMap& arguments) {
 }
 
 int FrostWindowPlugin::HitTest(POINT point) const {
-  if (window_ == nullptr) return HTCLIENT;
-  RECT rect{};
-  GetWindowRect(window_, &rect);
+  if (window_ == nullptr || fullscreen_ || fullscreen_transitioning_) return HTCLIENT;
   const UINT dpi = GetDpiForWindow(window_);
   POINT client_point = point;
   ScreenToClient(content_, &client_point);
@@ -432,28 +674,31 @@ int FrostWindowPlugin::HitTest(POINT point) const {
   const double client_x = client_point.x / scale;
   const double client_y = client_point.y / scale;
   if (!IsZoomed(window_) && !IsIconic(window_)) {
-    const int corner_x = GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi) +
-                         GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
-    const int corner_y = GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi) +
-                         GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
-    if (point.y < rect.top + corner_y) {
-      if (point.x < rect.left + corner_x) return HTTOPLEFT;
-      if (point.x >= rect.right - corner_x) return HTTOPRIGHT;
-    }
-    if (point.y >= rect.bottom - corner_y) {
-      if (point.x < rect.left + corner_x) return HTBOTTOMLEFT;
-      if (point.x >= rect.right - corner_x) return HTBOTTOMRIGHT;
-    }
-    // NCCALCSIZE gives Flutter the full client rect. The padded system frame
-    // therefore lies over content, rather than outside it. Reserve only the
-    // outer two logical pixels for straight-edge resizing, keeping larger
-    // corner targets without stealing input from window-edge controls such
-    // as a scrollbar on the right edge.
-    const int edge = (std::max)(1, MulDiv(2, dpi, USER_DEFAULT_SCREEN_DPI));
-    if (point.x < rect.left + edge) return HTLEFT;
-    if (point.x >= rect.right - edge) return HTRIGHT;
-    if (point.y < rect.top + edge) return HTTOP;
-    if (point.y >= rect.bottom - edge) return HTBOTTOM;
+    RECT client{};
+    GetClientRect(window_, &client);
+    MapWindowPoints(window_, nullptr, reinterpret_cast<POINT*>(&client), 2);
+    // Three resize edges live entirely in the system's invisible frame.
+    // Only the top strip occupies visible client pixels. Its intersections
+    // with the outer side borders form the two upper corner targets.
+    const bool left = point.x < client.left;
+    const bool right = point.x >= client.right;
+    const bool bottom = point.y >= client.bottom;
+    const int top_width = (std::max)(1, static_cast<int>(std::round(
+        resize_border_width_ * dpi / USER_DEFAULT_SCREEN_DPI)));
+    const bool top = point.y < client.top + top_width;
+    if (top && left) return HTTOPLEFT;
+    if (top && right) return HTTOPRIGHT;
+    if (bottom && left) return HTBOTTOMLEFT;
+    if (bottom && right) return HTBOTTOMRIGHT;
+    if (left) return HTLEFT;
+    if (right) return HTRIGHT;
+    if (top) return HTTOP;
+    if (bottom) return HTBOTTOM;
+  }
+  // Interactive overlays/fields win regardless of collection or paint order.
+  for (const auto& region : regions_) {
+    if (region.hit == HTCLIENT && client_x >= region.left && client_x < region.right &&
+        client_y >= region.top && client_y < region.bottom) return HTCLIENT;
   }
   for (const auto& region : regions_) {
     if (client_x >= region.left && client_x < region.right &&
@@ -466,6 +711,14 @@ int FrostWindowPlugin::HitTest(POINT point) const {
 
 flutter::EncodableValue FrostWindowPlugin::State() const {
   return flutter::EncodableValue(flutter::EncodableMap{
+      {flutter::EncodableValue("geometry"), WindowGeometry(window_, fullscreen_, fullscreen_ ? &restore_placement_ : nullptr)},
+      {flutter::EncodableValue("captionMode"), flutter::EncodableValue("client")},
+      {flutter::EncodableValue("leftButtons"), flutter::EncodableValue(flutter::EncodableList{})},
+      {flutter::EncodableValue("rightButtons"), flutter::EncodableValue(flutter::EncodableList{
+          flutter::EncodableValue("minimize"), flutter::EncodableValue("maximize"), flutter::EncodableValue("close")})},
+      {flutter::EncodableValue("fullscreen"), flutter::EncodableValue(fullscreen_)},
+      {flutter::EncodableValue("fullscreenAvailable"), flutter::EncodableValue(true)},
+      {flutter::EncodableValue("fullscreenTransitioning"), flutter::EncodableValue(fullscreen_transitioning_)},
       {flutter::EncodableValue("maximized"),
        flutter::EncodableValue(IsZoomed(window_) != FALSE)},
       {flutter::EncodableValue("active"),
@@ -476,12 +729,18 @@ flutter::EncodableValue FrostWindowPlugin::State() const {
        flutter::EncodableValue(ButtonName(hovered_button_))},
       {flutter::EncodableValue("pressedButton"),
        flutter::EncodableValue(ButtonName(pressed_button_))},
+      {flutter::EncodableValue("reduceTransparency"),
+       flutter::EncodableValue(!SystemTransparencyEnabled())},
+      {flutter::EncodableValue("backdropAvailable"),
+       flutter::EncodableValue(backdrop_available_)},
+      {flutter::EncodableValue("backdropActive"),
+       flutter::EncodableValue(backdrop_active_)},
       {flutter::EncodableValue("revision"), flutter::EncodableValue(revision_)},
   });
 }
 
 void FrostWindowPlugin::PublishState() {
-  if (!channel_ || window_ == nullptr) return;
+  if (shutting_down_ || !channel_ || window_ == nullptr) return;
   ++revision_;
   channel_->InvokeMethod("stateChanged",
                          std::make_unique<flutter::EncodableValue>(State()));
@@ -625,11 +884,17 @@ LRESULT FrostWindowPlugin::HandleMessage(HWND hwnd, UINT message, WPARAM wparam,
     return *handled;
   }
   switch (message) {
+
     case WM_SETFOCUS:
       if (IsWindow(content_) && GetFocus() != content_) SetFocus(content_);
       return 0;
     case WM_SYSCOMMAND: {
       const WPARAM command = wparam & 0xfff0;
+      if (fullscreen_ && (command == SC_RESTORE || command == SC_MAXIMIZE ||
+                          command == SC_MOVE || command == SC_SIZE)) {
+        if (!SetFullscreen(false)) return 0;
+        if (command == SC_RESTORE) return 0;
+      }
       if (command == SC_KEYMENU && lparam == VK_SPACE) {
         double caption_bottom = 0;
         for (const auto& region : regions_) {
@@ -652,16 +917,30 @@ LRESULT FrostWindowPlugin::HandleMessage(HWND hwnd, UINT message, WPARAM wparam,
       if ((GetKeyState(VK_SPACE) & 0x8000) == 0) system_menu_key_down_ = false;
       system_menu_char_pending_ = false;
       break;
-    case WM_NCCALCSIZE:
-      if (wparam) {
-        if (IsZoomed(hwnd)) {
-          SetMaximizedClientRect(
-              &reinterpret_cast<NCCALCSIZE_PARAMS*>(lparam)->rgrc[0]);
-        }
-        return 0;
+    case WM_NCCALCSIZE: {
+      RECT* client = wparam
+                         ? &reinterpret_cast<NCCALCSIZE_PARAMS*>(lparam)->rgrc[0]
+                         : reinterpret_cast<RECT*>(lparam);
+      if (fullscreen_layout_) return 0;
+      if (IsZoomed(hwnd)) {
+        SetMaximizedClientRect(client);
+      } else {
+        // Keep the native invisible border outside Flutter's client area.
+        // Query the current DPI on every calculation, including the runner's
+        // SetWindowPos during WM_DPICHANGED; never cache system frame widths.
+        const UINT dpi = GetDpiForWindow(hwnd);
+        const int frame_x = GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi) +
+                            GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+        const int frame_y = GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi) +
+                            GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+        client->left += frame_x;
+        client->right -= frame_x;
+        client->bottom -= frame_y;
       }
-      break;
+      return 0;
+    }
     case WM_GETMINMAXINFO: {
+      if (fullscreen_layout_) return 0;
       if (minimum_width_ <= 0 || minimum_height_ <= 0) break;
       auto* info = reinterpret_cast<MINMAXINFO*>(lparam);
       const double scale = static_cast<double>(GetDpiForWindow(hwnd)) /
@@ -728,6 +1007,41 @@ LRESULT FrostWindowPlugin::HandleMessage(HWND hwnd, UINT message, WPARAM wparam,
         return 0;
       }
       break;
+    case WM_DPICHANGED:
+    case WM_DISPLAYCHANGE:
+      if (fullscreen_ && !fullscreen_transitioning_) {
+        fullscreen_transitioning_ = true;
+        const bool fitted = FitFullscreenMonitor();
+        fullscreen_transitioning_ = false;
+        if (!fitted) SetFullscreen(false);
+        PublishState();
+        return 0; // Do not let the runner apply a work-area/suggested rectangle.
+      }
+      PublishState();
+      break;
+    case WM_WINDOWPOSCHANGED:
+    case WM_STYLECHANGED:
+      if (!fullscreen_transitioning_) {
+        if (fullscreen_ && !IsIconic(hwnd)) {
+          RECT bounds{};
+          MONITORINFO monitor{sizeof(MONITORINFO)};
+          const auto style = GetWindowLongPtr(hwnd, GWL_STYLE);
+          if ((style & WS_OVERLAPPEDWINDOW) != 0 ||
+              (GetWindowRect(hwnd, &bounds) &&
+               GetMonitorInfo(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &monitor) &&
+               !EqualRect(&bounds, &monitor.rcMonitor))) {
+            SetFullscreen(false);
+          }
+        }
+        PublishState();
+      }
+      break;
+    case WM_SETTINGCHANGE:
+    case WM_THEMECHANGED:
+    case WM_DWMCOMPOSITIONCHANGED:
+      ApplyBackdrop();
+      PublishState();
+      break;
     case WM_ACTIVATE:
       if (LOWORD(wparam) == WA_INACTIVE) {
         back_key_down_ = false;
@@ -739,6 +1053,10 @@ LRESULT FrostWindowPlugin::HandleMessage(HWND hwnd, UINT message, WPARAM wparam,
       [[fallthrough]];
     case WM_SIZE:
       PublishState();
+      // The default runner resizes its Flutter child to the iconic client area
+      // (not necessarily zero). Preserve the last real viewport while minimized
+      // so responsive layouts and their state do not transition on restoration.
+      if (wparam == SIZE_MINIMIZED) return 0;
       break;
   }
   return DefSubclassProc(hwnd, message, wparam, lparam);
@@ -748,8 +1066,9 @@ LRESULT FrostWindowPlugin::HandleMessage(HWND hwnd, UINT message, WPARAM wparam,
 LRESULT CALLBACK FrostWindowPlugin::WindowProc(HWND hwnd, UINT message,
                                                WPARAM wparam, LPARAM lparam,
                                                UINT_PTR id, DWORD_PTR data) {
-  if (message == WM_NCDESTROY) {
-    RemoveWindowSubclass(hwnd, WindowProc, id);
+  if (message == WM_DESTROY || message == WM_NCDESTROY) {
+    // Run before the runner's WM_DESTROY handler resets FlutterViewController.
+    reinterpret_cast<FrostWindowPlugin*>(data)->DetachWindow();
     return DefSubclassProc(hwnd, message, wparam, lparam);
   }
   return reinterpret_cast<FrostWindowPlugin*>(data)->HandleMessage(
@@ -761,8 +1080,8 @@ LRESULT CALLBACK FrostWindowPlugin::ContentProc(HWND hwnd, UINT message,
                                                 WPARAM wparam, LPARAM lparam,
                                                 UINT_PTR id, DWORD_PTR data) {
   auto* self = reinterpret_cast<FrostWindowPlugin*>(data);
-  if (message == WM_NCDESTROY) {
-    RemoveWindowSubclass(hwnd, ContentProc, id);
+  if (message == WM_DESTROY || message == WM_NCDESTROY) {
+    self->DetachWindow();
     return DefSubclassProc(hwnd, message, wparam, lparam);
   }
   // The runner parents the view and sizes it before showing the window.

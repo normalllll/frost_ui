@@ -8,3 +8,5 @@ analyzer:
     - build/**
     - example/build/**
     - windows/**
+    - macos/**
+    - linux/**

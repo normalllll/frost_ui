@@ -246,7 +246,9 @@ void Win32Window::SetChildContent(HWND content) {
   MoveWindow(content, frame.left, frame.top, frame.right - frame.left,
              frame.bottom - frame.top, true);
 
-  SetFocus(child_content_);
+  // A hidden startup must not activate its parent while Dart prepares bounds.
+  // Active windows still receive the runner's usual initial child focus.
+  if (GetForegroundWindow() == window_handle_) SetFocus(child_content_);
 }
 
 RECT Win32Window::GetClientArea() {

@@ -18,9 +18,11 @@ namespace frost_window {
 // menu and DWM effects. Hit testing stays outside Flutter's gesture arena: the
 // Flutter child HWND passes caption/resize hits to its top-level window.
 //
-// The plugin needs no runner changes. It subclasses the Flutter view at
+// The titlebar needs no runner changes. It subclasses the Flutter view at
 // registration and takes over the top-level window as soon as the view is
 // parented to it, which happens before the window is first shown.
+// App-owned initial placement additionally opts into a hidden runner and an
+// explicit Dart show() after preparation and the first rasterized frame.
 class FrostWindowPlugin : public flutter::Plugin {
  public:
   static void RegisterWithRegistrar(flutter::PluginRegistrarWindows* registrar);
@@ -49,12 +51,17 @@ class FrostWindowPlugin : public flutter::Plugin {
       const flutter::MethodCall<flutter::EncodableValue>& call,
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
   bool Attach();
+  void DetachWindow();
   bool InstallFrame();
   LRESULT HandleMessage(HWND, UINT, WPARAM, LPARAM);
   std::optional<LRESULT> HandleInput(HWND, UINT, WPARAM, LPARAM);
   void NavigateBack();
   int HitTest(POINT screen_point) const;
+  bool SetFullscreen(bool target);
+  bool FitFullscreenMonitor();
   void UpdateRegions(const flutter::EncodableValue* arguments);
+  void ApplyBackdrop();
+  bool SetNativeCaptionPainting(bool hidden);
   void UpdateToolbar(const flutter::EncodableMap& arguments);
   flutter::EncodableValue State() const;
   flutter::EncodableValue Diagnostics() const;
@@ -73,15 +80,29 @@ class FrostWindowPlugin : public flutter::Plugin {
   int hovered_button_ = HTNOWHERE;
   int pressed_button_ = HTNOWHERE;
   int64_t revision_ = 0;
+  bool fullscreen_ = false;
+  bool show_maximized_ = false;
+  bool fullscreen_layout_ = false;
+  bool fullscreen_transitioning_ = false;
+  LONG_PTR restore_style_ = 0;
+  LONG_PTR restore_ex_style_ = 0;
+  WINDOWPLACEMENT restore_placement_{sizeof(WINDOWPLACEMENT)};
   bool back_key_down_ = false;
   bool system_menu_key_down_ = false;
   bool system_menu_char_pending_ = false;
   bool tracking_leave_ = false;
   bool ready_ = false;
+  bool shutting_down_ = false;
+  int requested_backdrop_ = 1;  // DWMSBT_NONE; 2=Mica, 4=Mica Alt.
+  bool reduce_transparency_ = false;
+  bool backdrop_available_ = false;
+  bool backdrop_active_ = false;
+  bool native_caption_hidden_ = false;
   const char* failure_step_ = "not_attached";
   DWORD failure_error_ = 0;
   double minimum_width_ = 0;
   double minimum_height_ = 0;
+  double resize_border_width_ = 4;
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;
 };
 
