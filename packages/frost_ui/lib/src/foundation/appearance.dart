@@ -47,11 +47,8 @@ FrostAccentValidation validateAccent(Color candidate, Brightness brightness, Fro
     }
   }
   if (minimum < 1.5) return FrostAccentValidation(FrostAccentSeverity.rejected, minimum);
-  // Filled controls resolve their own foreground from the exact accent. The
-  // paired black/white alternatives guarantee at least 4.5 on an opaque fill.
-  if (colorContrast(candidate, readableOnAccent(candidate)) < 4.5) {
-    return FrostAccentValidation(FrostAccentSeverity.rejected, minimum);
-  }
+  // Solid buttons intentionally keep white labels on the exact accent. Their
+  // accepted lower contrast must not reject presets or persisted selections.
   return FrostAccentValidation(minimum < 2 ? FrostAccentSeverity.warning : FrostAccentSeverity.allowed, minimum);
 }
 

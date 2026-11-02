@@ -23,14 +23,26 @@ enum FrostContentScript { japanese, simplifiedChinese, traditionalChinese }
 /// the chain.
 @immutable
 class FrostFonts {
-  const FrostFonts({required this.japanese, required this.simplifiedChinese, this.traditionalChinese, this.defaultScript});
+  const FrostFonts({this.body, this.japanese, this.simplifiedChinese, this.traditionalChinese, this.defaultScript, this.monospace, this.numeric});
+
+  /// Optional App-bundled interface family, used when a regional family is absent.
+  final String? body;
+
+  /// Optional bundled monospace family; otherwise typography uses the platform default.
+  final String? monospace;
+
+  /// App-bundled family for cover statistics/durations and player timecodes.
+  /// Apps may opt in for dedicated detail statistics; ordinary counts/dates
+  /// use the body family, optionally with tabular figures.
+  /// Null keeps tabular figures in the ordinary interface font.
+  final String? numeric;
 
   /// Bundled family with Japanese regional forms.
-  final String japanese;
+  final String? japanese;
 
   /// Bundled family with Simplified Chinese forms. It also draws Traditional
   /// Chinese when [traditionalChinese] is null.
-  final String simplifiedChinese;
+  final String? simplifiedChinese;
 
   /// Optional bundled family with Traditional Chinese forms.
   final String? traditionalChinese;
@@ -44,13 +56,14 @@ class FrostFonts {
   FrostFontChain resolve({required TargetPlatform platform, required Locale locale}) {
     final chinese = locale.languageCode == 'zh';
     final traditional = chinese && _usesTraditional(locale);
-    final family = !chinese
+    final regional = !chinese
         ? japanese
         : traditional
         ? traditionalChinese ?? simplifiedChinese
         : simplifiedChinese;
+    final family = regional ?? body ?? _platformFallbacks(platform, locale).first;
     final other = chinese ? japanese : simplifiedChinese;
-    return FrostFontChain(family: family, fallbacks: [other, ..._platformFallbacks(platform, locale)]);
+    return FrostFontChain(family: family, fallbacks: [?other, ..._platformFallbacks(platform, locale)]);
   }
 
   /// [style] with the locale and CJK fallback order for [text]'s own script,
@@ -101,13 +114,16 @@ class FrostFonts {
   @override
   bool operator ==(Object other) =>
       other is FrostFonts &&
+      other.body == body &&
       other.japanese == japanese &&
       other.simplifiedChinese == simplifiedChinese &&
       other.traditionalChinese == traditionalChinese &&
-      other.defaultScript == defaultScript;
+      other.defaultScript == defaultScript &&
+      other.monospace == monospace &&
+      other.numeric == numeric;
 
   @override
-  int get hashCode => Object.hash(japanese, simplifiedChinese, traditionalChinese, defaultScript);
+  int get hashCode => Object.hash(body, japanese, simplifiedChinese, traditionalChinese, defaultScript, monospace, numeric);
 }
 
 // Common characters whose simplified and traditional forms differ. A text is
@@ -122,13 +138,14 @@ final _traditionalSet = _traditionalOnly.runes.toSet().difference(_simplifiedOnl
 
 /// Classifies text by script. Kana, including halfwidth katakana, means Japanese; otherwise Han text with
 /// simplified-only or traditional-only characters is Chinese. Anything
-/// undecidable returns null.
+/// undecidable returns null. The middle dot U+30FB and long vowel mark U+30FC
+/// also punctuate Chinese names and text, so they say nothing about the script.
 FrostContentScript? detectContentScript(String text) {
   var han = false;
   var simplified = 0;
   var traditional = 0;
   for (final rune in text.runes) {
-    if ((rune >= 0x3040 && rune <= 0x30FF) || (rune >= 0x31F0 && rune <= 0x31FF) || (rune >= 0xFF66 && rune <= 0xFF9F)) {
+    if ((rune >= 0x3040 && rune <= 0x30FF && rune != 0x30FB && rune != 0x30FC) || (rune >= 0x31F0 && rune <= 0x31FF) || (rune >= 0xFF66 && rune <= 0xFF9F)) {
       return FrostContentScript.japanese;
     }
     if (rune >= 0x4E00 && rune <= 0x9FFF) {
