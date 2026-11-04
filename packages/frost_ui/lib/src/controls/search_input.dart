@@ -40,7 +40,6 @@ import '_field_row.dart';
 import 'buttons.dart';
 import 'field_appearance.dart';
 import 'search_suggestion.dart';
-import 'shortcuts.dart';
 import 'text_field.dart';
 import 'token_field.dart';
 
@@ -88,6 +87,7 @@ class FrostSearchInput extends StatelessWidget {
     this.onClear,
     this.onDismiss,
     this.actions = const [],
+    this.hint,
     this.leadingIcon = false,
     this.autofocus = false,
     this.size,
@@ -114,6 +114,7 @@ class FrostSearchInput extends StatelessWidget {
     this.onClear,
     this.onDismiss,
     this.actions = const [],
+    this.hint,
     this.leadingIcon = false,
     this.autofocus = false,
     this.size,
@@ -133,6 +134,11 @@ class FrostSearchInput extends StatelessWidget {
 
   /// Structural actions should be compact FrostButton.icon controls.
   final List<Widget> actions;
+
+  /// Short text before the clear button and [actions] while the field has no
+  /// focus; the first thing to go when the width runs out. The App keeps it in
+  /// step with its own bindings ([FrostShortcut.hintLabel]). None by default.
+  final String? hint;
 
   /// Optional decorative search icon. The trailing submit action is always
   /// available, so queries can be submitted without opening a soft keyboard.
@@ -220,7 +226,7 @@ class _PlainSearchInputState extends State<_PlainSearchInput> {
   }
 
   void _focusChanged() {
-    // The trailing submit action and caption shortcut hint follow focus.
+    // The trailing submit action and the hint follow focus.
     setState(() {});
     _reportFocus(context, _input.focusNode);
   }
@@ -280,30 +286,32 @@ class _SearchField extends StatelessWidget {
                 child: FrostFieldClearButton(visible: input.controller.text.isNotEmpty, onClear: input.onClear ?? input.controller.clear),
               ),
               for (final action in input.actions) FrostFieldIconSlot(child: action),
-              if (FrostCaptionFieldScope.of(context) && !input.focusNode.hasFocus)
-                Container(
-                  margin: const EdgeInsetsDirectional.only(end: 4),
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: FrostThemeTokens.of(context).separator),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    frostShortcutLabel(context, const FrostShortcut(LogicalKeyboardKey.keyK, primary: true)).replaceAll('+', ' '),
-                    style: FrostTypography.of(
-                      context,
-                    ).style(FrostTextRole.caption, tabular: true).copyWith(fontSize: 10.5, color: FrostThemeTokens.of(context).textTertiary),
-                  ),
-                )
               // Like the caption field's rest state, an empty unfocused field
               // has nothing to submit; its width goes to the placeholder.
-              else if (input.focusNode.hasFocus || input.controller.text.isNotEmpty)
+              if (input.focusNode.hasFocus || (input.controller.text.isNotEmpty && !FrostCaptionFieldScope.of(context)))
                 FrostFieldIconSlot(
                   child: FrostButton.icon(
                     icon: frostForwardIcon(context),
                     label: FrostScope.labelsOf(context).search,
                     size: FrostControlSize.compact,
                     onPressed: input.controller.text.trim().isEmpty ? null : () => input._submit(input.controller.text),
+                  ),
+                ),
+              if (input.hint case final hint? when !input.focusNode.hasFocus)
+                FrostFieldHintSlot(
+                  child: Container(
+                    margin: const EdgeInsetsDirectional.only(end: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: FrostThemeTokens.of(context).separator),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      hint,
+                      style: FrostTypography.of(
+                        context,
+                      ).style(FrostTextRole.caption, tabular: true).copyWith(fontSize: 10.5, color: FrostThemeTokens.of(context).textTertiary),
+                    ),
                   ),
                 ),
             ],
@@ -377,6 +385,10 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
   // generation waits for this widget's build.
   int _builtGeneration = 0;
   bool _keptOpen = false;
+  // False while the field is in a subtree with its tickers off, such as title
+  // content the shell keeps offstage: the field keeps its text and focus, and
+  // its list is not shown.
+  bool _active = true;
 
   FrostSearchInput get _input => widget.input;
 
@@ -399,7 +411,7 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
 
   /// The list sits in the page rather than in a floating panel.
   bool get _inline => _placement != _Placement.overlay;
-  bool get _visible => _input.focusNode.hasFocus && !_suppressed && (_entries.isNotEmpty || _input.loading || _input.message != null);
+  bool get _visible => _active && _input.focusNode.hasFocus && !_suppressed && (_entries.isNotEmpty || _input.loading || _input.message != null);
 
   @override
   void initState() {
@@ -745,8 +757,9 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
     );
   }
 
-  // With reduced motion the panel goes straight to its end, as menus do.
-  Widget _suggestionPresence(BuildContext context, Widget panel) => MediaQuery.disableAnimationsOf(context)
+  // With reduced motion the panel goes straight to its end, as menus do, and
+  // so it does when hidden: a fade would not run with the tickers off.
+  Widget _suggestionPresence(BuildContext context, Widget panel) => MediaQuery.disableAnimationsOf(context) || !_active
       ? (_visible ? panel : const SizedBox.shrink())
       : FrostPresence(visible: _visible, alignment: AlignmentDirectional.topStart, child: panel);
 
@@ -806,6 +819,7 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
   @override
   Widget build(BuildContext context) {
     _builtGeneration = _generation;
+    _active = TickerMode.valuesOf(context).enabled;
     _placement = _resolvePlacement();
     final body = _placement == _Placement.body ? FrostHeaderSearchBodyScope.maybeOf(context) : null;
     if (!identical(body, _body) && (_body?.showing ?? false)) _body!.showing = false;

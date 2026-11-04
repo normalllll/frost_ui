@@ -13,6 +13,11 @@ class FrostShortcut {
   const FrostShortcut(this.key, {this.primary = false, this.shift = false, this.alt = false});
   final LogicalKeyboardKey key;
   final bool primary, shift, alt;
+
+  /// This combination in the current platform's notation, for showing as a hint
+  /// where its binding works: `Ctrl K` on Windows, `⌘K` on macOS.
+  String hintLabel(BuildContext context) => frostShortcutLabel(context, this).replaceAll(_keySeparator, ' ');
+
   @override
   bool operator ==(Object other) => other is FrostShortcut && key == other.key && primary == other.primary && shift == other.shift && alt == other.alt;
   @override

@@ -30,6 +30,7 @@ class FrostCaptionSearch extends StatefulWidget {
     this.suggestions = const [],
     this.loading = false,
     this.message,
+    this.hint,
     super.key,
   });
   final TextEditingController controller;
@@ -46,6 +47,9 @@ class FrostCaptionSearch extends StatefulWidget {
   /// As [FrostSearchInput.message]: one line in the dropdown for no
   /// suggestions or a failed load, shown even when suggestions are empty.
   final String? message;
+
+  /// As [FrostSearchInput.hint]; none by default.
+  final String? hint;
   @override
   State<FrostCaptionSearch> createState() => _FrostCaptionSearchState();
 }
@@ -118,6 +122,7 @@ class _FrostCaptionSearchState extends State<FrostCaptionSearch> {
         appearance: FrostFieldAppearance.subtle,
         size: FrostControlSize.small,
         leadingIcon: true,
+        hint: widget.hint,
         // A resting icon has no dropdown; its status returns with the field.
         suggestions: constraints.maxWidth >= 120 ? widget.suggestions : const [],
         loading: constraints.maxWidth >= 120 && widget.loading,

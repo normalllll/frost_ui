@@ -242,7 +242,8 @@ class FrostShell extends StatefulWidget {
   /// shows in the client title row of a sidebar layout when there is room. It is
   /// hidden otherwise, keeping its state, and returns when room does: place the
   /// page's own entry by [titleContentInCaptionOf]. Keep search state/controllers
-  /// in the app. Suggestions use ordinary OverlayPortal/overlay mechanisms.
+  /// in the app. An open suggestion list closes while the content is hidden and
+  /// returns with it.
   final Widget? titleBarContent;
 
   /// A search for the title row, usually a [FrostCaptionSearch] with any wrapper

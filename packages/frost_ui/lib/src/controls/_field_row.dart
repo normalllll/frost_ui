@@ -46,6 +46,7 @@ class FrostFieldRow extends MultiChildRenderObjectWidget {
 
 class _FieldRowParentData extends ContainerBoxParentData<RenderBox> {
   bool icon = false;
+  bool hint = false;
 }
 
 /// Marks a direct child of [FrostFieldTrailing] as an icon button, which may
@@ -58,6 +59,23 @@ class FrostFieldIconSlot extends ParentDataWidget<_FieldRowParentData> {
     final data = renderObject.parentData! as _FieldRowParentData;
     if (data.icon) return;
     data.icon = true;
+    renderObject.parent?.markNeedsLayout();
+  }
+
+  @override
+  Type get debugTypicalAncestorWidgetClass => FrostFieldTrailing;
+}
+
+/// Marks a direct child of [FrostFieldTrailing] as a hint. It comes last in
+/// priority, so it is the first to go, and shows before the other controls.
+class FrostFieldHintSlot extends ParentDataWidget<_FieldRowParentData> {
+  const FrostFieldHintSlot({required super.child, super.key});
+
+  @override
+  void applyParentData(RenderObject renderObject) {
+    final data = renderObject.parentData! as _FieldRowParentData;
+    if (data.hint) return;
+    data.hint = true;
     renderObject.parent?.markNeedsLayout();
   }
 
@@ -256,7 +274,8 @@ class _RenderTrailingFit extends RenderBox
   bool _lastIsIcon(int shown, List<Size> sizes, bool Function(_RenderTrailingFit child, double remaining) nested, double width) {
     var remaining = width, result = false, index = 0;
     for (final child in _children.take(shown)) {
-      if (sizes[index].width > 0) result = child is _RenderTrailingFit ? nested(child, remaining) : (child.parentData! as _FieldRowParentData).icon;
+      final data = child.parentData! as _FieldRowParentData;
+      if (sizes[index].width > 0 && !data.hint) result = child is _RenderTrailingFit ? nested(child, remaining) : data.icon;
       remaining -= sizes[index].width;
       index++;
     }
@@ -331,11 +350,18 @@ class _RenderTrailingFit extends RenderBox
     endsOnIcon = _lastIsIcon(shown, sizes, (child, _) => child.endsOnIcon, constraints.maxWidth);
     size = _size(constraints, shown, sizes);
     var x = 0.0;
-    for (final (index, child) in _children.indexed) {
-      final width = index < shown ? child.size.width : 0.0;
+    void place(RenderBox child, double width) {
       final y = (size.height - child.size.height) / 2;
       (child.parentData! as _FieldRowParentData).offset = Offset(_textDirection == TextDirection.rtl ? size.width - x - width : x, y);
       x += width;
+    }
+
+    bool isHint(RenderBox child) => (child.parentData! as _FieldRowParentData).hint;
+    for (final (index, child) in _children.indexed) {
+      if (isHint(child)) place(child, index < shown ? child.size.width : 0.0);
+    }
+    for (final (index, child) in _children.indexed) {
+      if (!isHint(child)) place(child, index < shown ? child.size.width : 0.0);
     }
     onFitted(shown);
   }

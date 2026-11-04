@@ -299,7 +299,7 @@ ctor	FrostButton.plain	controls/buttons.dart	chevron,edgeAlignment,icon,key,labe
 ctor	FrostButton.prominent	controls/buttons.dart	chevron,icon,key,label,labelWidget,onPressed,role,shape,size,state,tooltip	baseline-20261102
 ctor	FrostButton.quiet	controls/buttons.dart	edgeAlignment,key,label,onPressed,shape,size,state,tooltip	baseline-20261102
 ctor	FrostButton.tinted	controls/buttons.dart	chevron,icon,key,label,labelWidget,onPressed,role,shape,size,state,tooltip	baseline-20261102
-ctor	FrostCaptionSearch.new	controls/caption_search.dart	controller,focusNode,key,loading,message,onSubmitted,onSubmittedInNewTab,placeholder,suggestions	baseline-20261102
+ctor	FrostCaptionSearch.new	controls/caption_search.dart	controller,focusNode,hint,key,loading,message,onSubmitted,onSubmittedInNewTab,placeholder,suggestions	reviewed:20261104:pass: actions cannot show before the clear key, show only after focus leaves, and hide first when width runs short, so the hint parameter is needed; hintLabel keeps the platform-dependent hint shown before and frostShortcutLabel is not public, so no smaller interface exists
 ctor	FrostCaptionState.new	layout/window_caption_scope.dart	active,failed,fullscreen,icons,leftButtons,maximizeHovered,maximizePressed,maximized,mode,nativeControls,rightButtons,style	baseline-20261102
 ctor	FrostCheckbox.new	controls/checkbox.dart	key,onChanged,semanticLabel,tristate,value	baseline-20261102
 ctor	FrostCheckboxRow.new	controls/checkbox_row.dart	key,onChanged,subtitle,title,tristate,value	baseline-20261102
@@ -469,8 +469,8 @@ ctor	FrostRowSubtitle.path	lists/list_row.dart	path	baseline-20261102
 ctor	FrostRowSubtitle.status	lists/list_row.dart	content,status,text,tone	baseline-20261102
 ctor	FrostScope.new	foundation/scope.dart	child,config,key,reduceTransparency	baseline-20261102
 ctor	FrostSearchEntry.new	controls/search_entry.dart	focusNode,key,onPressed,placeholder,shortcutLabel,size,value	baseline-20261102
-ctor	FrostSearchInput.new	controls/search_input.dart	actions,appearance,autofocus,controller,focusNode,key,leadingIcon,onClear,onDismiss,onSubmitted,placeholder,size	baseline-20261102
-ctor	FrostSearchInput.suggesting	controls/search_input.dart	actions,appearance,autofocus,controller,focusNode,key,leadingIcon,loading,message,onClear,onDismiss,onSubmitted,placeholder,placement,size,suggestions	baseline-20261102
+ctor	FrostSearchInput.new	controls/search_input.dart	actions,appearance,autofocus,controller,focusNode,hint,key,leadingIcon,onClear,onDismiss,onSubmitted,placeholder,size	reviewed:20261104:pass: actions cannot show before the clear key, show only after focus leaves, and hide first when width runs short, so the hint parameter is needed; hintLabel keeps the platform-dependent hint shown before and frostShortcutLabel is not public, so no smaller interface exists
+ctor	FrostSearchInput.suggesting	controls/search_input.dart	actions,appearance,autofocus,controller,focusNode,hint,key,leadingIcon,loading,message,onClear,onDismiss,onSubmitted,placeholder,placement,size,suggestions	reviewed:20261104:pass: actions cannot show before the clear key, show only after focus leaves, and hide first when width runs short, so the hint parameter is needed; hintLabel keeps the platform-dependent hint shown before and frostShortcutLabel is not public, so no smaller interface exists
 ctor	FrostSearchSuggestion.new	controls/search_suggestion.dart	dataColor,detail,icon,inlineDetail,keepsOpen,label,onRemove,onSelected,value	baseline-20261102
 ctor	FrostSearchSuggestionGroup.new	controls/search_suggestion.dart	actionLabel,items,keepsOpen,onAction,title	baseline-20261102
 ctor	FrostSectionHeader.collapsible	display/section_header.dart	child,expanded,key,onExpansionChanged,pathTitle,title,trailing	baseline-20261102
@@ -961,6 +961,7 @@ member	FrostShellTabs.showOverview	navigation/shell_tabs.dart	-	baseline-2026110
 member	FrostShellTabs.strip	navigation/shell_tabs.dart	-	baseline-20261102
 member	FrostShellTaskEntryPlacement.floating	navigation/shell/task_entry.dart	-	baseline-20261102
 member	FrostShellTaskEntryPlacement.sidebar	navigation/shell/task_entry.dart	-	baseline-20261102
+member	FrostShortcut.hintLabel	controls/shortcuts.dart	-	reviewed:20261104:pass: actions cannot show before the clear key, show only after focus leaves, and hide first when width runs short, so the hint parameter is needed; hintLabel keeps the platform-dependent hint shown before and frostShortcutLabel is not public, so no smaller interface exists
 member	FrostSidebarAlignment.automatic	navigation/shell/shell.dart	-	baseline-20261102
 member	FrostSidebarAlignment.bottom	navigation/shell/shell.dart	-	baseline-20261102
 member	FrostSidebarAlignment.top	navigation/shell/shell.dart	-	baseline-20261102

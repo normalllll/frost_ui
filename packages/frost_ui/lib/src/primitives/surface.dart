@@ -250,15 +250,22 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
     // Nested sampling still follows the deferred 0-to-target blur, with no
     // sampler below a content opacity layer. The outer reveal keeps its
     // static sigma and fades the filtered contribution, not the blur radius.
-    final sigma = targetSigma * FrostContentRevealScope.blurFactorOf(context);
-    var alpha = role == FrostSurfaceRole.chrome ? frostChromeFillOpacity(color, baseAlpha, sigma, secondary: tokens.textSecondary, dark: tokens.isDark) : baseAlpha;
+    final blurFactor = FrostContentRevealScope.blurFactorOf(context);
+    final sigma = targetSigma * blurFactor;
+    // Unblurred chrome needs a heavier fill than blurred chrome. While a route
+    // turns its blur on or off the fill moves with the blur, so the band never
+    // jumps between the two in one frame.
+    final unblurredAlpha = role == FrostSurfaceRole.chrome ? frostChromeFillOpacity(color, baseAlpha, 0) : baseAlpha;
+    var alpha = role == FrostSurfaceRole.chrome && targetSigma > 0
+        ? frostChromeFillOpacity(color, baseAlpha, targetSigma, secondary: tokens.textSecondary, dark: tokens.isDark)
+        : unblurredAlpha;
     // Blurred chrome under an ambient host solves against the Frost content
     // it can show, and returns to the black/white-safe alpha over registered
     // media. Without a host media cannot be seen, so the safe alpha stays.
     final mediaScope = role == FrostSurfaceRole.chrome && sigma > 0 ? FrostAmbientCardScope.scopeOf(context) : null;
     final modelled = mediaScope?.media != null;
     _watchMedia(mediaScope?.mediaRects);
-    final mediaSafe = alpha;
+    var mediaSafe = alpha;
     if (modelled) {
       final content = frostChromeModelFillOpacity(
         color,
@@ -269,6 +276,10 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
       );
       alpha = lerpDouble(content, alpha, _mediaCover?.value ?? 0)!;
       if (_mediaRects != null) _scheduleMediaCheck();
+    }
+    if (role == FrostSurfaceRole.chrome && targetSigma > 0 && blurFactor < 1) {
+      alpha = lerpDouble(unblurredAlpha, alpha, blurFactor)!;
+      mediaSafe = lerpDouble(unblurredAlpha, mediaSafe, blurFactor)!;
     }
     // Raised dark fills stay close to the page. One shared hairline and
     // two shadows establish elevation in both glass and opaque rendering.
