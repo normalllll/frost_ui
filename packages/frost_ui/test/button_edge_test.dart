@@ -116,7 +116,7 @@ void main() {
   }
   for (final direction in TextDirection.values) {
     for (final edge in FrostButtonEdgeAlignment.values) {
-      for (final host in ['box', 'sliver', 'card']) {
+      for (final host in ['box', 'sliver']) {
         testWidgets('edge $edge in $host preserves content, overflow hits and focus $direction', (tester) async {
           var calls = 0;
           final button = FrostButton.quiet(label: 'Edge action', edgeAlignment: edge, size: FrostControlSize.compact, onPressed: () => calls++);
@@ -127,11 +127,6 @@ void main() {
               slivers: [
                 FrostSliverContentColumn(sliver: SliverList.list(children: [row, const SizedBox(height: 1000)])),
               ],
-            ),
-            'card' => FrostContentColumn(
-              child: SingleChildScrollView(
-                child: FrostModule(title: 'Card', content: row),
-              ),
             ),
             _ => SingleChildScrollView(
               child: FrostContentColumn(child: Column(children: [row, const SizedBox(height: 1000)])),
@@ -148,10 +143,9 @@ void main() {
           );
           final content = tester.getRect(find.text('Edge action'));
           final surface = tester.getRect(find.descendant(of: find.byType(FrostButton), matching: find.byType(FrostClickSurface)));
-          final module = host == 'card' ? tester.getRect(find.byType(FrostModule)) : null;
           final columnInset = FrostMetrics.columnPadding(800).left;
-          final keyline = module == null ? columnInset : module.left + 16;
-          final endKeyline = module == null ? 800 - columnInset : module.right - 16;
+          final keyline = columnInset;
+          final endKeyline = 800 - columnInset;
           final startEdge = edge == FrostButtonEdgeAlignment.start;
           final physicalLeft = startEdge == (direction == TextDirection.ltr);
           expect(physicalLeft ? content.left : content.right, closeTo(physicalLeft ? keyline : endKeyline, .001));
@@ -178,10 +172,6 @@ void main() {
           expect(focus, findsOneWidget);
           expect(tester.getRect(focus), surface);
           final ringBounds = surface.inflate(2 + FrostMetrics.focusBorderWidth);
-          if (module != null) {
-            expect(module.contains(ringBounds.topLeft), isTrue);
-            expect(module.contains(ringBounds.bottomRight), isTrue);
-          }
           // Check actual ancestor paint clips, not just the button's own box.
           RenderObject current = tester.renderObject(focus);
           for (var parent = current.parent; parent != null; parent = current.parent) {
@@ -198,19 +188,6 @@ void main() {
       }
     }
   }
-  testWidgets('nested section action spends the module inner padding once', (tester) async {
-    final header = FrostSectionHeader(title: 'Nested', actionLabel: 'Show all', onAction: () {});
-    final card = FrostModule(title: 'Card', content: header);
-    final content = FrostContentColumn(
-      child: Align(alignment: Alignment.topCenter, child: card),
-    );
-    await tester.pumpWidget(frostTestApp(content));
-    final module = tester.getRect(find.byType(FrostModule));
-    expect(tester.getRect(find.text('Show all')).right, module.right - 16);
-    expect(tester.getRect(find.text('Nested')).left, module.left + 16);
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets('null alignment retains ordinary inset and section/banner opt in', (tester) async {
     await tester.pumpWidget(
       frostTestApp(

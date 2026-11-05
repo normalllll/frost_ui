@@ -156,18 +156,28 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('it fades when a scrolling stage passes under the header', (tester) async {
+    testWidgets('it fades when scrolling media passes under the header', (tester) async {
       final scrolled = <bool>[];
       await app(
         tester,
-        FrostDetailLayout(
-          compactStageSizing: FrostDetailStageSizing.natural,
-          mediaHeader: (_, past) {
-            scrolled.add(past);
-            return const SizedBox(height: 48);
-          },
-          stage: const ColoredBox(color: Colors.white, child: SizedBox(height: 300)),
-          primary: const SizedBox(height: 2000, child: ColoredBox(color: Colors.white)),
+        StatefulBuilder(
+          builder: (context, setState) => NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              final past = notification.metrics.pixels > 250;
+              if (scrolled.isEmpty || scrolled.last != past) setState(() => scrolled.add(past));
+              return false;
+            },
+            child: FrostMediaSystemChrome(
+              active: scrolled.isEmpty || !scrolled.last,
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: const [
+                  ColoredBox(color: Colors.white, child: SizedBox(height: 300)),
+                  SizedBox(height: 2000, child: ColoredBox(color: Colors.white)),
+                ],
+              ),
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();

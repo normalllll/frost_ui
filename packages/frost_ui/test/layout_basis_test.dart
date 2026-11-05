@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 
+import 'page_support.dart';
 import 'support.dart';
 
 void _window(WidgetTester tester, Size size) {
@@ -162,31 +163,18 @@ void main() {
 
   group('content width by page type', () {
     const header = ValueKey('header'), body = ValueKey('body');
-    testWidgets('a browse page fills a very wide window', (tester) async {
+    testWidgets('a pinned page fills a very wide window', (tester) async {
       _window(tester, const Size(2560, 900));
       await tester.pumpWidget(
         frostTestApp(
-          const FrostBrowseLayout(
-            header: SizedBox(key: header, height: 40, width: double.infinity),
-            slivers: [SliverToBoxAdapter(child: SizedBox(key: body, height: 40))],
+          pinnedPage(
+            header: const SizedBox(key: header, height: 40, width: double.infinity),
+            slivers: const [SliverToBoxAdapter(child: SizedBox(key: body, height: 40))],
           ),
         ),
       );
       expect(tester.getRect(find.byKey(header)), const Rect.fromLTWH(24, 0, 2512, 40));
       expect(tester.getSize(find.byKey(body)).width, 2512);
-    });
-
-    testWidgets('a collection page fills a very wide window', (tester) async {
-      _window(tester, const Size(2560, 900));
-      await tester.pumpWidget(
-        frostTestApp(
-          const FrostCollectionLayout(
-            header: SizedBox(key: header, height: 40, width: double.infinity),
-            slivers: [SliverToBoxAdapter(child: SizedBox(key: body, height: 40))],
-          ),
-        ),
-      );
-      expect(tester.getSize(find.byKey(header)).width, 2512);
     });
 
     testWidgets('a form column is width-limited and centred', (tester) async {
@@ -224,11 +212,9 @@ void main() {
       _window(tester, const Size(1400, 900));
       await tester.pumpWidget(
         frostTestApp(
-          Scaffold(
-            body: FrostContentLayout(
-              slivers: const [SliverToBoxAdapter(child: SizedBox(key: body, height: 40))],
-              auxiliarySlivers: const [],
-            ),
+          const FrostContentColumn(
+            maxWidth: FrostMetrics.readingMaxWidth,
+            child: SizedBox(key: body, height: 40, width: double.infinity),
           ),
         ),
       );

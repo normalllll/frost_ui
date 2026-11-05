@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 
 import '../controls/buttons.dart';
 import '../foundation/_layout_scope.dart';
+import '../foundation/density.dart';
 import '../foundation/icon_data.dart';
 import '../foundation/metrics.dart';
 import '../foundation/radius.dart';
@@ -60,23 +61,39 @@ class FrostModalHeader extends StatelessWidget {
   final bool showsCloseButton;
 
   @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Expanded(
-        child: title == null ? const SizedBox.shrink() : FrostText(title!, role: role, tone: FrostTextTone.primary),
-      ),
-      if (showsCloseButton) ...[
-        const SizedBox(width: FrostGap.related),
-        FrostButton.icon(
-          icon: FrostIconSet.of(context).close,
-          label: FrostScope.labelsOf(context).close,
-          size: FrostControlSize.compact,
-          onPressed: () => frostDismissModal(context, closeControl: true),
+  Widget build(BuildContext context) {
+    // The close button centres on the title's first line, so a wrapped title
+    // keeps it beside that line.
+    final style = FrostTypography.of(context).style(role);
+    final line = MediaQuery.textScalerOf(context).scale(style.fontSize!) * style.height!;
+    final button = FrostDensity.of(context).targetHeight;
+    final offset = (button - line) / 2;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: title == null
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: EdgeInsets.only(top: showsCloseButton ? math.max(0, offset) : 0),
+                  child: FrostText(title!, role: role, tone: FrostTextTone.primary),
+                ),
         ),
+        if (showsCloseButton) ...[
+          const SizedBox(width: FrostGap.related),
+          Padding(
+            padding: EdgeInsets.only(top: math.max(0, -offset)),
+            child: FrostButton.icon(
+              icon: FrostIconSet.of(context).close,
+              label: FrostScope.labelsOf(context).close,
+              size: FrostControlSize.compact,
+              onPressed: () => frostDismissModal(context, closeControl: true),
+            ),
+          ),
+        ],
       ],
-    ],
-  );
+    );
+  }
 }
 
 /// The controller always belongs to the modal, including lazy content slots.

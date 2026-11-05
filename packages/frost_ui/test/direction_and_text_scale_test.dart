@@ -243,7 +243,6 @@ void main() {
 
   group('trailing chevrons in RTL', () {
     for (final (name, child) in <(String, Widget)>[
-      ('FrostModule', FrostModule(title: 'Module', onPressed: () {})),
       ('FrostDisclosure', const FrostDisclosure(title: 'More', child: SizedBox())),
       (
         'FrostSectionHeader.collapsible',
@@ -291,29 +290,6 @@ void main() {
     await tester.pump();
     expect(hidden.hasFocus, isFalse);
     expect(shown.hasPrimaryFocus, isTrue);
-  });
-
-  group('FrostContentLayout', () {
-    testWidgets('scales its columns from the first step of text size', (tester) async {
-      _window(tester, const Size(1800, 900));
-      for (final (scale, expected) in [(1.0, 320.0), (1.1, 352.0), (1.3, 416.0)]) {
-        await tester.pumpWidget(
-          frostTestApp(
-            _scaled(
-              scale,
-              const Scaffold(
-                body: FrostContentLayout(
-                  slivers: [SliverToBoxAdapter(child: SizedBox(height: 100))],
-                  auxiliarySlivers: [SliverToBoxAdapter(child: SizedBox(key: ValueKey('auxiliary'), height: 100))],
-                ),
-              ),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        expect(tester.getSize(find.byKey(const ValueKey('auxiliary'))).width, closeTo(expected, .5), reason: 'text scale $scale');
-      }
-    });
   });
 
   group('column counts at large text', () {

@@ -4,8 +4,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../foundation/metrics.dart';
 import '../foundation/tokens.dart';
-import '_system_chrome_activation.dart';
 
 // Continue the system-bar protection into edge-to-edge media.
 const _systemFadeExtent = 24.0;
@@ -19,20 +19,25 @@ const _lightIconsProgress = .5;
 /// predictive back, and the route that covers this one as it comes and goes.
 /// This does not consume safe-area padding or move content.
 class FrostMediaSystemChrome extends StatefulWidget {
-  const FrostMediaSystemChrome({required this.child, super.key});
+  const FrostMediaSystemChrome({required this.child, this.active = true, super.key});
   final Widget child;
+
+  /// Whether the media is behind the system bars. A change eases over, so media
+  /// scrolling under a header does not cut the protection off.
+  final bool active;
   @override
   State<FrostMediaSystemChrome> createState() => _MediaSystemChromeState();
 }
 
-class _MediaSystemChromeState extends State<FrostMediaSystemChrome> {
+class _MediaSystemChromeState extends State<FrostMediaSystemChrome> with SingleTickerProviderStateMixin {
+  late final _activation = AnimationController(vsync: this, value: widget.active ? 1 : 0)..addListener(_changed);
   _SystemChromeScope? _scope;
   ModalRoute<Object?>? _route;
-  Animation<double>? _animation, _covering, _activation;
+  Animation<double>? _animation, _covering;
   bool _enabled = true;
   double get progress {
     if (!_enabled || _route?.offstage == true) return 0;
-    final shown = (_animation?.value ?? 1) * (1 - (_covering?.value ?? 0)) * (_activation?.value ?? 1);
+    final shown = (_animation?.value ?? 1) * (1 - (_covering?.value ?? 0)) * _activation.value;
     return shown.clamp(0.0, 1.0);
   }
 
@@ -56,8 +61,15 @@ class _MediaSystemChromeState extends State<FrostMediaSystemChrome> {
     _route = ModalRoute.of(context);
     _animation = _follow(_animation, _route?.animation);
     _covering = _follow(_covering, _route?.secondaryAnimation);
-    _activation = _follow(_activation, FrostSystemChromeActivation.of(context));
     _changed();
+  }
+
+  @override
+  void didUpdateWidget(FrostMediaSystemChrome oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active != oldWidget.active) {
+      _activation.animateTo(widget.active ? 1 : 0, duration: FrostMotion.duration(context, FrostMotion.snappyDuration));
+    }
   }
 
   void _changed() => _scope?.invalidate();
@@ -65,7 +77,7 @@ class _MediaSystemChromeState extends State<FrostMediaSystemChrome> {
   void dispose() {
     _animation?.removeListener(_changed);
     _covering?.removeListener(_changed);
-    _activation?.removeListener(_changed);
+    _activation.dispose();
     _scope?.entries.remove(this);
     _changed();
     super.dispose();

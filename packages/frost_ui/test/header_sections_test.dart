@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 
+import 'page_support.dart';
 import 'support.dart';
 
 Finder get _header => find.byType(FrostPageHeader);
@@ -30,7 +31,7 @@ void main() {
   }
 
   Widget page({bool rtl = false, bool reduceMotion = false, bool searchField = false, Widget? trailing, FrostRefreshAction? onRefresh}) {
-    Widget layout(List<Widget> leading) => FrostBrowseLayout(
+    Widget layout(List<Widget> leading) => pinnedPage(
       header: FrostPageHeader(
         leading: [
           FrostTitleMenu(
@@ -45,17 +46,15 @@ void main() {
           FrostToolbarItem.action(icon: testIcons.more, label: 'More', onPressed: () {}),
         ],
       ),
-      sections: FrostHeaderSections(
-        tabs: const FrostTabBar(
-          scrollable: true,
-          tabs: [
-            FrostTab(label: 'New'),
-            FrostTab(label: 'Hot'),
-            FrostTab(label: 'Random'),
-          ],
-        ),
-        trailing: trailing,
+      tabs: const FrostTabBar(
+        scrollable: true,
+        tabs: [
+          FrostTab(label: 'New'),
+          FrostTab(label: 'Hot'),
+          FrostTab(label: 'Random'),
+        ],
       ),
+      trailing: trailing,
       slivers: [
         ...leading,
         SliverList.builder(

@@ -144,31 +144,4 @@ void main() {
     await tester.pumpAndSettle();
     expect(calls, 1);
   });
-
-  for (final local in [390.0, 720.0]) {
-    testWidgets('default detail stage follows local portrait space at $local', (tester) async {
-      tester.view.physicalSize = const Size(1200, 1000);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      await tester.pumpWidget(
-        frostTestApp(
-          Align(
-            alignment: Alignment.topLeft,
-            child: SizedBox(
-              width: local,
-              height: 800,
-              child: const FrostDetailLayout(
-                stackBelow: FrostSizeClass.large,
-                stage: FrostMediaStage(aspectRatio: 1, child: SizedBox.expand(key: ValueKey('media'))),
-                primary: Text('Primary'),
-              ),
-            ),
-          ),
-        ),
-      );
-      final size = tester.getSize(find.byKey(const ValueKey('media')));
-      expect(size.height, closeTo(local == 390 ? 390 : 800 * .58, .001));
-      expect(tester.takeException(), isNull);
-    });
-  }
 }

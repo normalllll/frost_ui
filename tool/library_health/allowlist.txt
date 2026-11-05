@@ -53,15 +53,12 @@ framework	lists/_reorder_motion.dart	FrostReorderMotionBox.hitTest	hitTest	1	rev
 framework	lists/selection.dart	_SelectableItemState._pointerDown	hitTestInView	1	baseline-20261102
 framework	lists/table.dart	_TableRowState._mainTarget	hitTestInView	1	baseline-20261102
 framework	media/media_chrome.dart	_FrostMediaChromeState.initState	HardwareKeyboard.addHandler	1	baseline-20261102
-framework	motion/_frame_work.dart	FrostFrameWorkRender.hitTest	hitTest	1	reviewed:20261103:existing use, listed when the rule grew
 framework	overlays/context_menu.dart	_FrostContextMenuRegionState._pointerDown	hitTestInView	1	baseline-20261102
 framework	overlays/menu_anchor.dart	_AppMenuAnchorState._contentPopScope	visitChildElements	1	reviewed:20261103:popover PopScope walk has no cleaner mechanism
 framework	primitives/_text_selection_chrome.dart	_TextSelectionInputState.initState	HardwareKeyboard.addHandler	1	baseline-20261102
 framework	primitives/click_surface.dart	_AppClickSurfaceState._updateHover	hitTestInView	1	baseline-20261102
 framework	primitives/keyline.dart	_RenderBleed.hitTest	hitTest	1	reviewed:20261103:existing use, listed when the rule grew
 framework	primitives/keyline.dart	frostHasBleedBoundary	visitAncestorElements	1	baseline-20261102
-layers	feedback/error_content.dart	-	navigation/page_header.dart	1	baseline-20261102
-layers	feedback/error_content.dart	-	navigation/shell_navigation_scope.dart	1	baseline-20261102
 layers	foundation/app.dart	-	controls/toast.dart	1	baseline-20261102
 layers	foundation/app.dart	-	feedback/skeleton.dart	1	baseline-20261102
 layers	foundation/app.dart	-	layout/auto_scaffold.dart	1	baseline-20261102
@@ -109,7 +106,6 @@ silent	controls/toast.dart	_ToastGlyphReveal.readyOf	maybeOf-fallback	1	baseline
 silent	feedback/activity_indicator.dart	_FrostActivityIndicatorState.build	maybeOf-fallback	1	baseline-20261102
 silent	feedback/empty_state.dart	FrostStateContent.build	maybeOf-fallback	1	baseline-20261102
 silent	feedback/error_content.dart	FrostErrorContent.build	maybeOf-fallback	1	baseline-20261102
-silent	feedback/error_content.dart	FrostErrorPage.build	maybeOf-fallback	2	baseline-20261102
 silent	feedback/loading_gate.dart	frostLoadingHasShown	maybeOf-fallback	1	baseline-20261102
 silent	foundation/_control_dimming.dart	FrostControlDimming.ownsOpacityOf	maybeOf-fallback	1	baseline-20261102
 silent	foundation/_layout_scope.dart	FrostAdaptiveLayoutData.horizontalOf	maybeOf-fallback	1	baseline-20261102
@@ -119,12 +115,10 @@ silent	foundation/feedback.dart	_frostButtonFeedbackBackground	maybeOf-fallback	
 silent	foundation/scope.dart	FrostScope.configOf	maybeOf-fallback	1	baseline-20261102
 silent	foundation/scope.dart	FrostScope.solidSurfaces	maybeOf-fallback	1	baseline-20261102
 silent	frost_data:list_source.dart	FrostListSource._loadData	catch	1	reviewed:20261103:moved to frost_data unchanged
-silent	layout/_chrome_active_body.dart	FrostChromeActiveBody.isActive	maybeOf-fallback	1	baseline-20261102
+silent	layout/chrome_active_body.dart	FrostChromeActiveBody.isActive	maybeOf-fallback	1	reviewed:20261105:moved unchanged from the private file
 silent	layout/_local_back.dart	FrostLocalBack.build	maybeOf-fallback	1	baseline-20261102
-silent	layout/_section_pages.dart	_SectionPagesState._slide	catch	1	baseline-20261102
 silent	layout/column_placement.dart	FrostColumnPlacement.alignmentOf	maybeOf-fallback	1	baseline-20261102
 silent	layout/content_viewport.dart	FrostContentColumnBudget.of	maybeOf-fallback	1	baseline-20261102
-silent	layout/pinned_chrome.dart	FrostPinnedChromeMaterial.enabledOf	maybeOf-fallback	1	baseline-20261102
 silent	layout/pinned_chrome_glass.dart	FrostPinnedChromeGlass.build	maybeOf-fallback	1	baseline-20261102
 silent	layout/window_caption_scope.dart	FrostWindowCaptionScope.systemBackdropActiveOf	maybeOf-fallback	1	baseline-20261102
 silent	layout/window_caption_scope.dart	FrostWindowCaptionScope.systemBackdropAvailableOf	maybeOf-fallback	1	baseline-20261102

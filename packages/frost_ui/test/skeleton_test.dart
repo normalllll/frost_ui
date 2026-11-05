@@ -19,10 +19,6 @@ void main() {
             FrostListRow.skeleton(title: '000000000000', icon: true, subtitle: '00000000000000000000', value: '000000'),
             FrostListRow(title: '0' * 12, subtitle: FrostRowSubtitle('0' * 20), value: '0' * 6, leading: FrostGlyph.icon(testIcons.empty)),
           ),
-          (
-            FrostModule.skeleton(title: '0000000000', icon: true, value: '0000', note: '00000000000000000000'),
-            FrostModule(title: '0' * 10, value: '0' * 4, note: '0' * 20, icon: testIcons.empty),
-          ),
           (FrostTag.skeleton(label: '00000000'), FrostTag(label: '0' * 8)),
           (FrostAvatar.skeleton(size: FrostAvatarSize.regular), const FrostAvatar(semanticLabel: 'Person')),
           (FrostStat.skeleton(value: '0000', unit: null, caption: '0000000000'), FrostStat(value: '0' * 4, caption: '0' * 10)),

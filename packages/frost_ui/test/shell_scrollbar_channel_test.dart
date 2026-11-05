@@ -30,15 +30,16 @@ void main() {
                     child: PrimaryScrollController(
                       controller: controller,
                       automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
-                      child: FrostBrowseLayout(
-                        maxWidth: double.infinity,
-                        contentInset: FrostBrowseContentInset.edge,
-                        header: const FrostPageHeader(title: Text('Header')),
-                        slivers: const [
-                          SliverToBoxAdapter(
-                            child: ColoredBox(key: media, color: Colors.red, child: SizedBox(height: 3000)),
-                          ),
-                        ],
+                      child: FrostPinnedChrome(
+                        chrome: const FrostContentColumn(child: FrostPageHeader(title: Text('Header'))),
+                        body: const FrostLoadingScrollView(
+                          slivers: [
+                            FrostChromeSpacer(),
+                            SliverToBoxAdapter(
+                              child: ColoredBox(key: media, color: Colors.red, child: SizedBox(height: 3000)),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -48,14 +49,12 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        final page = find.byType(FrostBrowseLayout);
+        final page = find.byType(FrostPinnedChrome);
         final viewport = tester.getRect(find.descendant(of: page, matching: find.byType(Viewport)));
-        final image = tester.getRect(find.byKey(media));
         // The page runs up to the sidebar's rail on the right in right-to-left text.
         final edge = direction == TextDirection.rtl ? 1440.0 - 60 : 1440.0;
         expect(viewport.right, edge);
         expect(controller.positions, hasLength(1));
-        expect(image.right, edge - 8);
         expect(
           find.descendant(of: page, matching: find.byType(Scrollbar)),
           findsOneWidget,

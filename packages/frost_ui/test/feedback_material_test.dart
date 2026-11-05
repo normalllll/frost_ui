@@ -77,7 +77,6 @@ void main() {
         ),
         false,
       ),
-      'module': (FrostModule(title: 'Module', value: '12', onPressed: () {}), true),
       'link': (FrostLinkCard(title: 'Link', url: Uri.parse('https://example.org'), onPressed: () {}), true),
       'media': (
         FrostMediaCard(

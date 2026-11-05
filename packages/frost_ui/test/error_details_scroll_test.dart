@@ -68,30 +68,4 @@ void main() {
       });
     }
   }
-
-  testWidgets('the error page back control closes a non-dismissible modal it sits in', (tester) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(390, 800);
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      frostTestApp(
-        Builder(
-          builder: (context) => FrostButton(
-            label: 'Open',
-            onPressed: () => showFrostDialog<void>(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) => FrostErrorPage(message: 'Failed', onRetry: () {}),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
-    expect(find.text('Failed'), findsOneWidget);
-    await tester.tap(findFrostTooltip('L.back'));
-    await tester.pumpAndSettle();
-    expect(find.text('Failed'), findsNothing);
-  });
 }

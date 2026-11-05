@@ -46,7 +46,6 @@ void main() {
 
     group('trailing chevrons with $kind', () {
       for (final (name, child) in <(String, Widget)>[
-        ('FrostModule', FrostModule(title: 'Module', onPressed: () {})),
         ('FrostDisclosure', const FrostDisclosure(title: 'More', child: SizedBox())),
         (
           'FrostSectionHeader.collapsible',

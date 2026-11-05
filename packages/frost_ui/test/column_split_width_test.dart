@@ -31,7 +31,7 @@ void main() {
 
   for (final direction in TextDirection.values) {
     for (final width in [1000.0, 1200.0, 1400.0, FrostMetrics.settingsMaxWidth]) {
-      testWidgets('both layouts put the divider and the content start at the same x ($width, $direction)', (tester) async {
+      testWidgets('the settings sections put the divider at the navigation width and keep the content within its limit ($width, $direction)', (tester) async {
         viewport(tester, Size(width, 820));
         Widget app(Widget child) => frostTestApp(Directionality(textDirection: direction, child: child));
         await tester.pumpWidget(
@@ -45,22 +45,8 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        final settingsDivider = tester.getRect(find.byType(FrostDivider));
-        final settingsContent = tester.getRect(find.byKey(const ValueKey('content')));
-
-        await tester.pumpWidget(
-          app(
-            FrostNavigationColumnLayout(
-              navigationBuilder: (_) => const SizedBox(),
-              content: const FrostContentColumn(child: SizedBox.expand(key: ValueKey('content'))),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
         final divider = tester.getRect(find.byType(FrostDivider));
         final content = tester.getRect(find.byKey(const ValueKey('content')));
-        expect(divider, settingsDivider);
-        expect(content, settingsContent);
 
         final navigation = frostColumnNavigationWidthFor(width);
         expect(direction == TextDirection.ltr ? divider.left : width - divider.right, moreOrLessEquals(navigation));
@@ -76,12 +62,11 @@ void main() {
       late bool isWide;
       await tester.pumpWidget(
         frostTestApp(
-          FrostNavigationColumnLayout(
-            navigationBuilder: (context) {
-              isWide = FrostNavigationColumnLayout.isWideOf(context);
+          LayoutBuilder(
+            builder: (context, constraints) {
+              isWide = frostColumnSplitIsWide(context, constraints.maxWidth);
               return const SizedBox();
             },
-            content: const SizedBox(),
           ),
         ),
       );

@@ -193,12 +193,6 @@ void main() {
   );
 
   _agrees(
-    'FrostModule',
-    () => const FrostModule(title: 'Module title', value: '1234567', note: 'A note beneath the value'),
-    widths: const [400, 200],
-  );
-
-  _agrees(
     'FrostGrid',
     () => const FrostGrid(minItemWidth: 120, children: [Text('One long tile of text that wraps'), Text('Two'), Text('Three'), Text('Four')]),
     widths: const [900, 300],

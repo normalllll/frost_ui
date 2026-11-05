@@ -8,8 +8,9 @@ import '../foundation/tokens.dart';
 import '../motion/_material_reveal.dart';
 import '../primitives/_page_outline.dart';
 import '../primitives/surface.dart';
-import '_chrome_active_body.dart';
 import '_chrome_scroll_away.dart';
+import '_header_search_body.dart';
+import 'chrome_active_body.dart';
 
 part 'pinned_chrome_glass.dart';
 
@@ -34,6 +35,10 @@ part 'pinned_chrome_glass.dart';
 /// scrolls on and return when it scrolls back. The body keeps the full
 /// reserved height, so its scroll position, spacer and refresh header do not
 /// move; content shows through where the row was.
+///
+/// On narrow windows a suggesting search field in the chrome's page header
+/// lists its suggestions over the body: the body stays laid out underneath,
+/// hidden, and comes back as it was when the suggestions close.
 class FrostPinnedChrome extends StatefulWidget {
   const FrostPinnedChrome({required this.chrome, required this.body, this.extent, super.key});
 
@@ -57,7 +62,8 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
   /// The chrome's top row that slides away by scroll direction, if it has one.
   late final _hidden = AnimationController(vsync: this);
   late final _away = FrostChromeScrollAway(_hidden)..addListener(_awayChanged);
-  late final _awayMotion = Listenable.merge([_hidden, _away]);
+  final _search = FrostHeaderSearchBody();
+  late final _awayMotion = Listenable.merge([_hidden, _away, _search]);
   bool _hideTarget = false;
 
   /// Scrolling in one direction this far makes the top row follow, so a
@@ -77,8 +83,8 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
   static const _revealDistance = 24.0;
 
   bool _handleMetrics(ScrollMetricsNotification notification) {
-    if (!FrostChromeActiveBody.isActive(notification.context)) return false;
     _track(notification.context);
+    if (!FrostChromeActiveBody.isActive(notification.context)) return false;
     _refreshCoverage(notification.metrics);
     // A list that appears or changes near its top (another section's list,
     // say) cannot fill the place of the row, so the row returns.
@@ -182,13 +188,14 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
     _drag?.cancel();
     _away.dispose();
     _hidden.dispose();
+    _search.dispose();
     super.dispose();
   }
 
   bool _handleScroll(ScrollNotification notification) {
+    _track(notification.context);
     // A section kept off screen scrolls (or settles) without moving the bar.
     if (!FrostChromeActiveBody.isActive(notification.context)) return false;
-    _track(notification.context);
     _refreshCoverage(notification.metrics);
     _followDirection(notification);
     return false;
@@ -217,11 +224,23 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
     _applyCoverage(metrics);
   }
 
-  void _applyCoverage(ScrollMetrics metrics) {
+  /// Another body came on screen. It may be at rest, so no scrolling reports
+  /// its position: the glass and the sliding row take it from there.
+  bool _handleBodyActivated(FrostChromeBodyActivated notification) {
+    _pendingMetrics = null;
+    _travelled = 0;
+    _applyCoverage(null);
+    _scrollables.removeWhere((scrollable) => !scrollable.mounted);
+    final near = _scrollables.where((scrollable) => FrostChromeActiveBody.isActive(scrollable.context) && scrollable.position.hasContentDimensions);
+    if (near.isEmpty || near.any((scrollable) => scrollable.position.extentBefore < _away.extent)) _setHidden(false);
+    return true;
+  }
+
+  void _applyCoverage(ScrollMetrics? metrics) {
     _scrollables.removeWhere((scrollable) => !scrollable.mounted);
     // Independently scrolling panes share one band. A pane returning to zero
     // must not hide glass while another pane still has content under the bar.
-    var coverage = (metrics.extentBefore / _revealDistance).clamp(0.0, 1.0);
+    var coverage = metrics == null ? 0.0 : (metrics.extentBefore / _revealDistance).clamp(0.0, 1.0);
     for (final scrollable in _scrollables) {
       final position = scrollable.position;
       if (position.hasContentDimensions && FrostChromeActiveBody.isActive(scrollable.context)) {
@@ -253,7 +272,7 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
       ),
     );
 
-    return CustomMultiChildLayout(
+    final bars = CustomMultiChildLayout(
       delegate: _PinnedLayoutDelegate(widget.extent),
       children: [
         LayoutId(
@@ -273,7 +292,20 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
                   child: _PinnedBodyScope(
                     child: NotificationListener<ScrollMetricsNotification>(
                       onNotification: _handleMetrics,
-                      child: NotificationListener<ScrollNotification>(onNotification: _handleScroll, child: widget.body),
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: _handleScroll,
+                        child: NotificationListener<FrostChromeBodyActivated>(
+                          onNotification: _handleBodyActivated,
+                          child: FrostHeaderSearchConcealed(
+                            link: _search,
+                            child: ListenableBuilder(
+                              listenable: _search,
+                              builder: (context, body) => ExcludeFocus(excluding: _search.showing, child: body!),
+                              child: widget.body,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -300,7 +332,8 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
               child: AnimatedBuilder(
                 animation: _awayMotion,
                 builder: (context, chrome) => FrostPinnedChromeGlass._(
-                  opacity: FrostPinnedChromeMaterial.enabledOf(context) ? _coverage : 0,
+                  // The header sits on the suggestions page, not over scrolled content.
+                  opacity: _search.showing ? 0 : _coverage,
                   // The value already follows the scroll position frame by frame.
                   animate: false,
                   // The glass ends where the visible rows end once the top
@@ -314,6 +347,10 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
           ),
         ),
       ],
+    );
+    return FrostHeaderSearchBodyScope(
+      link: _search,
+      child: FrostHeaderSearchPage(link: _search, child: bars),
     );
   }
 }
@@ -355,14 +392,4 @@ class FrostChromeSpacer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SliverToBoxAdapter(child: SizedBox(height: MediaQuery.paddingOf(context).top));
-}
-
-// DetailLayout keeps one measured chrome slot while media controls turn into a
-// normal header. Only its material changes; body padding never changes on scroll.
-class FrostPinnedChromeMaterial extends InheritedWidget {
-  const FrostPinnedChromeMaterial({required this.enabled, required super.child, super.key});
-  final bool enabled;
-  static bool enabledOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<FrostPinnedChromeMaterial>()?.enabled ?? true;
-  @override
-  bool updateShouldNotify(FrostPinnedChromeMaterial oldWidget) => enabled != oldWidget.enabled;
 }

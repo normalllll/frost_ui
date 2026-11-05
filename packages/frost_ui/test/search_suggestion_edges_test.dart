@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/overlays/_popover_surface.dart';
 
+import 'page_support.dart';
 import 'support.dart';
 
 List<FrostSearchSuggestionGroup> _groups({int each = 1}) => [
@@ -108,12 +109,11 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('inline suggestions inside a browse layout share the page edges with the field', (tester) async {
+  testWidgets('inline suggestions inside a pinned page share the page edges with the field', (tester) async {
     viewport(tester, const Size(412, 915));
     await tester.pumpWidget(
       frostTestApp(
-        FrostBrowseLayout(
-          maxWidth: double.infinity,
+        pinnedPage(
           header: const FrostPageHeader(title: FrostText('Search')),
           slivers: [
             SliverFillRemaining(
@@ -135,7 +135,7 @@ void main() {
     await tester.pumpAndSettle();
     final start = tester.getRect(find.byType(FrostTextField)).left;
     final end = 412 - start;
-    // One column: the layout's own, not a second one inside it.
+    // One column: the page's own, not a second one inside it.
     expect(tester.getRect(find.text('Recent')).left, start);
     expect(tester.getRect(find.text('cat 0')).left, start);
     expect(tester.getRect(find.text('Clear')).right, end);

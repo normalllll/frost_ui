@@ -748,12 +748,16 @@ class FrostAmbientBackdrop extends StatelessWidget {
   const FrostAmbientBackdrop({super.key}) : _media = null;
 
   /// Extends app-owned media's dominant colours around it as tone-mapped  /// gradients over canvas. Reduced transparency uses their weighted mean.
-  const FrostAmbientBackdrop.fromImage({required ImageProvider image, required Widget child, super.key}) : _media = (image: image, child: child);
-  final ({ImageProvider image, Widget child})? _media;
+  ///
+  /// [stageKey] names the media stage, whose centre anchors the light theme's
+  /// tint falloff; without one it is the centre of this backdrop.
+  const FrostAmbientBackdrop.fromImage({required ImageProvider image, required Widget child, GlobalKey? stageKey, super.key})
+    : _media = (image: image, child: child, stageKey: stageKey);
+  final ({ImageProvider image, Widget child, GlobalKey? stageKey})? _media;
 
   @override
   Widget build(BuildContext context) {
-    if (_media case final media?) return FrostMediaAmbientBackdrop(image: media.image, child: media.child);
+    if (_media case final media?) return FrostMediaAmbientBackdrop(image: media.image, stageKey: media.stageKey, child: media.child);
     final tokens = FrostThemeTokens.of(context);
     final plain = FrostScope.solidSurfaces(context);
     final scope = context.dependOnInheritedWidgetOfExactType<_AmbientScope>();

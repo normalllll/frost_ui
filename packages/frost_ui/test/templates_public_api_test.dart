@@ -3,24 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 
 void main() {
-  test('7C APIs compile with only widgets and frost_ui', () {
+  test('page composition APIs compile with only widgets and frost_ui', () {
     final widgets = <Widget>[
-      FrostBrowseLayout(header: const SizedBox(), filterBar: const SizedBox(), slivers: const [], empty: const SizedBox(), isEmpty: true),
-      const FrostDetailLayout(
-        stackBelow: FrostSizeClass.expanded,
-        stage: SizedBox(),
-        primary: SizedBox(),
-        actions: SizedBox(),
-        modules: [],
-        sections: [],
-        technical: SizedBox(),
-        header: SizedBox(),
-      ),
-      FrostCollectionLayout(
-        header: const SizedBox(),
-        toolbar: const SizedBox(),
-        stats: const [FrostStat(value: '1', caption: 'items')],
-        slivers: const [],
+      FrostPinnedChrome(
+        chrome: const FrostHeaderSections(header: SizedBox(), tabs: SizedBox(), trailing: SizedBox()),
+        body: const FrostChromeActiveBody(active: true, child: SizedBox()),
+        extent: 100,
       ),
     ];
     final controller = FrostFormDialogController(errorSummary: 'error')..errorSummary = null;
@@ -37,6 +25,6 @@ void main() {
     );
     expect(open, isNotNull);
     controller.dispose();
-    expect(widgets, hasLength(3));
+    expect(widgets, hasLength(1));
   });
 }

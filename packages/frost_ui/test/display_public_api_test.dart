@@ -6,7 +6,6 @@ import 'package:frost_ui/src/display/stat.dart' show FrostStatStrip;
 
 void main() {
   test('display APIs compile with widgets.dart and no material import', () {
-    const icon = FrostIconData.glyph(IconData(0xe000));
     final widgets = <Widget>[
       const FrostCountBadge(count: 5, max: 99, tone: FrostCountBadgeTone.negative),
       const SizedBox().frostBadge(120),
@@ -21,10 +20,6 @@ void main() {
       const FrostStatStrip(
         stats: [FrostStat(value: '24', caption: 'Comments')],
       ),
-      FrostModule(title: 'Module', icon: icon, value: '42', graphic: const SizedBox(), content: const Text('Body'), note: 'Note', onPressed: () {}),
-      const FrostModuleGrid(
-        items: [FrostModuleGridItem(span: FrostModuleSpan.full, child: SizedBox())],
-      ),
       const FrostMeter(value: .5, semanticLabel: 'Level'),
       const FrostDisclosure(title: 'Details', child: Text('Body')),
       const FrostCodeBlock(text: 'source'),
@@ -32,6 +27,6 @@ void main() {
       const FrostAvatar(semanticLabel: 'Child', child: Text('App-owned')),
       const FrostStatusDot(tone: FrostStatusTone.positive, label: 'Ready'),
     ];
-    expect(widgets, hasLength(17));
+    expect(widgets, hasLength(15));
   });
 }

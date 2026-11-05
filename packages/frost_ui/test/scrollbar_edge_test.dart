@@ -6,7 +6,7 @@ import 'support.dart';
 
 void main() {
   for (final direction in TextDirection.values) {
-    for (final page in ['detail', 'browse', 'settings']) {
+    for (final page in ['browse', 'settings']) {
       testWidgets('$page scrollbar stays outside content and at pane edge $direction', (tester) async {
         tester.view.physicalSize = const Size(1440, 900);
         tester.view.devicePixelRatio = 1;
@@ -18,12 +18,16 @@ void main() {
           child: FrostContentColumn(child: SizedBox(height: 2000, child: Text('Section body'))),
         );
         final child = switch (page) {
-          'detail' => const FrostDetailLayout(stage: SizedBox(), primary: Text('Information'), sections: [SizedBox(height: 2000)]),
           'browse' => FrostRefreshView(
             onRefresh: () async => true,
-            builder: (context, physics, locators) => const FrostBrowseLayout(
-              header: SizedBox(height: 52),
-              slivers: [SliverToBoxAdapter(child: SizedBox(height: 2000))],
+            builder: (context, physics, locators) => const FrostPinnedChrome(
+              chrome: SizedBox(height: 52),
+              body: FrostLoadingScrollView(
+                slivers: [
+                  FrostChromeSpacer(),
+                  SliverToBoxAdapter(child: SizedBox(height: 2000)),
+                ],
+              ),
             ),
           ),
           _ => FrostSettingsSections(labels: const ['One'], selectedIndex: 0, onSelected: (_) {}, sectionBuilder: (_, _) => scroll()),

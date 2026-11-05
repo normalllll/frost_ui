@@ -58,16 +58,6 @@ final _cases = <DisplayCase>[
   DisplayCase('FrostMetaLine.new', FrostMetaLine, (_) => const FrostMetaLine(items: [longLabel, longLabel, longLabel])),
   DisplayCase('FrostMeter.new', FrostMeter, (_) => const FrostMeter(value: 0.4, semanticLabel: 'Meter')),
   DisplayCase(
-    'FrostModuleGrid.new',
-    FrostModuleGrid,
-    (_) => const FrostModuleGrid(
-      items: [
-        FrostModuleGridItem(child: FrostModule(title: longLabel)),
-        FrostModuleGridItem(child: FrostModule(title: longLabel)),
-      ],
-    ),
-  ),
-  DisplayCase(
     'FrostProfileHeader.new',
     FrostProfileHeader,
     (_) => const FrostProfileHeader(
@@ -90,18 +80,6 @@ final _cases = <DisplayCase>[
   DisplayCase('FrostErrorContent.fromError', FrostErrorContent, (_) => const FrostErrorContent.fromError(error: 'broken', onRetry: null)),
   DisplayCase('FrostErrorDetails.new', FrostErrorDetails, (_) => const FrostErrorDetails(details: 'Details')),
   DisplayCase('FrostErrorDetails.quiet', FrostErrorDetails, (_) => const FrostErrorDetails.quiet(details: 'Details')),
-  DisplayCase(
-    'FrostErrorPage.new',
-    FrostErrorPage,
-    (_) => FrostErrorPage(message: longLabel, onRetry: () {}),
-    skip: const {'intrinsic': 'a full Scaffold page: it fills its route and has no content size to report'},
-  ),
-  DisplayCase(
-    'FrostErrorPage.fromError',
-    FrostErrorPage,
-    (_) => FrostErrorPage.fromError(error: 'broken', onRetry: () {}),
-    skip: const {'intrinsic': 'a full Scaffold page: it fills its route and has no content size to report'},
-  ),
   DisplayCase('FrostInlineBanner.new', FrostInlineBanner, (_) => const FrostInlineBanner(tone: FrostBannerTone.info, message: longLabel)),
   DisplayCase('FrostLoadingGate.new', FrostLoadingGate, (_) => FrostLoadingGate(loading: false, builder: (context, loading) => _box)),
   DisplayCase('FrostProgressBar.new', FrostProgressBar, (_) => const FrostProgressBar(value: 0.4, semanticLabel: 'Progress')),
@@ -136,43 +114,7 @@ final _cases = <DisplayCase>[
     FrostAutoScaffold,
     (_) => hosted(height: 300, width: 400, child: FrostAutoScaffold(builder: (context, layout, orientation, horizontal) => _box)),
   ),
-  DisplayCase(
-    'FrostBrowseLayout.new',
-    FrostBrowseLayout,
-    (_) => hosted(
-      height: 400,
-      width: 400,
-      child: FrostBrowseLayout(
-        header: const FrostInlinePageHeading(title: longLabel),
-        slivers: [FrostSliverList(itemCount: 3, itemBuilder: _listRow)],
-      ),
-    ),
-    skip: _scroll,
-  ),
-  DisplayCase(
-    'FrostCollectionLayout.new',
-    FrostCollectionLayout,
-    (_) => hosted(
-      height: 400,
-      width: 400,
-      child: FrostCollectionLayout(
-        header: const FrostInlinePageHeading(title: longLabel),
-        slivers: [FrostSliverList(itemCount: 3, itemBuilder: _listRow)],
-      ),
-    ),
-    skip: _scroll,
-  ),
   DisplayCase('FrostColumnPlacement.new', FrostColumnPlacement, (_) => const FrostColumnPlacement(alignment: FrostColumnAlignment.center, child: _box)),
-  DisplayCase(
-    'FrostContentLayout.new',
-    FrostContentLayout,
-    (_) => hosted(
-      height: 400,
-      width: 400,
-      child: FrostContentLayout(slivers: [FrostSliverList(itemCount: 3, itemBuilder: _listRow)]),
-    ),
-    skip: _scroll,
-  ),
   DisplayCase('FrostContentColumn.new', FrostContentColumn, (_) => const FrostContentColumn(child: _box)),
   DisplayCase(
     'FrostContentViewport.new',
@@ -186,16 +128,6 @@ final _cases = <DisplayCase>[
     (_) => _inScroll(const FrostSliverContentColumn(sliver: SliverToBoxAdapter(child: _box))),
     skip: _sliver,
   ),
-  DisplayCase(
-    'FrostDetailLayout.new',
-    FrostDetailLayout,
-    (_) => hosted(
-      height: 600,
-      width: 400,
-      child: FrostDetailLayout(stage: _box, primary: Text('Primary')),
-    ),
-    skip: _scroll,
-  ),
   DisplayCase('FrostFit.new', FrostFit, (_) => FrostFit(candidates: [(context) => _box, (context) => const SizedBox(width: 60, height: 20)])),
   DisplayCase('FrostGrid.new', FrostGrid, (_) => const FrostGrid(minItemWidth: 80, children: [_box, _box, _box])),
   DisplayCase(
@@ -205,16 +137,6 @@ final _cases = <DisplayCase>[
     skip: _sliver,
   ),
   DisplayCase('FrostKeepAlive.new', FrostKeepAlive, (_) => const FrostKeepAlive(child: _box)),
-  DisplayCase(
-    'FrostNavigationColumnLayout.new',
-    FrostNavigationColumnLayout,
-    (_) => hosted(
-      height: 300,
-      width: 400,
-      child: FrostNavigationColumnLayout(navigationBuilder: (context) => const Text('Navigation'), content: _box),
-    ),
-    skip: const {'intrinsic': 'a page layout of navigation and content columns that fills what it is given'},
-  ),
   DisplayCase('FrostChromeSpacer.new', FrostChromeSpacer, (_) => _inScroll(const FrostChromeSpacer()), hasContent: false, skip: _sliver),
   DisplayCase(
     'FrostPinnedChrome.new',
@@ -402,6 +324,15 @@ final _cases = <DisplayCase>[
 
   // navigation/
   DisplayCase('FrostInlinePageHeading.new', FrostInlinePageHeading, (_) => const FrostInlinePageHeading(title: longLabel)),
+  DisplayCase(
+    'FrostHeaderSections.new',
+    FrostHeaderSections,
+    (_) => const FrostHeaderSections(
+      header: FrostPageHeader(title: Text('Header')),
+      tabs: _box,
+    ),
+    skip: const {'intrinsic': 'a pinned-chrome row that measures its tabs against the width it is given and has no content size of its own'},
+  ),
   DisplayCase('FrostPageHeader.new', FrostPageHeader, (_) => const FrostPageHeader(title: Text('Header'))),
   DisplayCase(
     'FrostPager.new',

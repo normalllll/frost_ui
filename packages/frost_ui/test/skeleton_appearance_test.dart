@@ -235,9 +235,6 @@ void main() {
       greaterThanOrEqualTo(4 - .001),
     );
     expect(find.text('1,280'), findsOneWidget);
-    await tester.pumpWidget(host(FrostModule.skeleton(title: 'Stored', icon: true, value: '1,280', note: 'Since yesterday'), reduced: true));
-    expect(textBones(tester), hasLength(3));
-    expect(find.text('1,280'), findsOneWidget);
   });
   testWidgets('FrostText.rich uses one line bone across differently styled spans', (tester) async {
     await tester.pumpWidget(

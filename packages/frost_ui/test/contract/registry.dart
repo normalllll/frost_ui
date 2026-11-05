@@ -75,7 +75,6 @@ const _data = [
   'FrostAppearance',
   'FrostBackIntent',
   'FrostBleedSnap',
-  'FrostBrowseSection',
   'FrostCaptionMetrics',
   'FrostCaptionState',
   'FrostDetailPage',
@@ -85,7 +84,6 @@ const _data = [
   'FrostFloatingEntryPosition',
   'FrostFontWarmUpSample',
   'FrostGlyph',
-  'FrostHeaderSections',
   'FrostHitRegion',
   'FrostIconData',
   'FrostIconSet',
@@ -98,9 +96,7 @@ const _data = [
   'FrostMenuEntry',
   'FrostMenuSection',
   'FrostMenuSubmenu',
-  'FrostModuleGridItem',
   'FrostNavDestination',
-  'FrostNavigationColumnPage',
   'FrostPickerOption',
   'FrostRefreshLocators',
   'FrostRowSubtitle',
@@ -165,6 +161,7 @@ const _style = [
 
 const _scope = [
   // Environment components; they paint nothing of their own or need a native window
+  'FrostChromeActiveBody',
   'FrostAmbientBackdropHost',
   'FrostControlScope',
   'FrostFieldScope',

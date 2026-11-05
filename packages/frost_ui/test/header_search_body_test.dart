@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 
+import 'page_support.dart';
 import 'support.dart';
 
 Finder get _header => find.byType(FrostPageHeader);
@@ -35,7 +36,7 @@ void main() {
   Widget page({bool suggestions = true}) => frostTestApp(
     DefaultTabController(
       length: 2,
-      child: FrostBrowseLayout(
+      child: pinnedPage(
         header: FrostPageHeader(
           leading: [
             FrostTitleMenu(
@@ -68,14 +69,12 @@ void main() {
           ),
           actions: [FrostToolbarItem.action(icon: testIcons.filter, label: 'Filter', onPressed: () {})],
         ),
-        sections: const FrostHeaderSections(
-          tabs: FrostTabBar(
-            scrollable: true,
-            tabs: [
-              FrostTab(label: 'New'),
-              FrostTab(label: 'Hot'),
-            ],
-          ),
+        tabs: const FrostTabBar(
+          scrollable: true,
+          tabs: [
+            FrostTab(label: 'New'),
+            FrostTab(label: 'Hot'),
+          ],
         ),
         slivers: [SliverList.builder(itemCount: 80, itemBuilder: (_, i) => SizedBox(height: 40, child: Text('row $i')))],
       ),

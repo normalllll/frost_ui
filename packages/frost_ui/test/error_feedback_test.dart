@@ -11,24 +11,6 @@ import 'display_badges_test.dart' show display;
 import 'support.dart';
 
 void main() {
-  testWidgets('error page narrow header and back, wide content keeps no header', (tester) async {
-    for (final width in [400.0, 1000.0]) {
-      await tester.pumpWidget(
-        frostTestApp(
-          MediaQuery(
-            data: MediaQueryData(size: Size(width, 700)),
-            child: FrostErrorPage(message: 'Failure summary', onRetry: () {}),
-          ),
-        ),
-      );
-      expect(find.byType(AppBar), findsNothing);
-      expect(find.byType(FrostPageHeader), width < 600 ? findsOneWidget : findsNothing);
-      expect(find.byType(FrostCompactBackButton), width < 600 ? findsOneWidget : findsNothing);
-      expect(find.byType(FrostStateContent), findsOneWidget);
-      expect(find.text('Failure summary'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    }
-  });
   testWidgets('error content keeps parameters, negative icon, readable summary and retry', (tester) async {
     var retries = 0;
     await display(
@@ -51,35 +33,6 @@ void main() {
     expect(tester.widget<FrostCodeBlock>(find.byType(FrostCodeBlock).first).text, 'https://example.test/path?query=full');
     await tester.tap(find.text('Try again'));
     expect(retries, 1);
-    expect(tester.takeException(), isNull);
-  });
-  testWidgets('standalone opaque error route paints canvas and back returns to caller', (tester) async {
-    await tester.pumpWidget(
-      frostTestApp(
-        Builder(
-          builder: (context) => FrostButton(
-            label: 'Open error',
-            onPressed: () => Navigator.of(context).push<void>(
-              PageRouteBuilder<void>(
-                pageBuilder: (_, animation, secondary) => MediaQuery(
-                  data: const MediaQueryData(size: Size(400, 700)),
-                  child: FrostErrorPage(message: 'Route failure', onRetry: () {}),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.tap(find.text('Open error'));
-    await tester.pumpAndSettle();
-    final page = find.byType(FrostErrorPage);
-    final scaffold = tester.widget<Scaffold>(find.descendant(of: page, matching: find.byType(Scaffold)));
-    expect(scaffold.backgroundColor, FrostThemeTokens.of(tester.element(page)).canvas);
-    await tester.tap(find.byType(FrostCompactBackButton));
-    await tester.pumpAndSettle();
-    expect(find.byType(FrostErrorPage), findsNothing);
-    expect(find.text('Open error'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
   for (final reduced in [false, true]) {

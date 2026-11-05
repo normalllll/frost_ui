@@ -96,23 +96,4 @@ void main() {
     expect(tag.aspectRatio, 2);
     expect(tester.takeException(), isNull);
   });
-  testWidgets('natural detail stage scrolls with information and survives sizing changes', (tester) async {
-    tester.view.physicalSize = const Size(390, 800);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    Widget app(FrostDetailStageSizing sizing) =>
-        frostTestApp(FrostDetailLayout(compactStageSizing: sizing, header: const SizedBox(height: 48), stage: stage(.2), primary: const Text('Information')));
-    await tester.pumpWidget(app(FrostDetailStageSizing.natural));
-    expect(tester.getSize(find.byKey(mediaKey)), const Size(390, 1950));
-    final retained = tester.element(find.byKey(mediaKey));
-    final scroll = find.byType(CustomScrollView);
-    await tester.drag(scroll, const Offset(0, -1500));
-    await tester.pumpAndSettle();
-    expect(tester.getTopLeft(find.byKey(mediaKey)).dy, lessThan(0));
-    await tester.pumpWidget(app(FrostDetailStageSizing.viewport));
-    await tester.pumpAndSettle();
-    expect(tester.element(find.byKey(mediaKey)), same(retained));
-    expect(tester.getSize(find.byKey(mediaKey)).height, lessThanOrEqualTo(800 * .6));
-    expect(tester.takeException(), isNull);
-  });
 }

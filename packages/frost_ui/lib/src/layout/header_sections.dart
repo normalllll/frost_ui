@@ -9,8 +9,8 @@ import '_chrome_scroll_away.dart';
 import '_header_row_span.dart';
 import '_header_search_body.dart';
 
-/// Section tabs that a page template treats as part of its page header, such
-/// as a browse page's Latest / Popular / Random.
+/// A page header with section tabs that belong to it, such as a browse page's
+/// Latest / Popular / Random. Use it as the chrome of a [FrostPinnedChrome].
 ///
 /// Only one row stays pinned when it can: if the header row, with every
 /// action at its full form, has room for the tabs between its leading content
@@ -19,8 +19,11 @@ import '_header_search_body.dart';
 /// the content scrolls on and returns when it scrolls back. Focus in the
 /// header row, its search field included, keeps it shown. The choice follows
 /// the width the header actually has, not the platform or input.
-class FrostHeaderSections {
-  const FrostHeaderSections({required this.tabs, this.trailing});
+class FrostHeaderSections extends StatefulWidget {
+  const FrostHeaderSections({required this.header, required this.tabs, this.trailing, super.key});
+
+  /// Usually a [FrostPageHeader].
+  final Widget header;
 
   /// Usually a [FrostTabBar] with `scrollable: true`. Measured at its natural
   /// width; in a row of its own it takes the width left by [trailing].
@@ -29,19 +32,12 @@ class FrostHeaderSections {
   /// A control that belongs to the selected section, for example a time-range
   /// menu: right after the tabs in the header row, at the end of their own row.
   final Widget? trailing;
-}
 
-/// Library-only: a page header with [FrostHeaderSections], inside
-/// [FrostPinnedChrome].
-class FrostSectionedHeader extends StatefulWidget {
-  const FrostSectionedHeader({required this.header, required this.sections, super.key});
-  final Widget header;
-  final FrostHeaderSections sections;
   @override
-  State<FrostSectionedHeader> createState() => _SectionedHeaderState();
+  State<FrostHeaderSections> createState() => _HeaderSectionsState();
 }
 
-class _SectionedHeaderState extends State<FrostSectionedHeader> {
+class _HeaderSectionsState extends State<FrostHeaderSections> {
   final _span = FrostHeaderRowSpan();
   var _focused = false;
 
@@ -68,8 +64,8 @@ class _SectionedHeaderState extends State<FrostSectionedHeader> {
         // Passive: only reports whether focus is anywhere in the header row.
         child: Focus(canRequestFocus: false, skipTraversal: true, onFocusChange: (focused) => setState(() => _focused = focused), child: widget.header),
       ),
-      tabs: concealed(widget.sections.tabs),
-      trailing: widget.sections.trailing == null ? null : concealed(widget.sections.trailing!),
+      tabs: concealed(widget.tabs),
+      trailing: widget.trailing == null ? null : concealed(widget.trailing!),
     );
   }
 }

@@ -19,8 +19,7 @@ class FrostMediaStage extends StatelessWidget {
   final double aspectRatio;
   final Widget child;
 
-  /// Shared detail-stage corners: edge-to-edge narrow media is square; finite
-  /// wide stages use the media radius. Read below FrostDetailLayout.stage.
+  /// The corners of the enclosing presented stage, or the media radius.
   static double radiusOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<FrostMediaStagePresentation>()?.radius ?? FrostRadius.lg;
 
   @override

@@ -13,7 +13,7 @@ void main() {
       textHeightFactor: .5,
     );
     expect(style.effect, FrostSkeletonEffect.shimmer);
-    // Compile errors by design: FrostListRow.skeleton(), FrostModule.skeleton(),
+    // Compile errors by design: FrostListRow.skeleton(),
     // FrostTag.skeleton(), FrostStat.skeleton(), FrostAvatar.skeleton(),
     // FrostMediaFrame.skeleton(), FrostMediaCard.skeleton(), and omitting
     // firstLoadSkeleton on the source-owned paged slivers.
@@ -40,7 +40,6 @@ void main() {
       const FrostProgressRing(value: .5, semanticLabel: 'Progress'),
       const Text('Real layout').frostSkeleton(true),
       FrostListRow.skeleton(title: '000000000000', icon: false, subtitle: '00000000000000000000', value: '000000'),
-      FrostModule.skeleton(title: '0000000000', icon: false, value: null, note: null),
       FrostTag.skeleton(label: '00000000'),
       FrostAvatar.skeleton(size: FrostAvatarSize.xlarge),
       FrostStat.skeleton(value: '0000', unit: null, caption: '0000000000'),
@@ -48,9 +47,8 @@ void main() {
       const FrostEmptyState(title: 'Empty'),
       const FrostInlineBanner(tone: FrostBannerTone.info, message: 'Info'),
       FrostErrorContent(message: 'Failure', onRetry: () {}),
-      FrostErrorPage(message: 'Failure', onRetry: () {}),
       const FrostErrorDetails(details: 'Technical'),
     ];
-    expect(widgets, hasLength(14));
+    expect(widgets, hasLength(12));
   });
 }

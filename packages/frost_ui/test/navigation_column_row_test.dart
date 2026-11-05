@@ -3,21 +3,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
+import 'package:frost_ui/src/layout/_column_split.dart';
+import 'package:frost_ui/src/layout/_content_padding.dart';
+import 'package:frost_ui/src/layout/navigation_column_row.dart' show FrostNavigationColumnFocus, frostNavigationRowTextStart;
 import 'package:frost_ui/src/navigation/_navigation_tile.dart';
 import 'support.dart';
 
 const _labels = ['Alpha', 'Bravo', 'Charlie'];
 
-Widget _column(List<Widget> children) => FrostNavigationColumnLayout(
-  navigationBuilder: (_) => ListView(
-    padding: EdgeInsets.zero,
-    children: [
-      FrostContentColumn(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+/// The navigation column of a split page, as an app composes it from the
+/// column panes and the column focus.
+Widget _column(List<Widget> children) => LayoutBuilder(
+  builder: (context, constraints) => FrostColumnPanes(
+    wide: frostColumnSplitIsWide(context, constraints.maxWidth),
+    width: constraints.maxWidth,
+    navigation: FrostNavigationColumnFocus(
+      child: FrostContentPadding(
+        padding: const EdgeInsetsDirectional.only(start: FrostGap.related + frostNavigationRowTextStart, end: FrostGap.related),
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            FrostContentColumn(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+            ),
+          ],
+        ),
       ),
-    ],
+    ),
+    content: const Text('Detail'),
   ),
-  content: const Text('Detail'),
 );
 
 Finder _fill(Finder of) => find.descendant(of: of, matching: find.byType(DecoratedBox)).first;

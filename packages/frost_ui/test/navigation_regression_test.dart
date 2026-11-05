@@ -7,6 +7,7 @@ import 'package:frost_ui/desktop.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/media.dart';
 
+import 'page_support.dart';
 import 'support.dart';
 
 FrostNavDestination _destination(String label, {int badge = 0, double? progress, Widget Function(BuildContext, Widget)? builder}) =>
@@ -479,14 +480,11 @@ void main() {
     Widget sections({TargetPlatform platform = TargetPlatform.windows, int count = 2}) => frostTestApp(
       DefaultTabController(
         length: count,
-        child: FrostBrowseLayout.sectioned(
+        child: sectionedPage(
           header: const FrostPageHeader(),
-          sections: FrostHeaderSections(
-            tabs: FrostTabBar(tabs: [for (final label in labels.take(count)) FrostTab(label: label)]),
-          ),
-          sectionBuilder: (context, section) => FrostBrowseSection(
-            slivers: [SliverList.builder(itemCount: 60, itemBuilder: (_, row) => SizedBox(height: 40, child: Text('S$section row $row')))],
-          ),
+          tabs: FrostTabBar(tabs: [for (final label in labels.take(count)) FrostTab(label: label)]),
+          sections: count,
+          slivers: (context, section) => [SliverList.builder(itemCount: 60, itemBuilder: (_, row) => SizedBox(height: 40, child: Text('S$section row $row')))],
         ),
       ),
       platform: platform,

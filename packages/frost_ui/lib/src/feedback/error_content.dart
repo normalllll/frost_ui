@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart' show Scaffold;
 import 'package:flutter/widgets.dart';
 
 import '../controls/buttons.dart';
@@ -8,55 +7,11 @@ import '../foundation/icon_data.dart';
 import '../foundation/scope.dart';
 import '../foundation/spacing.dart';
 import '../foundation/tokens.dart';
-import '../layout/auto_scaffold.dart';
-import '../navigation/page_header.dart';
-import '../navigation/shell_navigation_scope.dart';
-import '../overlays/_modal_route.dart';
-import '../primitives/surface.dart';
-import '_skeleton_geometry.dart';
 import 'empty_state.dart';
 import 'error_action_button.dart';
 
 // Keep technical details bounded inside a page or a short inline message.
 const _errorDetailsMaximumHeight = 220.0;
-
-/// A full page for a failed load, with page-owned navigation and retry.
-class FrostErrorPage extends StatelessWidget {
-  const FrostErrorPage({required String this.message, required this.onRetry, this.fullUrl, this.details, super.key}) : error = null;
-  const FrostErrorPage.fromError({required Object this.error, required this.onRetry, super.key}) : message = null, fullUrl = null, details = null;
-  final String? message;
-  final Object? error;
-  final VoidCallback onRetry;
-  final String? fullUrl, details;
-  @override
-  Widget build(BuildContext context) => FrostAutoScaffold(
-    builder: (context, layout, orientation, horizontal) => Scaffold(
-      // An opaque route cannot reveal the previous route's canvas. Inherit a
-      // shell surface when present, and supply the canvas for standalone pages.
-      backgroundColor: FrostSurfaceScope.maybeOf(context)?.background ?? FrostThemeTokens.of(context).canvas,
-      body: SafeArea(
-        child: Column(
-          children: [
-            if (layout.isCompact || !(FrostShellNavigationScope.maybeOf(context)?.ownsBackControl ?? true))
-              FrostPageHeader(
-                title: FrostSkeletonText(child: Text(FrostScope.labelsOf(context).loadFailed)),
-                onBack: () => frostDismissModal(context, closeControl: true),
-              ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(FrostGap.of(context).section),
-                child: switch (error) {
-                  final error? => FrostErrorContent.fromError(error: error, onRetry: onRetry),
-                  null => FrostErrorContent(message: message!, onRetry: onRetry, fullUrl: fullUrl, details: details),
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
 
 /// Error presentation shares the empty state's readable, scrollable structure.
 class FrostErrorContent extends StatelessWidget {

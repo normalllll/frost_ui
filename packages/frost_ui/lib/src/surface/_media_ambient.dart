@@ -68,7 +68,7 @@ class FrostMediaAmbientBackdrop extends StatelessWidget {
     builder: (context, constraints) => _SizedMediaAmbientBackdrop(
       image: image,
       size: constraints.biggest,
-      stageKey: stageKey ?? context.dependOnInheritedWidgetOfExactType<FrostMediaStageScope>()?.stageKey,
+      stageKey: stageKey,
       child: child,
     ),
   );
@@ -340,11 +340,3 @@ class _MediaPalettePainter extends CustomPainter {
   bool shouldRepaint(_MediaPalettePainter old) => true;
 }
 
-/// Internal: lets a layout name its media stage to the surround below it,
-/// whose light tint falloff is measured from the stage centre.
-class FrostMediaStageScope extends InheritedWidget {
-  const FrostMediaStageScope({required this.stageKey, required super.child, super.key});
-  final GlobalKey stageKey;
-  @override
-  bool updateShouldNotify(FrostMediaStageScope oldWidget) => stageKey != oldWidget.stageKey;
-}

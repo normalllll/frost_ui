@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 
+import 'page_support.dart';
 import 'support.dart';
 
 const _count = 400;
@@ -159,14 +160,14 @@ void main() {
   });
 
   for (final (mode, width) in [('one-row', 1147.0), ('two-row', 412.0)]) {
-    testWidgets('in a $mode browse layout the pinned header rows never cover the item', (tester) async {
+    testWidgets('in a $mode pinned page the header rows never cover the item', (tester) async {
       viewport(tester, Size(width, 800));
       final controller = FrostWaterfallController();
       await tester.pumpWidget(
         frostTestApp(
           DefaultTabController(
             length: 3,
-            child: FrostBrowseLayout(
+            child: pinnedPage(
               header: FrostPageHeader(
                 leading: [
                   FrostTitleMenu(
@@ -179,15 +180,13 @@ void main() {
                   FrostToolbarItem.action(icon: testIcons.more, label: 'More', onPressed: () {}),
                 ],
               ),
-              sections: const FrostHeaderSections(
-                tabs: FrostTabBar(
-                  scrollable: true,
-                  tabs: [
-                    FrostTab(label: 'New'),
-                    FrostTab(label: 'Hot'),
-                    FrostTab(label: 'Random'),
-                  ],
-                ),
+              tabs: const FrostTabBar(
+                scrollable: true,
+                tabs: [
+                  FrostTab(label: 'New'),
+                  FrostTab(label: 'Hot'),
+                  FrostTab(label: 'Random'),
+                ],
               ),
               slivers: [FrostSliverWaterfallGrid<int>(items: _items, itemBuilder: _tile, controller: controller)],
             ),

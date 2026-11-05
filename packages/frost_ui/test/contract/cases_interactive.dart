@@ -440,19 +440,6 @@ final interactiveCases = <InteractiveCase>[
     skip: _noInteraction,
   ),
   InteractiveCase(
-    'FrostModule.new',
-    FrostModule,
-    (go) => FrostModule(title: longLabel, value: '3', onPressed: go),
-    kind: ControlKind.other,
-  ),
-  InteractiveCase(
-    'FrostModule.skeleton',
-    FrostModule,
-    (go) => FrostModule.skeleton(title: longLabel, icon: true, value: '3', note: null),
-    kind: ControlKind.other,
-    skip: _noInteraction,
-  ),
-  InteractiveCase(
     'FrostTag.new',
     FrostTag,
     (go) => FrostTag(label: longLabel, onPressed: go),
