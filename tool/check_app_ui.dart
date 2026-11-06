@@ -205,10 +205,14 @@ List<Finding> scanSource(String source, String relativePath) {
     final declared = parsed.comments.any(
       (c) =>
           (firstCode < 0 || c.start < firstCode) &&
-          RegExp(r'^//\s*frost-escape:\s*\S[^\r\n]*$').hasMatch(c.value.trim()),
+          RegExp(r'^//\s*(?:app-owned|frost-escape):\s*\S[^\r\n]*$').hasMatch(c.value.trim()),
     );
     if (!declared) add(Rule.r9, 0);
-  } else {
+  }
+  // App-owned widgets in ui/custom/ may draw and set text themselves; they
+  // still take no Material, no Material icons, no literal colours and no
+  // numeric radii.
+  {
     // Import URI strings are inspected only when preceded by the import token;
     // literal text saying "import ..." never creates a finding.
     for (final statement in RegExp(r'\bimport\b[^;]*;').allMatches(code)) {
@@ -230,6 +234,14 @@ List<Finding> scanSource(String source, String relativePath) {
     matches(Rule.r3, r'\bIcons\s*\.');
     matches(Rule.r4, r'\bColor\s*\(\s*0[xX][0-9a-fA-F]+|\bColors\s*\.');
     matches(
+      Rule.r7,
+      r'\b(?:BorderRadius|Radius)\s*\.\s*circular\s*\(\s*' +
+          numberPattern +
+          r'\s*\)',
+    );
+  }
+  if (!custom) {
+    matches(
       Rule.r5,
       r'\b(?:BoxDecoration|ShapeDecoration|CustomPaint|ClipRRect|ClipPath)\s*\(',
     );
@@ -242,12 +254,6 @@ List<Finding> scanSource(String source, String relativePath) {
     matches(
       Rule.r6,
       r'\bTextStyle\s*\(|\b(?:fontSize|fontWeight)\s*:|\bTheme\s*\.\s*of\s*\(',
-    );
-    matches(
-      Rule.r7,
-      r'\b(?:BorderRadius|Radius)\s*\.\s*circular\s*\(\s*' +
-          numberPattern +
-          r'\s*\)',
     );
     matches(Rule.r10, r'\bbleed\s*:|\bTransform\s*\.\s*translate\s*\(');
     matches(

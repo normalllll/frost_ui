@@ -1,2 +1,2 @@
-// frost-escape: App-specific chart drawing
-Icons.add;
+// app-owned: reader body set in the user's font size
+CustomPaint(); Text(body, style: TextStyle(fontSize: 22, height: 2));

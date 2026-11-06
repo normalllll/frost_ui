@@ -124,14 +124,37 @@ void main() {
     );
     for (final entry in {
       'fake.dart': 'const message = "// frost-escape: fake";',
-      'empty.dart': '// frost-escape:\nIcons.add;',
-      'late.dart': 'Icons.add;\n// frost-escape: late',
+      'empty.dart': '// frost-escape:\nCustomPaint();',
+      'late.dart': 'CustomPaint();\n// frost-escape: late',
+      'empty-owned.dart': '// app-owned:\nCustomPaint();',
     }.entries)
       check(
         audit.scanSource(entry.value, 'ui/custom/' + entry.key).single.rule ==
             audit.Rule.r9,
         'escape header ' + entry.key,
       );
+    check(
+      audit
+          .scanSource(
+            '// app-owned: reader body\n'
+            'CustomPaint(); TextStyle(fontSize: 22, height: 2); Text(x); BoxDecoration();',
+            'ui/custom/reader.dart',
+          )
+          .isEmpty,
+      'app-owned widgets draw and set text',
+    );
+    check(
+      audit
+          .scanSource(
+            '// app-owned: reader body\n'
+            "import 'package:flutter/material.dart'; Icons.add; Colors.red; BorderRadius.circular(4);",
+            'ui/custom/reader.dart',
+          )
+          .map((f) => f.rule)
+          .toSet()
+          .containsAll([audit.Rule.r1, audit.Rule.r3, audit.Rule.r4, audit.Rule.r7]),
+      'app-owned widgets take no Material, icons, literal colours or numeric radii',
+    );
     check(
       audit
               .scanSource(
