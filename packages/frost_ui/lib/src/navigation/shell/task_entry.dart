@@ -36,7 +36,8 @@ class FrostFloatingEntryPosition {
 /// A persistent app entry (for example downloads) the shell keeps on screen:
 /// at the bottom of the sidebar, or as a draggable button above the content
 /// in bottom-bar layouts. The app builds the widget, usually a
-/// [FrostShellTaskButton], and may anchor a popover or a key on it.
+/// [FrostShellTaskButton], and may anchor a popover or a key on it, or give
+/// the entry a [panel] the button opens.
 @immutable
 class FrostShellTaskEntry {
   const FrostShellTaskEntry({
@@ -44,6 +45,7 @@ class FrostShellTaskEntry {
     this.visible = true,
     this.initialFloatingPosition = const FrostFloatingEntryPosition(),
     this.onFloatingPositionChanged,
+    this.panel,
   });
 
   final Widget Function(BuildContext context, FrostShellTaskEntryPlacement placement) builder;
@@ -59,25 +61,47 @@ class FrostShellTaskEntry {
 
   /// Called after the user drags the floating entry and it snaps to an edge.
   final ValueChanged<FrostFloatingEntryPosition>? onFloatingPositionChanged;
+
+  /// Content a [FrostShellTaskButton] without its own `onPressed` opens. In
+  /// bottom-bar layouts the button expands into a draggable floating panel at
+  /// its position, or a sheet where the panel does not fit; in the sidebar the
+  /// content opens in a popover anchored to the entry.
+  final FrostShellTaskPanel? panel;
 }
 
 // Tells a FrostShellTaskButton how the shell placed it.
 class _TaskEntryScope extends InheritedWidget {
-  const _TaskEntryScope({required this.placement, this.progress = 0, required super.child});
+  const _TaskEntryScope({required this.placement, this.progress = 0, this.panel, this.onTogglePanel, this.focusNode, required super.child});
   final FrostShellTaskEntryPlacement placement;
 
   /// The sidebar's expand progress.
   final double progress;
 
+  /// The entry's panel, which a button without its own action opens.
+  final FrostShellTaskPanel? panel;
+
+  /// Opens or closes the floating panel.
+  final VoidCallback? onTogglePanel;
+
+  /// The floating button's focus, which the panel returns to on close.
+  final FocusNode? focusNode;
+
   static _TaskEntryScope? maybeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<_TaskEntryScope>();
 
   @override
-  bool updateShouldNotify(_TaskEntryScope oldWidget) => placement != oldWidget.placement || progress != oldWidget.progress;
+  bool updateShouldNotify(_TaskEntryScope oldWidget) =>
+      placement != oldWidget.placement ||
+      progress != oldWidget.progress ||
+      panel != oldWidget.panel ||
+      onTogglePanel != oldWidget.onTogglePanel ||
+      focusNode != oldWidget.focusNode;
 }
 
 /// Ready-made task entry button for [FrostShellTaskEntry.builder]. In the
 /// sidebar it is an unselected destination row; floating, a raised round
-/// button. Both show the count and progress the way destinations do.
+/// button. Both show the count and progress the way destinations do. Without
+/// [onPressed] it opens the entry's [FrostShellTaskEntry.panel], and it is
+/// disabled when the entry has none.
 class FrostShellTaskButton extends StatelessWidget {
   const FrostShellTaskButton({
     required this.icon,
@@ -105,16 +129,26 @@ class FrostShellTaskButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = _TaskEntryScope.maybeOf(context);
+    final panel = onPressed == null ? scope?.panel : null;
+    final Widget child;
+    if (scope?.placement == FrostShellTaskEntryPlacement.floating) {
+      child = _FloatingTaskButton(icon: icon, label: label, onPressed: onPressed ?? (panel == null ? null : scope?.onTogglePanel), focusNode: scope?.focusNode);
+    } else if (panel != null) {
+      // The popover's trigger focus wraps the row, so focus returns to it.
+      child = FrostPopover(
+        title: panel.title,
+        builder: (context, focusNode, toggle) => Focus(
+          focusNode: focusNode,
+          child: FrostNavItem(label: label, icon: icon, selected: false, progress: scope?.progress ?? 0, onTap: toggle),
+        ),
+        contentBuilder: (context, close) => Builder(builder: panel.builder),
+      );
+    } else {
+      child = FrostNavItem(label: label, icon: icon, selected: false, progress: scope?.progress ?? 0, onTap: onPressed);
+    }
     return Semantics(
       container: true,
-      child: FrostDestinationStatus(
-        badge: badge,
-        badgeTone: badgeTone,
-        progress: progress,
-        child: scope?.placement == FrostShellTaskEntryPlacement.floating
-            ? _FloatingTaskButton(icon: icon, label: label, onPressed: onPressed)
-            : FrostNavItem(label: label, icon: icon, selected: false, progress: scope?.progress ?? 0, onTap: onPressed),
-      ),
+      child: FrostDestinationStatus(badge: badge, badgeTone: badgeTone, progress: progress, child: child),
     );
   }
 }
@@ -142,6 +176,7 @@ class _SidebarTaskSlot extends StatelessWidget {
       child: _TaskEntryScope(
         placement: FrostShellTaskEntryPlacement.sidebar,
         progress: progress,
+        panel: entry.panel,
         child: Builder(builder: (context) => entry.builder(context, FrostShellTaskEntryPlacement.sidebar)),
       ),
     ),
@@ -157,10 +192,11 @@ const _floatingEntryRingWidth = 2.0;
 
 /// The raised round form of [FrostShellTaskButton].
 class _FloatingTaskButton extends StatelessWidget {
-  const _FloatingTaskButton({required this.icon, required this.label, required this.onPressed});
+  const _FloatingTaskButton({required this.icon, required this.label, required this.onPressed, this.focusNode});
   final FrostIconData icon;
   final String label;
   final VoidCallback? onPressed;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -179,6 +215,7 @@ class _FloatingTaskButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(_floatingEntrySize / 2),
           child: FrostClickSurface(
             onTap: onPressed,
+            focusNode: focusNode,
             shape: const FrostClickShape.circle(),
             child: Stack(
               fit: StackFit.expand,
@@ -270,7 +307,7 @@ class _FloatingTaskLayer extends StatefulWidget {
   State<_FloatingTaskLayer> createState() => _FloatingTaskLayerState();
 }
 
-class _FloatingTaskLayerState extends State<_FloatingTaskLayer> with SingleTickerProviderStateMixin {
+class _FloatingTaskLayerState extends State<_FloatingTaskLayer> with TickerProviderStateMixin, _FloatingTaskPanelHost {
   late final AnimationController _snap = AnimationController(vsync: this);
 
   /// The entry's top-left while a finger moves it.
@@ -282,10 +319,15 @@ class _FloatingTaskLayerState extends State<_FloatingTaskLayer> with SingleTicke
   // What the band depends on, from the last build.
   EdgeInsets _padding = EdgeInsets.zero;
   double _header = 0;
+  @override
   bool _ltr = true;
 
   // The layer and the entry as last laid out.
+  @override
   Size _layerSize = Size.zero;
+  @override
+  double _keyboardInset = 0;
+  @override
   Size _entrySize = const Size.square(_floatingEntrySize);
 
   /// No bar reported a height by the end of the first frame: the band uses the
@@ -308,12 +350,14 @@ class _FloatingTaskLayerState extends State<_FloatingTaskLayer> with SingleTicke
       oldWidget.barExtent.removeListener(_rebuild);
       widget.barExtent.addListener(_rebuild);
     }
+    if (widget.entry.panel == null || !widget.entry.visible) _forceClosePanel(disposing: false);
   }
 
   @override
   void dispose() {
     widget.barExtent.removeListener(_rebuild);
     _snap.dispose();
+    _disposePanel();
     super.dispose();
   }
 
@@ -323,6 +367,7 @@ class _FloatingTaskLayerState extends State<_FloatingTaskLayer> with SingleTicke
 
   /// The top-left positions the entry may take at its laid-out size: below
   /// the page header and above the bottom bar, inside the side safe insets.
+  @override
   Rect get _band {
     final barTop = _layerSize.height - (widget.barExtent.value ?? _mobileNavigationMinHeight + _padding.bottom);
     final left = _padding.left + _floatingEntryMargin;
@@ -335,6 +380,7 @@ class _FloatingTaskLayerState extends State<_FloatingTaskLayer> with SingleTicke
   Offset _rest(Rect band, FrostFloatingEntryPosition position) =>
       Offset((position.edge == FrostFloatingEntryEdge.start) == _ltr ? band.left : band.right, band.top + position.fraction * band.height);
 
+  @override
   Offset _current(Rect band) {
     if (_drag case final drag?) return drag;
     final rest = _rest(band, widget.position);
@@ -393,48 +439,81 @@ class _FloatingTaskLayerState extends State<_FloatingTaskLayer> with SingleTicke
     _ltr = Directionality.of(context) == TextDirection.ltr;
     // Sheets and dialogs cover the shell route (root Navigator) or sit on the
     // content Navigator; the entry steps aside for either and returns after.
-    final hidden = !widget.entry.visible || MediaQuery.viewInsetsOf(context).bottom > 0 || widget.covered || ModalRoute.isCurrentOf(context) == false;
+    // An open panel stays up under a route its own content opened, and above
+    // the keyboard of a field inside it.
+    _route = ModalRoute.of(context);
+    final current = _route?.isCurrent ?? true;
+    // Focus still in the panel as its route is covered: the panel opened it.
+    if (current) {
+      _coverFromPanel = false;
+    } else if (_panelOpen && _panelFocus.hasFocus) {
+      _coverFromPanel = true;
+    }
+    _keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final keyboard = _keyboardInset > 0 && !(_panelOpen && _panelFocus.hasFocus);
+    final hidden = !widget.entry.visible || keyboard || widget.covered || (!current && !(_panelOpen && _coverFromPanel));
+    _layerHidden = hidden;
     // Hiding cancels a drag: nothing is committed and the entry stays at rest.
     if (hidden) _drag = null;
     // Until the bar reports its height the band is a guess; show nothing
     // rather than a jump.
     final ready = widget.barExtent.value != null || _barMissing;
-    return CustomSingleChildLayout(
-      delegate: _FloatingEntryLayout(this),
-      child: IgnorePointer(
-        ignoring: hidden || !ready,
-        child: ExcludeSemantics(
+    return IgnorePointer(
+      ignoring: hidden || !ready,
+      child: ExcludeSemantics(
+        excluding: hidden || !ready,
+        child: ExcludeFocus(
           excluding: hidden || !ready,
-          child: ExcludeFocus(
-            excluding: hidden || !ready,
-            child: Opacity(
-              key: const ValueKey('frost-shell-floating-ready'),
-              opacity: ready ? 1 : 0,
-              child: AnimatedOpacity(
-                opacity: hidden ? 0 : 1,
-                duration: FrostMotion.duration(context, hidden ? FrostMotion.dismiss : FrostMotion.reveal),
-                curve: hidden ? Curves.easeInCubic : Curves.easeOutCubic,
-                child: GestureDetector(
-                  // The entry follows the finger from where it went down.
-                  dragStartBehavior: DragStartBehavior.down,
-                  onPanStart: (_) => _start(),
-                  onPanUpdate: (details) => _move(details.delta),
-                  onPanEnd: (_) => _end(),
-                  onPanCancel: () => setState(() => _drag = null),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: _floatingEntrySize, minHeight: _floatingEntrySize),
-                    child: _TaskEntryScope(
-                      placement: FrostShellTaskEntryPlacement.floating,
-                      child: Builder(builder: (context) => widget.entry.builder(context, FrostShellTaskEntryPlacement.floating)),
+          child: Opacity(
+            key: const ValueKey('frost-shell-floating-ready'),
+            opacity: ready ? 1 : 0,
+            child: AnimatedOpacity(
+              opacity: hidden ? 0 : 1,
+              duration: FrostMotion.duration(context, hidden ? FrostMotion.dismiss : FrostMotion.reveal),
+              curve: hidden ? Curves.easeInCubic : Curves.easeOutCubic,
+              // Only its children take hits: the page stays reachable around them.
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CustomSingleChildLayout(
+                    key: const ValueKey('frost-shell-task-entry'),
+                    delegate: _FloatingEntryLayout(this),
+                    child: _entryWhilePanel(
+                      GestureDetector(
+                        // The entry follows the finger from where it went down.
+                        dragStartBehavior: DragStartBehavior.down,
+                        onPanStart: (_) => _start(),
+                        onPanUpdate: (details) => _move(details.delta),
+                        onPanEnd: (_) => _end(),
+                        onPanCancel: () => setState(() => _drag = null),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minWidth: _floatingEntrySize, minHeight: _floatingEntrySize),
+                          child: _TaskEntryScope(
+                            placement: FrostShellTaskEntryPlacement.floating,
+                            panel: widget.entry.panel,
+                            onTogglePanel: _togglePanel,
+                            focusNode: _entryFocus,
+                            child: Builder(builder: (context) => widget.entry.builder(context, FrostShellTaskEntryPlacement.floating)),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  ..._panelLayers(),
+                ],
               ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  @override
+  void _stopEntryMotion() {
+    _snap.stop();
+    _drag = null;
+    _snapFrom = null;
   }
 }
 

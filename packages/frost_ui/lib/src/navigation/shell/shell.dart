@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
@@ -17,12 +18,14 @@ import '../../display/count_badge.dart';
 import '../../feedback/_skeleton_geometry.dart';
 import '../../foundation/_control_geometry.dart';
 import '../../foundation/_touch_targets.dart';
+import '../../foundation/control_scope.dart';
 import '../../foundation/density.dart';
 import '../../foundation/icon_data.dart';
 import '../../foundation/mask.dart';
 import '../../foundation/metrics.dart';
 import '../../foundation/radius.dart';
 import '../../foundation/scope.dart';
+import '../../foundation/sizes.dart';
 import '../../foundation/spacing.dart';
 import '../../foundation/tokens.dart';
 import '../../foundation/typography.dart';
@@ -31,10 +34,15 @@ import '../../layout/auto_scaffold.dart';
 import '../../layout/content_viewport.dart';
 import '../../layout/window_caption_scope.dart';
 import '../../motion/_layout_identity.dart';
+import '../../motion/_material_reveal.dart';
 import '../../motion/_selection_feedback.dart';
 import '../../motion/layout_crossfade.dart';
+import '../../overlays/_popover_surface.dart';
 import '../../overlays/_value_picker.dart';
 import '../../overlays/overlay_region.dart';
+import '../../overlays/panel_action.dart';
+import '../../overlays/popover.dart';
+import '../../overlays/sheet.dart';
 import '../../primitives/_directional_icon.dart';
 import '../../primitives/_page_outline.dart';
 import '../../primitives/click_surface.dart';
@@ -42,6 +50,7 @@ import '../../primitives/divider.dart';
 import '../../primitives/glyph.dart';
 import '../../primitives/icon.dart' show FrostIcon;
 import '../../primitives/surface.dart';
+import '../../primitives/text.dart';
 import '../_destination_status.dart';
 import '../_navigation_tile.dart';
 import '../_shell_back_scope.dart';
@@ -58,6 +67,7 @@ part 'destination.dart';
 part 'mobile_bar.dart';
 part 'sidebar.dart';
 part 'task_entry.dart';
+part 'task_panel.dart';
 
 enum FrostSidebarAlignment { automatic, top, bottom }
 
@@ -335,7 +345,12 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
 
   void _setFloatingPosition(FrostFloatingEntryPosition position) {
     if (position == _floatingPosition) return;
-    setState(() => _floatingPosition = position);
+    // A panel closed by the shell's own removal still reports its move.
+    if (mounted) {
+      setState(() => _floatingPosition = position);
+    } else {
+      _floatingPosition = position;
+    }
     widget.taskEntry?.onFloatingPositionChanged?.call(position);
   }
 
