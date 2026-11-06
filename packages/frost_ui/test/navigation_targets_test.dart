@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frost_ui/desktop.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'support.dart';
 
@@ -73,45 +72,5 @@ void main() {
     } finally {
       semantics.dispose();
     }
-  });
-  testWidgets('Inspector sheet threshold transfers at 900 and accepts runtime threshold changes', (tester) async {
-    tester.view.physicalSize = const Size(720, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    var threshold = FrostSizeClass.medium;
-    var callbacks = 0;
-    late StateSetter update;
-    await tester.pumpWidget(
-      frostTestApp(
-        StatefulBuilder(
-          builder: (_, setState) {
-            update = setState;
-            return FrostInspector(
-              open: true,
-              title: 'Info',
-              sheetBelow: threshold,
-              onOpenChanged: (_) => callbacks++,
-              inspector: const Text('Panel'),
-              child: const SizedBox(key: ValueKey('main')),
-            );
-          },
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byType(FrostSectionHeader), findsOneWidget);
-    expect(tester.getSize(find.byKey(const ValueKey('main'))).width, 399);
-    update(() => threshold = FrostSizeClass.expanded);
-    await tester.pumpAndSettle();
-    expect(find.byType(FrostSectionHeader), findsNothing);
-    expect(find.text('Info'), findsNothing); // Sheet content owns its title.
-    expect(find.text('Panel'), findsOneWidget);
-    expect(tester.getSize(find.byKey(const ValueKey('main'))).width, 720);
-    tester.view.physicalSize = const Size(1024, 900);
-    await tester.pumpAndSettle();
-    expect(find.byType(FrostSectionHeader), findsOneWidget);
-    expect(tester.getSize(find.byKey(const ValueKey('main'))).width, 703);
-    expect(callbacks, 0);
-    expect(tester.takeException(), isNull);
   });
 }

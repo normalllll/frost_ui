@@ -65,36 +65,6 @@ void main() {
   _agrees('FrostSelectionBar', () => FrostSelectionBar<int>(selection: FrostSelection<int>()..enter(), allItems: const [1, 2, 3], actions: actions));
 
   _agrees(
-    'FrostProfileHeader',
-    () => FrostProfileHeader(
-      avatar: const FrostAvatar(initials: 'AB', semanticLabel: 'a'),
-      title: 'Name',
-      subtitle: 'A rather long subtitle that is much wider than the title itself and wraps',
-      stats: const [
-        FrostStat(value: '123456', caption: 'Followers'),
-        FrostStat(value: '123456', caption: 'Following'),
-        FrostStat(value: '123456', caption: 'Illustrations'),
-      ],
-      actions: [
-        for (final label in ['Follow this user', 'Send a message', 'Add to a list']) FrostButton(label: label, onPressed: () {}),
-      ],
-    ),
-    widths: const [900, 500, 320],
-  );
-
-  _agrees(
-    'FrostProfileHeader with only a more action',
-    () => FrostProfileHeader(
-      avatar: const FrostAvatar(initials: 'AB', semanticLabel: 'a'),
-      title: 'A name',
-      moreAction: FrostButton.icon(label: 'More', icon: testIcons.more, onPressed: () {}),
-    ),
-    widths: const [900, 320],
-    // Its natural width is under the wide arrangement's minimum, so it stacks there.
-    checkWidth: false,
-  );
-
-  _agrees(
     'FrostKeyValueList',
     () => FrostKeyValueList(
       entries: [

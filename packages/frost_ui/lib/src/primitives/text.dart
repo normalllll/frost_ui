@@ -11,12 +11,22 @@ import 'surface.dart';
 
 enum FrostTextTone { primary, secondary, tertiary, quaternary, accent, positive, caution, negative, info }
 
+/// Heavier weights a [FrostText] can take at its role's size.
+enum FrostTextWeight {
+  medium(FontWeight.w500),
+  semibold(FontWeight.w600);
+
+  const FrostTextWeight(this.fontWeight);
+  final FontWeight fontWeight;
+}
+
 /// Semantic typography whose colour belongs to its caller unless [tone] is set.
 class FrostText extends StatelessWidget {
   const FrostText(
     this.data, {
     this.role = FrostTextRole.body,
     this.tone,
+    this.weight,
     this.numeric = false,
     this.tabular = false,
     this.content = false,
@@ -32,6 +42,7 @@ class FrostText extends StatelessWidget {
     InlineSpan this.span, {
     this.role = FrostTextRole.body,
     this.tone,
+    this.weight,
     this.numeric = false,
     this.tabular = false,
     this.content = false,
@@ -47,6 +58,10 @@ class FrostText extends StatelessWidget {
   final InlineSpan? span;
   final FrostTextRole role;
   final FrostTextTone? tone;
+
+  /// A heavier weight at the role's size, for the main text of a list row
+  /// such as a name. Null keeps the role's weight.
+  final FrostTextWeight? weight;
 
   /// Explicitly use the App numeric family for dedicated numeric text.
   final bool numeric;
@@ -68,6 +83,7 @@ class FrostText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var style = frostTextStyle(context, role, tone, numeric: numeric, tabular: tabular);
+    if (weight case final weight?) style = style.copyWith(fontWeight: weight.fontWeight);
     if (content) style = frostContentTextStyle(context, data ?? span!.toPlainText(), style);
     if (selectable) {
       final rich = span;

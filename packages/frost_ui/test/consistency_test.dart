@@ -1,60 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
-import 'package:frost_ui/src/display/stat.dart' show FrostStatStrip;
 
 import 'support.dart';
 
 void main() {
-  group('FrostProfileHeader', () {
-    Future<void> pump(WidgetTester tester, double width, {bool actions = true}) => tester.pumpWidget(
-      frostTestApp(
-        Align(
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: width,
-            child: FrostProfileHeader(
-              avatar: const FrostAvatar(initials: 'A', semanticLabel: 'avatar'),
-              title: 'Name',
-              subtitle: 'Detail',
-              stats: const [
-                FrostStat(value: '1', caption: 'One'),
-                FrostStat(value: '2', caption: 'Two'),
-              ],
-              actions: actions ? [FrostButton(label: 'Follow', onPressed: () {})] : const [],
-              moreAction: FrostButton.icon(icon: testIcons.image, label: 'More', onPressed: () {}),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    testWidgets('wide: 72px avatar, stats under the name, actions at the end', (tester) async {
-      tester.view.physicalSize = const Size(1000, 600);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      await pump(tester, 900);
-      final avatar = tester.getRect(find.byType(FrostAvatar));
-      final title = tester.getRect(find.text('Name'));
-      final stats = tester.getRect(find.byType(FrostStatStrip));
-      expect(avatar.size, const Size(72, 72));
-      expect(stats.left, title.left);
-      expect(stats.top, greaterThan(title.bottom));
-      expect(tester.getRect(find.byType(FrostButton).last).right, closeTo(900, 1));
-    });
-
-    testWidgets('narrow: everything centred, actions in one row, more at the corner without actions', (tester) async {
-      await pump(tester, 400);
-      expect(tester.getCenter(find.byType(FrostAvatar)).dx, closeTo(200, 1));
-      expect(tester.getCenter(find.text('Name')).dx, closeTo(200, 1));
-      expect(tester.getCenter(find.byType(FrostStatStrip)).dx, closeTo(200, 1));
-      expect(tester.getCenter(find.text('Follow')).dy, closeTo(tester.getCenter(find.byType(FrostButton).last).dy, 1));
-      await pump(tester, 400, actions: false);
-      expect(tester.getRect(find.byType(FrostButton)).right, closeTo(400, 1));
-      expect(tester.getRect(find.byType(FrostButton)).top, lessThan(tester.getRect(find.text('Name')).top));
-    });
-  });
-
   group('FrostFloatingActionLayer', () {
     testWidgets('collapses to its icon on scroll down, returns on scroll up, and clears the last item', (tester) async {
       tester.view.physicalSize = const Size(400, 600);

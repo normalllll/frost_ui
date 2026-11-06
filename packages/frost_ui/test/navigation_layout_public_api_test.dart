@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frost_ui/desktop.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/media.dart';
 
@@ -22,10 +21,9 @@ void main() {
         indicatorPlacement: FrostPageIndicatorPlacement.overlay,
       ),
       FrostPageIndicator(count: 3, current: 1, onSelected: (_) {}, onMedia: true),
-      FrostInspector(inspector: const SizedBox(), open: false, onOpenChanged: (_) {}, title: 'Info', child: const SizedBox()),
       FrostSplitView(primary: const SizedBox(), secondary: const SizedBox(), onCloseSecondary: () {}, initialPrimaryWidth: 320, resizable: true),
     ];
-    expect(widgets, hasLength(4));
+    expect(widgets, hasLength(3));
     expect(controller.page, 0);
     controller.dispose();
   });

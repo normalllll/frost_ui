@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frost_ui/desktop.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/controls/_button_control.dart';
 import 'package:frost_ui/src/overlays/panel_action.dart';
@@ -130,77 +129,52 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
-  for (final inspector in [false, true]) {
-    testWidgets('page navigation closes ${inspector ? 'inline Inspector' : 'anchored Popover'} without stealing incoming focus', (tester) async {
-      tester.view.physicalSize = const Size(1200, 800);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      final navigator = GlobalKey<NavigatorState>();
-      final incomingFocus = FocusNode();
-      addTearDown(incomingFocus.dispose);
-      var open = true;
-      var dismissals = 0;
-      Widget action() => Builder(
-        builder: (context) => FrostButton(
-          label: 'Open page',
-          onPressed: () => closeFrostPanelThen(context, (_) {
-            navigator.currentState!.push(
-              MaterialPageRoute<void>(
-                builder: (_) => Scaffold(body: TextField(autofocus: true, focusNode: incomingFocus)),
-              ),
-            );
-          }),
-        ),
-      );
-      await tester.pumpWidget(
-        FrostScope(
-          config: testConfig,
-          child: MaterialApp(
-            navigatorKey: navigator,
-            theme: FrostTheme.build(config: testConfig, brightness: Brightness.light, platform: TargetPlatform.windows, locale: const Locale('en')),
-            home: Scaffold(
-              body: StatefulBuilder(
-                builder: (_, setState) {
-                  if (inspector) {
-                    return FrostInspector(
-                      open: open,
-                      onOpenChanged: (value) => setState(() {
-                        open = value;
-                        dismissals++;
-                      }),
-                      inspector: action(),
-                      child: const Text('Root'),
-                    );
-                  }
-                  return Align(
-                    alignment: Alignment.topLeft,
-                    child: FrostPopover(
-                      builder: (_, focus, toggle) => FrostButtonControl(label: 'Show', focusNode: focus, onPressed: toggle),
-                      contentBuilder: (_, _) => action(),
-                    ),
-                  );
-                },
+  testWidgets('page navigation closes the anchored Popover without stealing incoming focus', (tester) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final navigator = GlobalKey<NavigatorState>();
+    final incomingFocus = FocusNode();
+    addTearDown(incomingFocus.dispose);
+    Widget action() => Builder(
+      builder: (context) => FrostButton(
+        label: 'Open page',
+        onPressed: () => closeFrostPanelThen(context, (_) {
+          navigator.currentState!.push(
+            MaterialPageRoute<void>(
+              builder: (_) => Scaffold(body: TextField(autofocus: true, focusNode: incomingFocus)),
+            ),
+          );
+        }),
+      ),
+    );
+    await tester.pumpWidget(
+      FrostScope(
+        config: testConfig,
+        child: MaterialApp(
+          navigatorKey: navigator,
+          theme: FrostTheme.build(config: testConfig, brightness: Brightness.light, platform: TargetPlatform.windows, locale: const Locale('en')),
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: FrostPopover(
+                builder: (_, focus, toggle) => FrostButtonControl(label: 'Show', focusNode: focus, onPressed: toggle),
+                contentBuilder: (_, _) => action(),
               ),
             ),
           ),
         ),
-      );
-      await tester.pumpAndSettle();
-      if (!inspector) {
-        await tester.tap(find.text('Show'));
-        await tester.pumpAndSettle();
-      }
-      await tester.tap(find.text('Open page'));
-      await tester.pumpAndSettle();
-      expect(incomingFocus.hasFocus, isTrue);
-      if (inspector) {
-        expect(open, isFalse);
-        expect(dismissals, 1);
-      }
-      navigator.currentState!.pop();
-      await tester.pumpAndSettle();
-      expect(find.text('Open page').hitTestable(), findsNothing);
-      expect(tester.takeException(), isNull);
-    });
-  }
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Show'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open page'));
+    await tester.pumpAndSettle();
+    expect(incomingFocus.hasFocus, isTrue);
+    navigator.currentState!.pop();
+    await tester.pumpAndSettle();
+    expect(find.text('Open page').hitTestable(), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

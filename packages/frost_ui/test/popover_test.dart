@@ -191,13 +191,15 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Compact popover becomes medium Sheet and content callback closes it', (tester) async {
+  testWidgets('Compact popover becomes a sheet fitted to its content and content callback closes it', (tester) async {
     await pump(tester, popover(width: 320), size: const Size(390, 800));
     await tester.tap(find.text('Open popover'));
     await tester.pumpAndSettle();
     expect(panel, findsNothing);
     expect(sheet, findsOneWidget);
-    expect(tester.getSize(sheet), const Size(390, 400));
+    expect(tester.getSize(sheet).width, 390);
+    expect(tester.getSize(sheet).height, lessThan(400));
+    expect(tester.getRect(sheet).bottom, 800);
     expect(find.text('Compact title'), findsOneWidget);
     await tester.tap(find.text('Close content'));
     await tester.pumpAndSettle();

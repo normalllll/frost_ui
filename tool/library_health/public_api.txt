@@ -83,7 +83,6 @@ class	FrostInlineBanner	feedback/inline_banner.dart	-	baseline-20261102
 class	FrostInlinePageHeading	navigation/page_header.dart	-	baseline-20261102
 class	FrostInputCapability	foundation/input_feedback.dart	-	reviewed:20261103:needed by the input capability, portrait and slot requests
 class	FrostInputFeedback	foundation/input_feedback.dart	-	baseline-20261102
-class	FrostInspector	navigation/inspector.dart	-	baseline-20261102
 class	FrostKeepAlive	layout/keep_alive.dart	-	baseline-20261102
 class	FrostKeyValue	display/labeled_content.dart	-	baseline-20261102
 class	FrostKeyValueList	display/labeled_content.dart	-	baseline-20261102
@@ -147,7 +146,6 @@ class	FrostPinnedChrome	layout/pinned_chrome.dart	-	baseline-20261102
 class	FrostPinnedChromeGlass	layout/pinned_chrome_glass.dart	-	baseline-20261102
 class	FrostPopover	overlays/popover.dart	-	baseline-20261102
 class	FrostPresence	primitives/presence.dart	-	baseline-20261102
-class	FrostProfileHeader	display/profile_header.dart	-	baseline-20261102
 class	FrostProgressBar	feedback/progress.dart	-	baseline-20261102
 class	FrostProgressRing	feedback/progress.dart	-	baseline-20261102
 class	FrostRadius	foundation/radius.dart	-	baseline-20261102
@@ -356,7 +354,6 @@ ctor	FrostIconSet.new	foundation/icon_data.dart	add,arrowDown,back,calendar,chec
 ctor	FrostInlineBanner.new	feedback/inline_banner.dart	actionLabel,key,message,onAction,onDismiss,style,title,tone	baseline-20261102
 ctor	FrostInlinePageHeading.new	navigation/page_header.dart	actions,key,title	baseline-20261102
 ctor	FrostInputFeedback.new	foundation/input_feedback.dart	child,key	baseline-20261102
-ctor	FrostInspector.new	navigation/inspector.dart	child,inspector,key,onOpenChanged,open,sheetBelow,sheetDetents,showsSheetCloseButton,title	baseline-20261102
 ctor	FrostKeepAlive.new	layout/keep_alive.dart	child,key	baseline-20261102
 ctor	FrostKeyValue.copyable	display/labeled_content.dart	label,monospace,value	baseline-20261102
 ctor	FrostKeyValue.link	display/labeled_content.dart	label,onPressed,semanticLabel,value	baseline-20261102
@@ -431,7 +428,6 @@ ctor	FrostPinnedChrome.new	layout/pinned_chrome.dart	body,chrome,extent,key	base
 ctor	FrostPinnedChromeGlass.new	layout/pinned_chrome_glass.dart	animate,child,corners,key,opacity	baseline-20261102
 ctor	FrostPopover.new	overlays/popover.dart	builder,contentBuilder,key,maxWidth,title	baseline-20261102
 ctor	FrostPresence.new	primitives/presence.dart	alignment,axis,child,effect,key,visible	baseline-20261102
-ctor	FrostProfileHeader.new	display/profile_header.dart	actions,avatar,contentSubtitle,contentTitle,key,moreAction,stats,subtitle,subtitleLeading,title,titleTooltip,titleTrailing	baseline-20261102
 ctor	FrostProgressBar.new	feedback/progress.dart	key,semanticLabel,value	baseline-20261102
 ctor	FrostProgressRing.new	feedback/progress.dart	key,semanticLabel,size,value	baseline-20261102
 ctor	FrostRefreshDots.new	feedback/refresh_dots.dart	key	baseline-20261102
@@ -515,8 +511,8 @@ ctor	FrostTag.new	display/tag.dart	contextMenu,dataColor,detail,icon,key,label,o
 ctor	FrostTag.skeleton	display/tag.dart	label	baseline-20261102
 ctor	FrostTaskAction.new	lists/task_row.dart	icon,label,onPressed	baseline-20261102
 ctor	FrostTaskRow.new	lists/task_row.dart	actions,contentTitle,contextMenu,detail,key,onPressed,progress,progressPlacement,selected,showsStatusDot,status,thumbnail,title,trailing	baseline-20261102
-ctor	FrostText.new	primitives/text.dart	content,data,key,maxLines,numeric,overflow,role,selectable,semanticsLabel,tabular,textAlign,tone	baseline-20261102
-ctor	FrostText.rich	primitives/text.dart	content,key,maxLines,numeric,overflow,role,selectable,semanticsLabel,span,tabular,textAlign,tone	baseline-20261102
+ctor	FrostText.new	primitives/text.dart	content,data,key,maxLines,numeric,overflow,role,selectable,semanticsLabel,tabular,textAlign,tone,weight	reviewed:20261106:pass: w500/w600 at body size are only reachable through TextStyle; a closed two-value enum adds no type step
+ctor	FrostText.rich	primitives/text.dart	content,key,maxLines,numeric,overflow,role,selectable,semanticsLabel,span,tabular,textAlign,tone,weight	reviewed:20261106:pass: w500/w600 at body size are only reachable through TextStyle; a closed two-value enum adds no type step
 ctor	FrostTextField.new	controls/text_field.dart	appearance,autofocus,clearable,controller,enabled,error,focusNode,help,key,keyboardType,label,leading,maxLines,minLines,monospace,obscureText,onChanged,onEditingComplete,onSubmitted,onTap,onTapOutside,placeholder,readOnly,scrollController,size,textInputAction,trailing	baseline-20261102
 ctor	FrostTextField.secure	controls/text_field.dart	appearance,autofocus,controller,enabled,error,focusNode,help,key,label,leading,onChanged,onEditingComplete,onSubmitted,onTap,onTapOutside,placeholder,readOnly,scrollController,size,textInputAction,trailing	baseline-20261102
 ctor	FrostThemeTokens.new	foundation/tokens.dart	accent,brightness,canvas,categorical,cautionInk,cautionTint,disabledText,edgeHairline,edgeHighlight,fill,fillStrong,fillSubtle,hoverSurface,infoInk,infoTint,line,mediaInnerStroke,negativeInk,negativeTint,onMediaInk,onMediaScrim,positiveInk,positiveTint,pressedSurface,separator,shadow,shadowAmbient,shadowContact,surface,surfaceInset,surfaceMuted,surfaceRaised,surfaceTint,textPrimary,textQuaternary,textSecondary,textSecondaryGlass,textTertiary,textTertiaryGlass,threadLine,tone	baseline-20261102
@@ -570,7 +566,6 @@ enum	FrostDividerInset	primitives/divider.dart	-	baseline-20261102
 enum	FrostFeedbackRole	foundation/feedback.dart	-	baseline-20261102
 enum	FrostFieldAppearance	foundation/field_appearance.dart	-	baseline-20261102
 enum	FrostFloatingEntryEdge	navigation/shell/task_entry.dart	-	baseline-20261102
-enum	FrostInspectorPresentation	navigation/inspector.dart	-	baseline-20261102
 enum	FrostLinkCardStyle	social/link_card.dart	-	baseline-20261102
 enum	FrostLoadPhase	frost_data:list_source.dart	-	reviewed:20261103:moved to frost_data unchanged
 enum	FrostNavigationPlacement	foundation/_layout_scope.dart	-	baseline-20261102
@@ -596,6 +591,7 @@ enum	FrostTaskProgressPlacement	lists/task_row.dart	-	baseline-20261102
 enum	FrostTaskStatus	lists/task_row.dart	-	baseline-20261102
 enum	FrostTextRole	foundation/typography.dart	-	baseline-20261102
 enum	FrostTextTone	primitives/text.dart	-	baseline-20261102
+enum	FrostTextWeight	primitives/text.dart	-	reviewed:20261106:pass: w500/w600 at body size are only reachable through TextStyle; a closed two-value enum adds no type step
 enum	FrostThreadStyle	social/thread.dart	-	baseline-20261102
 enum	FrostThumbnailSize	media/thumbnail.dart	-	baseline-20261102
 enum	FrostTokenTone	controls/token_field.dart	-	baseline-20261102
@@ -781,9 +777,6 @@ member	FrostInputCapability.hoverAvailable	foundation/input_feedback.dart	-	revi
 member	FrostInputCapability.mouseAvailable	foundation/input_feedback.dart	-	reviewed:20261103:needed by the input capability, portrait and slot requests
 member	FrostInputCapability.of	foundation/input_feedback.dart	-	reviewed:20261103:needed by the input capability, portrait and slot requests
 member	FrostInputCapability.touch	foundation/input_feedback.dart	-	reviewed:20261103:needed by the input capability, portrait and slot requests
-member	FrostInspector.presentationOf	navigation/inspector.dart	-	baseline-20261102
-member	FrostInspectorPresentation.inline	navigation/inspector.dart	-	baseline-20261102
-member	FrostInspectorPresentation.sheet	navigation/inspector.dart	-	baseline-20261102
 member	FrostKeyline.maybeOf	primitives/keyline.dart	-	baseline-20261102
 member	FrostLinkCardStyle.large	social/link_card.dart	-	baseline-20261102
 member	FrostLinkCardStyle.row	social/link_card.dart	-	baseline-20261102
@@ -1018,6 +1011,9 @@ member	FrostTextTone.primary	primitives/text.dart	-	baseline-20261102
 member	FrostTextTone.quaternary	primitives/text.dart	-	baseline-20261102
 member	FrostTextTone.secondary	primitives/text.dart	-	baseline-20261102
 member	FrostTextTone.tertiary	primitives/text.dart	-	baseline-20261102
+member	FrostTextWeight.fontWeight	primitives/text.dart	-	reviewed:20261106:pass: w500/w600 at body size are only reachable through TextStyle; a closed two-value enum adds no type step
+member	FrostTextWeight.medium	primitives/text.dart	-	reviewed:20261106:pass: w500/w600 at body size are only reachable through TextStyle; a closed two-value enum adds no type step
+member	FrostTextWeight.semibold	primitives/text.dart	-	reviewed:20261106:pass: w500/w600 at body size are only reachable through TextStyle; a closed two-value enum adds no type step
 member	FrostTheme.build	foundation/theme.dart	-	baseline-20261102
 member	FrostThemeTokens.accentInk	foundation/tokens.dart	-	baseline-20261102
 member	FrostThemeTokens.actionFill	foundation/tokens.dart	-	baseline-20261102

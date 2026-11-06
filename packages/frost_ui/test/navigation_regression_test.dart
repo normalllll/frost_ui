@@ -170,7 +170,14 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.bySemanticsLabel('L.more, L.navigationStatus(5,40)'), findsOneWidget);
-      expect(find.descendant(of: _navItem('L.more'), matching: find.byType(FrostCountBadge)), findsOneWidget);
+      // The summary marks its count with a dot above the glyph's corner, clear
+      // of an ellipsis drawn across the icon's middle; the count is in the label.
+      expect(find.descendant(of: _navItem('L.more'), matching: find.byType(FrostCountBadge)), findsNothing);
+      final dot = tester.getRect(find.descendant(of: _navItem('L.more'), matching: find.byWidgetPredicate((w) => w.runtimeType.toString() == '_CountDot')));
+      final glyph = tester.getRect(find.descendant(of: _navItem('L.more'), matching: find.byType(FrostIcon)));
+      expect(dot.size, const Size.square(8));
+      expect(dot.bottom, lessThanOrEqualTo(glyph.top + glyph.height * .25));
+      expect(dot.center.dx, closeTo(glyph.right, .01));
       await tester.tap(_navItem('L.more'));
       await tester.pumpAndSettle();
       expect(find.text('L.navigationStatus(5,40)'), findsOneWidget);
@@ -443,34 +450,6 @@ void main() {
       await tester.tapAt(where);
       await tester.pump(const Duration(milliseconds: 400));
       expect(taps, 1);
-    });
-
-    testWidgets('FrostInspector pauses a closed panel, finishes closing and resumes on reopening', (tester) async {
-      _window(tester, 1400, 800);
-      late BuildContext inside;
-      Widget app(bool open) => frostTestApp(
-        FrostInspector(
-          open: open,
-          onOpenChanged: (_) {},
-          inspector: Builder(
-            builder: (context) {
-              inside = context;
-              return const Text('Panel');
-            },
-          ),
-          child: const SizedBox.expand(),
-        ),
-      );
-      await tester.pumpWidget(app(true));
-      await tester.pumpAndSettle();
-      expect(TickerMode.valuesOf(inside).enabled, isTrue);
-      await tester.pumpWidget(app(false));
-      await tester.pumpAndSettle();
-      expect(tester.hasRunningAnimations, isFalse);
-      expect(TickerMode.valuesOf(inside).enabled, isFalse);
-      await tester.pumpWidget(app(true));
-      await tester.pumpAndSettle();
-      expect(TickerMode.valuesOf(inside).enabled, isTrue);
     });
   });
 

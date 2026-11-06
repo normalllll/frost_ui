@@ -45,7 +45,7 @@ class _FrostPopoverState extends State<FrostPopover> {
       await showFrostSheet<void>(
         context: context,
         title: widget.title,
-        detents: FrostPopoverDetents.of(context) ?? const [FrostSheetDetent.medium, FrostSheetDetent.large],
+        detents: FrostPopoverDetents.of(context) ?? const [FrostSheetDetent.fitted],
         builder: (context) {
           final route = ModalRoute.of(context)!;
           return widget.contentBuilder(context, () {

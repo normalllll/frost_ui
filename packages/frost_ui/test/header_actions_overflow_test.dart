@@ -31,11 +31,19 @@ void main() {
                           sliver: SliverToBoxAdapter(
                             child: Column(
                               children: [
-                                FrostProfileHeader(
-                                  avatar: const FrostAvatar.person(name: 'zhang', colorKey: 'zhang'),
-                                  title: 'zhang',
-                                  actions: [FrostButton(icon: testIcons.refresh, label: 'Test connection', onPressed: () => calls++)],
-                                  moreAction: FrostButton.icon(icon: testIcons.more, label: 'More profile', onPressed: () => calls++),
+                                Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    children: [
+                                      const FrostAvatar.person(name: 'zhang', colorKey: 'zhang'),
+                                      const FrostText('zhang'),
+                                      FrostButton(icon: testIcons.refresh, label: 'Test connection', onPressed: () => calls++),
+                                      FrostButton.icon(icon: testIcons.more, label: 'More profile', onPressed: () => calls++),
+                                    ],
+                                  ),
                                 ),
                                 FrostSectionHeader(title: 'Commit identities', actionLabel: 'Add identity', onAction: () => calls++),
                                 FrostSectionHeader(

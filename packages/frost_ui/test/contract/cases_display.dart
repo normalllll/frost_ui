@@ -2,7 +2,6 @@
 // their own case; slivers are placed in a scroll view.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frost_ui/desktop.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/media.dart';
 import 'package:frost_ui/social.dart';
@@ -57,14 +56,6 @@ final _cases = <DisplayCase>[
   DisplayCase('FrostLabeledContent.new', FrostLabeledContent, (_) => const FrostLabeledContent(label: longLabel, value: 'Value')),
   DisplayCase('FrostMetaLine.new', FrostMetaLine, (_) => const FrostMetaLine(items: [longLabel, longLabel, longLabel])),
   DisplayCase('FrostMeter.new', FrostMeter, (_) => const FrostMeter(value: 0.4, semanticLabel: 'Meter')),
-  DisplayCase(
-    'FrostProfileHeader.new',
-    FrostProfileHeader,
-    (_) => const FrostProfileHeader(
-      avatar: FrostAvatar(initials: 'AB', semanticLabel: 'a'),
-      title: longLabel,
-    ),
-  ),
   DisplayCase('FrostRichText.new', FrostRichText, (_) => const FrostRichText(text: 'Hello @someone #tag https://example.com')),
   DisplayCase('FrostStat.new', FrostStat, (_) => const FrostStat(value: '123456', caption: longLabel)),
   DisplayCase('FrostStat.skeleton', FrostStat, (_) => FrostStat.skeleton(value: '123456', unit: null, caption: longLabel)),
@@ -431,16 +422,6 @@ final _cases = <DisplayCase>[
       entries: [FrostMenuAction('Entry', onSelected: () {})],
       builder: (context, focus, toggle) => _box,
     ),
-  ),
-  DisplayCase(
-    'FrostInspector.new',
-    FrostInspector,
-    (_) => hosted(
-      height: 300,
-      width: 600,
-      child: FrostInspector(open: true, onOpenChanged: (_) {}, inspector: const Text('Inspector'), child: _box),
-    ),
-    skip: const {'intrinsic': 'a page layout: content with a side panel that divides the width it is given'},
   ),
 ];
 

@@ -149,9 +149,11 @@ void main() {
     final position = content(tester);
     position.jumpTo(600);
     await tester.pumpAndSettle();
+    // A row below the header, where nothing covers it.
+    final chromeBottom = tester.getRect(find.byType(FrostPageHeader)).bottom;
     final shown = [
       for (var i = 0; i < 80; i++)
-        if (_row(i).evaluate().isNotEmpty) i,
+        if (_row(i).evaluate().isNotEmpty && tester.getRect(_row(i)).top >= chromeBottom) i,
     ].first;
     final before = tester.getRect(_row(shown + 2));
 

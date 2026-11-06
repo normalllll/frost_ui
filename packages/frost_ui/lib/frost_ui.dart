@@ -48,7 +48,6 @@ export 'src/display/filter_chip.dart';
 export 'src/display/labeled_content.dart';
 export 'src/display/meta_line.dart';
 export 'src/display/meter.dart';
-export 'src/display/profile_header.dart' show FrostProfileHeader;
 export 'src/display/rich_text.dart' show FrostRichText;
 export 'src/display/section_header.dart';
 export 'src/display/stat.dart' hide FrostStatStrip;

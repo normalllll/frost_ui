@@ -40,17 +40,6 @@ final hidingCases = <HidingCase>[
   HidingCase('FrostTabHost.new', _TabSubject.new),
   HidingCase('FrostPresence.new', () => SimpleHiding((child, hidden) => FrostPresence(visible: !hidden, child: child))),
   HidingCase(
-    'FrostInspector.new',
-    () => SimpleHiding(
-      (child, hidden) => hosted(
-        // Wide enough for the inline presentation; below that it is a sheet, which leaves the tree.
-        width: 1200,
-        height: 600,
-        child: FrostInspector(open: !hidden, onOpenChanged: (_) {}, inspector: child, child: const SizedBox.expand()),
-      ),
-    ),
-  ),
-  HidingCase(
     'FrostDisclosure.new',
     () => SimpleHiding((child, hidden) => FrostDisclosure(title: 'Disclosure', expanded: !hidden, onExpansionChanged: (_) {}, child: child)),
   ),

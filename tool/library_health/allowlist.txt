@@ -131,7 +131,6 @@ silent	media/media_hero.dart	_flight	maybeOf-fallback	1	baseline-20261102
 silent	media/media_stage.dart	FrostMediaStage.radiusOf	maybeOf-fallback	1	baseline-20261102
 silent	motion/_material_reveal.dart	_FrostMaterialRevealState._prepareClose	catch	1	baseline-20261102
 silent	navigation/_toolbar_middle_scope.dart	FrostToolbarMiddleWidthScope.of	maybeOf-fallback	1	baseline-20261102
-silent	navigation/inspector.dart	FrostInspector.presentationOf	maybeOf-fallback	1	baseline-20261102
 silent	navigation/pager.dart	_FrostPagerState._move	catch	1	baseline-20261102
 silent	navigation/shell/sidebar.dart	FrostNavItem.build	maybeOf-fallback	1	baseline-20261102
 silent	navigation/shell/sidebar.dart	_SidebarIconAxis.ellipsizesOf	maybeOf-fallback	1	baseline-20261102

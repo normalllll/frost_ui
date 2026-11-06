@@ -1,7 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frost_ui/desktop.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/layout/_page_scroll_behavior.dart';
 import 'package:frost_ui/src/primitives/_page_outline.dart';
@@ -85,45 +84,6 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
-  }
-  for (final direction in TextDirection.values) {
-    testWidgets('inspector assigns the channel only to the physical-right pane $direction', (tester) async {
-      tester.view.physicalSize = const Size(1440, 900);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      Widget scroll(String key) => SingleChildScrollView(
-        key: ValueKey(key),
-        child: FrostContentColumn(child: SizedBox(key: ValueKey('$key content'), height: 2000)),
-      );
-      await tester.pumpWidget(
-        frostTestApp(
-          Directionality(
-            textDirection: direction,
-            child: shell(
-              child: FrostInspector(open: true, onOpenChanged: (_) {}, inspector: scroll('inspector'), child: scroll('main')),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      final main = tester.getRect(find.byKey(const ValueKey('main')));
-      final inspector = tester.getRect(find.byKey(const ValueKey('inspector')));
-      final mainContent = tester.getRect(find.byKey(const ValueKey('main content')));
-      final inspectorContent = tester.getRect(find.byKey(const ValueKey('inspector content')));
-      if (direction == TextDirection.ltr) {
-        expect(inspector.right, 1440);
-        expect(inspector.width, 328);
-        expect(inspectorContent.right, 1416);
-        expect(mainContent.right, lessThanOrEqualTo(main.right));
-      } else {
-        // The page ends at the sidebar's rail on the right.
-        expect(main.right, 1380);
-        expect(inspector.width, 320);
-        expect(inspectorContent.right, inspector.right - 16);
-        expect(mainContent.right, lessThanOrEqualTo(1372));
-      }
-      expect(tester.takeException(), isNull);
-    });
   }
   testWidgets('body suggestions keep their viewport full-width and align rows and footer inside the channel', (tester) async {
     tester.view.physicalSize = const Size(560, 900);

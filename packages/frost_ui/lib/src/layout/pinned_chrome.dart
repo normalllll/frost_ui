@@ -331,15 +331,18 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
               },
               child: AnimatedBuilder(
                 animation: _awayMotion,
-                builder: (context, chrome) => FrostPinnedChromeGlass._(
-                  // The header sits on the suggestions page, not over scrolled content.
-                  opacity: _search.showing ? 0 : _coverage,
-                  // The value already follows the scroll position frame by frame.
-                  animate: false,
-                  // The glass ends where the visible rows end once the top
-                  // row has slid away; content shows below it.
-                  hiddenExtent: _away.offset,
-                  child: chrome,
+                builder: (context, chrome) => _ChromeHitArea(
+                  exposed: _away.offset,
+                  child: FrostPinnedChromeGlass._(
+                    // The header sits on the suggestions page, not over scrolled content.
+                    opacity: _search.showing ? 0 : _coverage,
+                    // The value already follows the scroll position frame by frame.
+                    animate: false,
+                    // The glass ends where the visible rows end once the top
+                    // row has slid away; content shows below it.
+                    hiddenExtent: _away.offset,
+                    child: chrome,
+                  ),
                 ),
                 child: chrome,
               ),
@@ -353,6 +356,27 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
       child: FrostHeaderSearchPage(link: _search, child: bars),
     );
   }
+}
+
+// The shown chrome is solid to taps, blank parts included, so a tap on it
+// never reaches the content scrolled beneath. The band at its bottom that a
+// slid-away row left open shows the body, and taps there reach the body.
+class _ChromeHitArea extends SingleChildRenderObjectWidget {
+  const _ChromeHitArea({required this.exposed, required super.child});
+  final double exposed;
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderChromeHitArea(exposed);
+  @override
+  void updateRenderObject(BuildContext context, _RenderChromeHitArea renderObject) => renderObject.exposed = exposed;
+}
+
+class _RenderChromeHitArea extends RenderProxyBox {
+  _RenderChromeHitArea(this.exposed);
+  double exposed;
+
+  // Children still take their own taps first; blank chrome takes the rest.
+  @override
+  bool hitTestSelf(Offset position) => position.dy < size.height - exposed;
 }
 
 // The body keeps the public MediaQuery/spacer contract, but its top padding
