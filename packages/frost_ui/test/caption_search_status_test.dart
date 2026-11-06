@@ -17,40 +17,33 @@ void main() {
     focus.dispose();
   });
 
-  Future<void> pump(
-    WidgetTester tester, {
-    required double width,
-    bool loading = false,
-    String? message,
-    List<FrostSearchSuggestionGroup> suggestions = const [],
-  }) => tester.pumpWidget(
-    frostTestApp(
-      Align(
-        alignment: Alignment.topCenter,
-        child: SizedBox(
-          width: width,
-          height: 32,
-          child: FrostCaptionSearch(
-            controller: controller,
-            focusNode: focus,
-            placeholder: 'Search',
-            onSubmitted: (_) {},
-            suggestions: suggestions,
-            loading: loading,
-            message: message,
+  Future<void> pump(WidgetTester tester, {required double width, bool loading = false, String? message, List<Widget> suggestions = const []}) =>
+      tester.pumpWidget(
+        frostTestApp(
+          Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: width,
+              height: 32,
+              child: FrostCaptionSearch(
+                controller: controller,
+                focusNode: focus,
+                placeholder: 'Search',
+                onSubmitted: (_) {},
+                content: searchContent(suggestions, loading: loading, message: message),
+              ),
+            ),
           ),
         ),
-      ),
-    ),
-  );
+      );
 
   Finder panelStatus(Finder child) => find.descendant(of: find.byType(FrostPopoverSurface), matching: child);
 
   testWidgets('caption dropdown shows loading while typing, retaining suggestions', (tester) async {
     addTearDown(() => tester.pumpWidget(const SizedBox()));
     final suggestions = [
-      FrostSearchSuggestionGroup(
-        items: [FrostSearchSuggestion(label: 'cat', onSelected: () {})],
+      FrostSearchSection(
+        children: [FrostSearchSuggestionRow(label: 'cat', onSelected: () {})],
       ),
     ];
     await pump(tester, width: 360, loading: true, suggestions: suggestions);

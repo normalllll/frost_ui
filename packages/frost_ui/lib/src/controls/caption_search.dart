@@ -14,7 +14,6 @@ import '../primitives/_measured_layout_builder.dart';
 import 'buttons.dart';
 import 'field_appearance.dart';
 import 'search_input.dart';
-import 'search_suggestion.dart';
 
 /// Editable caption search. The shell reserves 360 logical pixels at rest and
 /// expands toward the leading edge to 520, over the tabs when needed. On a
@@ -27,9 +26,7 @@ class FrostCaptionSearch extends StatefulWidget {
     required this.placeholder,
     required this.onSubmitted,
     this.onSubmittedInNewTab,
-    this.suggestions = const [],
-    this.loading = false,
-    this.message,
+    this.content,
     this.hint,
     super.key,
   });
@@ -38,15 +35,10 @@ class FrostCaptionSearch extends StatefulWidget {
   final String placeholder;
   final ValueChanged<String> onSubmitted;
   final ValueChanged<String>? onSubmittedInNewTab;
-  final List<FrostSearchSuggestionGroup> suggestions;
 
-  /// As [FrostSearchInput.loading]: progress in the dropdown while the App
-  /// fetches suggestions for the current query, retaining shown items.
-  final bool loading;
-
-  /// As [FrostSearchInput.message]: one line in the dropdown for no
-  /// suggestions or a failed load, shown even when suggestions are empty.
-  final String? message;
+  /// As [FrostSearchInput.content]: the dropdown under the expanded field,
+  /// null for none. A resting icon shows no dropdown.
+  final Widget? content;
 
   /// As [FrostSearchInput.hint]; none by default.
   final String? hint;
@@ -123,10 +115,8 @@ class _FrostCaptionSearchState extends State<FrostCaptionSearch> {
         size: FrostControlSize.small,
         leadingIcon: true,
         hint: widget.hint,
-        // A resting icon has no dropdown; its status returns with the field.
-        suggestions: constraints.maxWidth >= 120 ? widget.suggestions : const [],
-        loading: constraints.maxWidth >= 120 && widget.loading,
-        message: constraints.maxWidth >= 120 ? widget.message : null,
+        // A resting icon has no dropdown; it returns with the field.
+        content: constraints.maxWidth >= 120 ? widget.content : null,
       );
       // The caption slot is bounded and the field fills it. Outside the caption
       // (the shell moves title content into the page header at large text

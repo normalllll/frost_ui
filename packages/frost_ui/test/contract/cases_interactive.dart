@@ -22,6 +22,10 @@ const _noInteraction = {
 
 const _needsScope = {'no-theme': 'the case itself has to place a FrostScope above the button to give it a recovery action'};
 
+const _searchPartSkip = {
+  'keyboard': 'a search option never takes focus by design: focus stays in the field and its arrow keys move a highlight, so Tab cannot reach the option',
+};
+
 final _edit = testIcons.edit, _add = testIcons.add;
 const _picture = FrostMediaImage(
   child: SizedBox(height: 120, child: ColoredBox(color: Colors.red)),
@@ -249,14 +253,52 @@ final interactiveCases = <InteractiveCase>[
       focusNode: FocusNode(),
       placeholder: 'Search',
       onSubmitted: (_) => go(),
-      suggestions: [
-        FrostSearchSuggestionGroup(
-          items: [FrostSearchSuggestion(label: 'Suggestion', onSelected: () {})],
-        ),
-      ],
+      content: FrostSearchSection(
+        children: [FrostSearchSuggestionRow(label: 'Suggestion', onSelected: () {})],
+      ),
     ),
     kind: ControlKind.field,
     target: _editable(FrostSearchInput),
+  ),
+  // Search dropdown parts: they work only as the content of a focused FrostSearchInput.suggesting.
+  InteractiveCase(
+    'FrostSearchOption.new',
+    FrostSearchOption,
+    (go) => searchDropdown(
+      FrostSearchOption(
+        semanticLabel: 'Option',
+        keepsOpen: true,
+        onSelected: go,
+        child: SizedBox(height: 48, child: Center(child: Text(longLabel))),
+      ),
+    ),
+    kind: ControlKind.other,
+    focusTarget: _editable(FrostSearchInput),
+    skip: _searchPartSkip,
+  ),
+  InteractiveCase(
+    'FrostSearchSuggestionRow.new',
+    FrostSearchSuggestionRow,
+    (go) => searchDropdown(FrostSearchSuggestionRow(label: longLabel, detail: 'Detail', value: '12', keepsOpen: true, onSelected: go, onRemove: () {})),
+    kind: ControlKind.other,
+    focusTarget: _editable(FrostSearchInput),
+    skip: _searchPartSkip,
+  ),
+  InteractiveCase(
+    'FrostSearchSection.new',
+    FrostSearchSection,
+    (go) => searchDropdown(
+      FrostSearchSection(
+        title: 'History',
+        actionLabel: 'Clear',
+        onAction: go,
+        children: [FrostSearchSuggestionRow(label: 'Suggestion', onSelected: () {})],
+      ),
+    ),
+    kind: ControlKind.other,
+    target: _text('Clear'),
+    focusTarget: _editable(FrostSearchInput),
+    skip: _searchPartSkip,
   ),
   InteractiveCase(
     'FrostCaptionSearch.new',

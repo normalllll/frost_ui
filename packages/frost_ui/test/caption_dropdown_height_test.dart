@@ -15,11 +15,11 @@ void main() {
       final controller = TextEditingController(), focus = FocusNode();
       addTearDown(controller.dispose);
       addTearDown(focus.dispose);
-      FrostSearchSuggestionGroup group(String title) => FrostSearchSuggestionGroup(
+      Widget group(String title) => FrostSearchSection(
         title: title,
         actionLabel: 'Act',
         onAction: () {},
-        items: [for (var i = 0; i < 12; i++) FrostSearchSuggestion(label: '$title $i', onSelected: () {})],
+        children: [for (var i = 0; i < 12; i++) FrostSearchSuggestionRow(label: '$title $i', onSelected: () {})],
       );
       await tester.pumpWidget(
         frostTestApp(
@@ -39,7 +39,7 @@ void main() {
                 focusNode: focus,
                 placeholder: 'Search',
                 onSubmitted: (_) {},
-                suggestions: [group('Recent'), group('Mine'), group('Common')],
+                content: searchContent([group('Recent'), group('Mine'), group('Common')]),
               ),
               child: const SizedBox.expand(),
             ),
@@ -58,7 +58,7 @@ void main() {
       // 1280×800, depending on where group titles fall (half the window, the
       // previous limit, held 8).
       expect(visible, greaterThanOrEqualTo(size.height == 717 ? 16 : 17));
-      expect(find.text('Common 11'), findsNothing, reason: 'the rest scrolls inside the panel');
+      expect(tester.getRect(find.text('Common 11')).top, greaterThan(panel.bottom), reason: 'the rest scrolls inside the panel');
       expect(tester.takeException(), isNull);
     });
   }

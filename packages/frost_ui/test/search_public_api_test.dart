@@ -11,16 +11,20 @@ void main() {
       controller: controller,
       focusNode: focus,
       placeholder: 'Search',
-      loading: true,
-      message: 'Loading matches',
       placement: FrostSuggestionPlacement.inline,
       onSubmitted: (_) {},
-      suggestions: [
-        FrostSearchSuggestionGroup(
-          title: 'Recent',
-          items: [FrostSearchSuggestion(label: 'Term', icon: null, dataColor: 1, detail: 'Detail', value: '42', onSelected: () {}, onRemove: () {})],
-        ),
-      ],
+      content: Column(
+        children: [
+          FrostSearchSection(
+            title: 'Recent',
+            actionLabel: 'Clear',
+            onAction: () {},
+            children: [FrostSearchSuggestionRow(label: 'Term', icon: null, dataColor: 1, detail: 'Detail', value: '42', onSelected: () {}, onRemove: () {})],
+          ),
+          FrostSearchOption(onSelected: () {}, keepsOpen: true, semanticLabel: 'Card', child: const SizedBox.square(dimension: 40)),
+          const FrostSearchStatus(loading: true, message: 'Loading matches'),
+        ],
+      ),
     );
     expect(widget, isA<Widget>());
     expect(FrostSearchInput(controller: controller, focusNode: focus, placeholder: 'Search', onSubmitted: (_) {}), isA<Widget>());
@@ -44,7 +48,7 @@ void main() {
               child: SizedBox(
                 width: 400,
                 child: suggesting
-                    ? FrostSearchInput.suggesting(controller: controller, focusNode: focus, placeholder: 'q', onSubmitted: submitted.add, suggestions: const [])
+                    ? FrostSearchInput.suggesting(controller: controller, focusNode: focus, placeholder: 'q', onSubmitted: submitted.add, content: null)
                     : FrostSearchInput(controller: controller, focusNode: focus, placeholder: 'q', onSubmitted: submitted.add),
               ),
             ),

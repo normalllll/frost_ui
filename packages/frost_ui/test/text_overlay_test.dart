@@ -128,16 +128,16 @@ void main() {
               placeholder: 'Search',
               leadingIcon: true,
               onSubmitted: (_) => submitted++,
-              suggestions: [
-                FrostSearchSuggestionGroup(
+              content: searchContent([
+                FrostSearchSection(
                   title: 'Recent',
-                  items: [FrostSearchSuggestion(label: 'With icon', icon: icon, onSelected: () {}, onRemove: () => removed++)],
+                  children: [FrostSearchSuggestionRow(label: 'With icon', icon: icon, onSelected: () {}, onRemove: () => removed++)],
                 ),
-                FrostSearchSuggestionGroup(
+                FrostSearchSection(
                   title: 'Other',
-                  items: [FrostSearchSuggestion(label: 'Without icon', onSelected: () {})],
+                  children: [FrostSearchSuggestionRow(label: 'Without icon', onSelected: () {})],
                 ),
-              ],
+              ]),
             ),
           ),
         ),

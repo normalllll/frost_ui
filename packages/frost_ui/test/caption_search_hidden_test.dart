@@ -37,13 +37,13 @@ void main() {
               controller: controller,
               focusNode: focus,
               placeholder: 'Search',
-              suggestions: [
-                FrostSearchSuggestionGroup(
-                  items: [
-                    for (final label in ['sky', 'sky blue', 'skyline']) FrostSearchSuggestion(label: label, onSelected: () {}),
+              content: searchContent([
+                FrostSearchSection(
+                  children: [
+                    for (final label in ['sky', 'sky blue', 'skyline']) FrostSearchSuggestionRow(label: label, onSelected: () {}),
                   ],
                 ),
-              ],
+              ]),
               onSubmitted: (_) {},
             ),
             child: FrostShellDestination(

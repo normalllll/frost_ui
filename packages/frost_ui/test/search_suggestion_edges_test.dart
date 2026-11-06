@@ -6,20 +6,24 @@ import 'package:frost_ui/src/overlays/_popover_surface.dart';
 import 'page_support.dart';
 import 'support.dart';
 
-List<FrostSearchSuggestionGroup> _groups({int each = 1}) => [
-  FrostSearchSuggestionGroup(
-    title: 'Recent',
-    actionLabel: 'Clear',
-    onAction: () {},
-    items: [for (var i = 0; i < each; i++) FrostSearchSuggestion(label: 'cat $i', onSelected: () {}, onRemove: () {})],
-  ),
-  FrostSearchSuggestionGroup(
-    title: 'Common',
-    actionLabel: 'All',
-    onAction: () {},
-    items: [for (var i = 0; i < each; i++) FrostSearchSuggestion(label: 'sky $i', value: '940k', onSelected: () {})],
-  ),
-];
+Widget _groups({int each = 1}) => Column(
+  crossAxisAlignment: CrossAxisAlignment.stretch,
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    FrostSearchSection(
+      title: 'Recent',
+      actionLabel: 'Clear',
+      onAction: () {},
+      children: [for (var i = 0; i < each; i++) FrostSearchSuggestionRow(label: 'cat $i', onSelected: () {}, onRemove: () {})],
+    ),
+    FrostSearchSection(
+      title: 'Common',
+      actionLabel: 'All',
+      onAction: () {},
+      children: [for (var i = 0; i < each; i++) FrostSearchSuggestionRow(label: 'sky $i', value: '940k', onSelected: () {})],
+    ),
+  ],
+);
 
 // The remove button's glyph, which is what lines up with the text edge.
 Rect _removeGlyph(WidgetTester tester) => tester.getRect(find.descendant(of: find.byType(FrostListRow).first, matching: find.byType(FrostIcon)).first);
@@ -61,7 +65,7 @@ void main() {
           alignment: Alignment.topCenter,
           child: SizedBox(
             width: 520,
-            child: FrostSearchInput.suggesting(controller: controller, focusNode: focus, placeholder: 'Search', onSubmitted: (_) {}, suggestions: _groups()),
+            child: FrostSearchInput.suggesting(controller: controller, focusNode: focus, placeholder: 'Search', onSubmitted: (_) {}, content: _groups()),
           ),
         ),
       ),
@@ -91,7 +95,7 @@ void main() {
           focusNode: focus,
           placeholder: 'Search',
           onSubmitted: (_) {},
-          suggestions: _groups(),
+          content: _groups(),
           placement: FrostSuggestionPlacement.inline,
         ),
         platform: TargetPlatform.android,
@@ -122,7 +126,7 @@ void main() {
                 focusNode: focus,
                 placeholder: 'Search',
                 onSubmitted: (_) {},
-                suggestions: _groups(),
+                content: _groups(),
                 placement: FrostSuggestionPlacement.inline,
               ),
             ),

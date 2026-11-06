@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/controls/search_input.dart' show FrostSearchInputRegion;
 
+import '../support.dart' show searchContent;
 import 'baseline.dart';
 import 'controls_support.dart';
 
@@ -12,11 +13,11 @@ void _noop() {}
 const _compactButton = FrostButton.icon(icon: baselineIcon, label: 'Filters', size: FrostControlSize.compact, onPressed: _noop);
 
 final _plain = [
-  FrostSearchSuggestionGroup(
-    items: [
-      FrostSearchSuggestion(label: 'sunset', onSelected: _noop),
-      FrostSearchSuggestion(label: 'sunrise', onSelected: _noop),
-      FrostSearchSuggestion(label: 'sundial', onSelected: _noop),
+  FrostSearchSection(
+    children: [
+      FrostSearchSuggestionRow(label: 'sunset', onSelected: _noop),
+      FrostSearchSuggestionRow(label: 'sunrise', onSelected: _noop),
+      FrostSearchSuggestionRow(label: 'sundial', onSelected: _noop),
     ],
   ),
 ];
@@ -24,19 +25,19 @@ final _plain = [
 // Titles, an action, icons, category dots, details, trailing values and remove
 // buttons: every part of a suggestion row.
 final _rich = [
-  FrostSearchSuggestionGroup(
+  FrostSearchSection(
     title: 'Recent',
     actionLabel: 'Clear',
     onAction: _noop,
-    items: [
-      FrostSearchSuggestion(label: 'sunset', icon: baselineIcon, onSelected: _noop, onRemove: _noop),
-      FrostSearchSuggestion(label: 'sky', dataColor: 2, detail: '98K posts', value: '98K', onSelected: _noop),
-      FrostSearchSuggestion(label: 'cloud', detail: 'Soft white shapes in the sky', inlineDetail: true, onSelected: _noop),
+    children: [
+      FrostSearchSuggestionRow(label: 'sunset', icon: baselineIcon, onSelected: _noop, onRemove: _noop),
+      FrostSearchSuggestionRow(label: 'sky', dataColor: 2, detail: '98K posts', value: '98K', onSelected: _noop),
+      FrostSearchSuggestionRow(label: 'cloud', detail: 'Soft white shapes in the sky', inlineDetail: true, onSelected: _noop),
     ],
   ),
-  FrostSearchSuggestionGroup(
+  FrostSearchSection(
     title: 'Tags',
-    items: [FrostSearchSuggestion(label: 'ocean', onSelected: _noop)],
+    children: [FrostSearchSuggestionRow(label: 'ocean', onSelected: _noop)],
   ),
 ];
 
@@ -68,7 +69,7 @@ Widget _search({
 
 Widget _suggesting({
   String text = '',
-  List<FrostSearchSuggestionGroup> suggestions = const [],
+  List<Widget> suggestions = const [],
   bool loading = false,
   String? message,
   FrostSuggestionPlacement placement = FrostSuggestionPlacement.overlay,
@@ -79,14 +80,12 @@ Widget _suggesting({
     focusNode: focus,
     placeholder: 'Search',
     onSubmitted: _submitted,
-    suggestions: suggestions,
-    loading: loading,
-    message: message,
+    content: searchContent(suggestions, loading: loading, message: message),
     placement: placement,
   ),
 );
 
-Widget _inline({String text = '', List<FrostSearchSuggestionGroup> suggestions = const [], bool loading = false, String? message}) =>
+Widget _inline({String text = '', List<Widget> suggestions = const [], bool loading = false, String? message}) =>
     _suggesting(text: text, suggestions: suggestions, loading: loading, message: message, placement: FrostSuggestionPlacement.inline);
 
 // A narrow window, as a phone presents the page.

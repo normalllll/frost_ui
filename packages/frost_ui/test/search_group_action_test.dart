@@ -11,7 +11,7 @@ Finder _row(String text) => find.byWidgetPredicate((w) => w is FrostListRow && w
 /// Recent history with a clear action and saved tags with a manage action.
 class _History extends StatefulWidget {
   const _History({required this.builder, required this.calls});
-  final Widget Function(List<FrostSearchSuggestionGroup> suggestions) builder;
+  final Widget Function(Widget content) builder;
   final List<String> calls;
   @override
   State<_History> createState() => _HistoryState();
@@ -20,23 +20,29 @@ class _History extends StatefulWidget {
 class _HistoryState extends State<_History> {
   var _recent = ['cat', 'dog'];
   @override
-  Widget build(BuildContext context) => widget.builder([
-    FrostSearchSuggestionGroup(
-      title: 'Recent',
-      actionLabel: 'Clear',
-      onAction: () {
-        widget.calls.add('clear');
-        setState(() => _recent = []);
-      },
-      items: [for (final query in _recent) FrostSearchSuggestion(label: query, onSelected: () => widget.calls.add(query))],
+  Widget build(BuildContext context) => widget.builder(
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FrostSearchSection(
+          title: 'Recent',
+          actionLabel: 'Clear',
+          onAction: () {
+            widget.calls.add('clear');
+            setState(() => _recent = []);
+          },
+          children: [for (final query in _recent) FrostSearchSuggestionRow(label: query, onSelected: () => widget.calls.add(query))],
+        ),
+        FrostSearchSection(
+          title: 'My tags',
+          actionLabel: 'Manage',
+          onAction: () => widget.calls.add('manage'),
+          children: [FrostSearchSuggestionRow(label: 'landscape', onSelected: () => widget.calls.add('landscape'))],
+        ),
+      ],
     ),
-    FrostSearchSuggestionGroup(
-      title: 'My tags',
-      actionLabel: 'Manage',
-      onAction: () => widget.calls.add('manage'),
-      items: [FrostSearchSuggestion(label: 'landscape', onSelected: () => widget.calls.add('landscape'))],
-    ),
-  ]);
+  );
 }
 
 void main() {
@@ -73,8 +79,8 @@ void main() {
           width: 480,
           child: _History(
             calls: calls,
-            builder: (suggestions) =>
-                FrostSearchInput.suggesting(controller: controller, focusNode: focus, placeholder: 'Search', onSubmitted: calls.add, suggestions: suggestions),
+            builder: (content) =>
+                FrostSearchInput.suggesting(controller: controller, focusNode: focus, placeholder: 'Search', onSubmitted: calls.add, content: content),
           ),
         ),
       ),
@@ -115,8 +121,8 @@ void main() {
           width: 480,
           child: _History(
             calls: calls,
-            builder: (suggestions) =>
-                FrostSearchInput.suggesting(controller: controller, focusNode: focus, placeholder: 'Search', onSubmitted: calls.add, suggestions: suggestions),
+            builder: (content) =>
+                FrostSearchInput.suggesting(controller: controller, focusNode: focus, placeholder: 'Search', onSubmitted: calls.add, content: content),
           ),
         ),
       ),
@@ -159,12 +165,12 @@ void main() {
       tester,
       _History(
         calls: calls,
-        builder: (suggestions) => FrostSearchInput.suggesting(
+        builder: (content) => FrostSearchInput.suggesting(
           controller: controller,
           focusNode: focus,
           placeholder: 'Search',
           onSubmitted: calls.add,
-          suggestions: suggestions,
+          content: content,
           placement: FrostSuggestionPlacement.inline,
         ),
       ),
@@ -190,8 +196,7 @@ void main() {
           height: 32,
           child: _History(
             calls: calls,
-            builder: (suggestions) =>
-                FrostCaptionSearch(controller: controller, focusNode: focus, placeholder: 'Search', onSubmitted: calls.add, suggestions: suggestions),
+            builder: (content) => FrostCaptionSearch(controller: controller, focusNode: focus, placeholder: 'Search', onSubmitted: calls.add, content: content),
           ),
         ),
       ),
@@ -217,13 +222,11 @@ void main() {
             focusNode: focus,
             placeholder: 'Search',
             onSubmitted: (_) {},
-            suggestions: [
-              FrostSearchSuggestionGroup(
-                title: 'Recent',
-                actionLabel: 'Clear',
-                items: [FrostSearchSuggestion(label: 'cat', onSelected: () {})],
-              ),
-            ],
+            content: FrostSearchSection(
+              title: 'Recent',
+              actionLabel: 'Clear',
+              children: [FrostSearchSuggestionRow(label: 'cat', onSelected: () {})],
+            ),
           ),
         ),
       ),

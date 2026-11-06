@@ -115,8 +115,8 @@ silent	foundation/feedback.dart	_frostButtonFeedbackBackground	maybeOf-fallback	
 silent	foundation/scope.dart	FrostScope.configOf	maybeOf-fallback	1	baseline-20261102
 silent	foundation/scope.dart	FrostScope.solidSurfaces	maybeOf-fallback	1	baseline-20261102
 silent	frost_data:list_source.dart	FrostListSource._loadData	catch	1	reviewed:20261103:moved to frost_data unchanged
-silent	layout/chrome_active_body.dart	FrostChromeActiveBody.isActive	maybeOf-fallback	1	reviewed:20261105:moved unchanged from the private file
 silent	layout/_local_back.dart	FrostLocalBack.build	maybeOf-fallback	1	baseline-20261102
+silent	layout/chrome_active_body.dart	FrostChromeActiveBody.isActive	maybeOf-fallback	1	reviewed:20261105:moved unchanged from the private file
 silent	layout/column_placement.dart	FrostColumnPlacement.alignmentOf	maybeOf-fallback	1	baseline-20261102
 silent	layout/content_viewport.dart	FrostContentColumnBudget.of	maybeOf-fallback	1	baseline-20261102
 silent	layout/pinned_chrome_glass.dart	FrostPinnedChromeGlass.build	maybeOf-fallback	1	baseline-20261102
@@ -175,8 +175,9 @@ tokens	controls/_picker_segments.dart	-	spacing	3	baseline-20261102
 tokens	controls/field_appearance.dart	-	color	6	baseline-20261102
 tokens	controls/search_entry.dart	-	spacing	1	baseline-20261102
 tokens	controls/search_input.dart	-	radius	1	baseline-20261102
-tokens	controls/search_input.dart	-	spacing	3	baseline-20261102
+tokens	controls/search_input.dart	-	spacing	2	baseline-20261102
 tokens	controls/search_input.dart	-	text	1	baseline-20261102
+tokens	controls/search_suggestion.dart	-	spacing	1	reviewed:20261107:pass: the vertical 2 padding of the group title action moved from search_input.dart to search_suggestion.dart; the total is unchanged
 tokens	controls/switch.dart	-	color	1	baseline-20261102
 tokens	controls/tab_bar.dart	-	radius	1	baseline-20261102
 tokens	controls/tab_bar.dart	-	spacing	4	baseline-20261102

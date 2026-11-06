@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:frost_ui/frost_ui.dart';
 
+import '../support.dart' show searchContent;
 import 'baseline.dart';
 import 'controls_support.dart';
 
@@ -8,10 +9,10 @@ void _submitted(String _) {}
 void _noop() {}
 
 final _suggestions = [
-  FrostSearchSuggestionGroup(
-    items: [
-      FrostSearchSuggestion(label: 'sunset', onSelected: _noop),
-      FrostSearchSuggestion(label: 'sunrise', onSelected: _noop),
+  FrostSearchSection(
+    children: [
+      FrostSearchSuggestionRow(label: 'sunset', onSelected: _noop),
+      FrostSearchSuggestionRow(label: 'sunrise', onSelected: _noop),
     ],
   ),
 ];
@@ -21,7 +22,7 @@ Widget _caption({
   double width = 360,
   String text = '',
   ValueChanged<String>? onSubmittedInNewTab,
-  List<FrostSearchSuggestionGroup> suggestions = const [],
+  List<Widget> suggestions = const [],
   bool loading = false,
   String? message,
 }) => BaselineField(
@@ -35,9 +36,7 @@ Widget _caption({
       placeholder: 'Search',
       onSubmitted: _submitted,
       onSubmittedInNewTab: onSubmittedInNewTab,
-      suggestions: suggestions,
-      loading: loading,
-      message: message,
+      content: searchContent(suggestions, loading: loading, message: message),
     ),
   ),
 );

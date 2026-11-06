@@ -154,6 +154,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final footer in [false, true]) {
+    testWidgets('hover leaves the text below the image in its own ink footer=$footer', (tester) async {
+      await tester.pumpWidget(
+        _host(
+          FrostMediaCard(
+            media: _picture,
+            title: footer ? null : 'Sample work',
+            footer: footer ? const FrostText('Sample work', role: FrostTextRole.subheadline) : null,
+            onPressed: () {},
+          ),
+        ),
+      );
+      Color? ink() => tester.renderObject<RenderParagraph>(find.text('Sample work')).text.style?.color;
+      final before = ink();
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      await mouse.moveTo(tester.getCenter(_surface));
+      await tester.pumpAndSettle();
+      expect(_scales(tester, _surface), contains(closeTo(FrostMetrics.mediaHoverZoom, .0001)));
+      expect(ink(), before);
+      expect(ink(), isNot(FrostThemeTokens.of(tester.element(_card)).accentInk));
+      await mouse.removePointer();
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('selection circle never overlaps topEnd, ring and check animate, null removes selection semantics', (tester) async {
     final semantics = tester.ensureSemantics();
     late StateSetter update;

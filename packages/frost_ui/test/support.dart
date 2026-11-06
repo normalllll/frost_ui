@@ -406,6 +406,19 @@ List<({OutlinedBorder shape, int draws, double? width, Color? color, Color? draw
   return result;
 }
 
+/// Search dropdown content of [sections] and a status line, or none when
+/// there is nothing to show.
+Widget? searchContent(List<Widget> sections, {bool loading = false, String? message}) => sections.isEmpty && !loading && message == null
+    ? null
+    : Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ...sections,
+          FrostSearchStatus(loading: loading, message: message),
+        ],
+      );
+
 /// Limits overlays opened below it to its live rectangle, the way a shell's
 /// content area does for the panels opened inside it.
 class TestOverlayRegion extends StatefulWidget {

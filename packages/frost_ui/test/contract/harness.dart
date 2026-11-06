@@ -814,3 +814,87 @@ Future<String?> checkEscOnlyOverlay(WidgetTester tester, OverlayCase c) =>
       if (find.text(pageMarker).evaluate().isEmpty) return 'Escape also closed the page under the overlay';
       return null;
     });
+
+// ---------------------------------------------------------------------------
+// Search dropdown host
+
+/// [content] as the dropdown of a focused [FrostSearchInput.suggesting] that
+/// already holds text, for components that only work inside a search dropdown.
+Widget searchDropdown(Widget content) => _SearchDropdown(content);
+
+class _SearchDropdown extends StatefulWidget {
+  const _SearchDropdown(this.content);
+  final Widget content;
+
+  @override
+  State<_SearchDropdown> createState() => _SearchDropdownState();
+}
+
+class _SearchDropdownState extends State<_SearchDropdown> {
+  final _controller = TextEditingController(text: 'ab');
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_reopen);
+    HardwareKeyboard.instance.addHandler(_escape);
+    _reopen();
+  }
+
+  /// The checks click away and press Escape; the dropdown comes back with the
+  /// focus so the next click has something to hit.
+  bool _escape(KeyEvent event) {
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+      // Escape hides the dropdown while the field keeps focus; losing and regaining focus shows it again.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focus.unfocus();
+      });
+      WidgetsBinding.instance.scheduleFrame();
+    }
+    return false;
+  }
+
+  void _reopen() {
+    if (_focus.hasFocus) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_focus.hasFocus) _focus.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _focus.removeListener(_reopen);
+    HardwareKeyboard.instance.removeHandler(_escape);
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // A disabled scope would keep the field from opening its dropdown, so the
+    // field is enabled and the scope the case runs in is applied to the content.
+    final enabled = FrostControlScope.enabledOf(context);
+    // The dropdown fades in; without motion it is fully shown on the frame it opens, which the checks need.
+    final media = MediaQuery.of(context).copyWith(disableAnimations: true);
+    return MediaQuery(
+      data: media,
+      child: FrostControlScope(
+        enabled: true,
+        child: SizedBox(
+          width: 360,
+          child: FrostSearchInput.suggesting(
+            controller: _controller,
+            focusNode: _focus,
+            autofocus: true,
+            placeholder: 'Search',
+            onSubmitted: (_) {},
+            placement: FrostSuggestionPlacement.overlay,
+            content: FrostControlScope(enabled: enabled, child: widget.content),
+          ),
+        ),
+      ),
+    );
+  }
+}

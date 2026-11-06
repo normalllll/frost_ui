@@ -61,11 +61,11 @@ void main() {
                 focusNode: focus,
                 placeholder: 'Search',
                 onSubmitted: (_) {},
-                suggestions: [
-                  FrostSearchSuggestionGroup(
-                    items: [FrostSearchSuggestion(label: 'cat', onSelected: () {})],
+                content: searchContent([
+                  FrostSearchSection(
+                    children: [FrostSearchSuggestionRow(label: 'cat', onSelected: () {})],
                   ),
-                ],
+                ]),
               ),
               child: const SizedBox.expand(),
             ),

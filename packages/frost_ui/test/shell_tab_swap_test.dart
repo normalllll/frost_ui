@@ -315,12 +315,12 @@ void main() {
               placeholder: 'Search',
               onSubmitted: (q) => submits.add('current:$q'),
               onSubmittedInNewTab: (q) => submits.add('new:$q'),
-              suggestions: [
-                FrostSearchSuggestionGroup(
+              content: searchContent([
+                FrostSearchSection(
                   title: 'History',
-                  items: [FrostSearchSuggestion(label: 'Earlier', onSelected: () {})],
+                  children: [FrostSearchSuggestionRow(label: 'Earlier', onSelected: () {})],
                 ),
-              ],
+              ]),
             ),
             child: const FrostShellDestination(child: SizedBox.expand()),
           ),
@@ -459,7 +459,7 @@ void main() {
     expect(image.getTransformTo(null).getMaxScaleOnAxis(), closeTo(1.03, .001));
     expect(
       tester.renderObject<RenderParagraph>(find.text('Title')).text.style!.color,
-      FrostThemeTokens.of(tester.element(find.byType(FrostMediaCard))).accentInk,
+      FrostThemeTokens.of(tester.element(find.byType(FrostMediaCard))).textPrimary,
     );
     await tester.tap(find.text('Title'));
     expect(taps, 1);

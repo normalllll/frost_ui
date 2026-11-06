@@ -23,16 +23,16 @@ void main() {
               focusNode: focus,
               placeholder: 'Search',
               onSubmitted: (_) {},
-              suggestions: [
-                FrostSearchSuggestionGroup(
+              content: searchContent([
+                FrostSearchSection(
                   title: 'History',
-                  items: [FrostSearchSuggestion(label: 'Flutter desktop', onSelected: () {})],
+                  children: [FrostSearchSuggestionRow(label: 'Flutter desktop', onSelected: () {})],
                 ),
-                FrostSearchSuggestionGroup(
+                FrostSearchSection(
                   title: 'Trending',
-                  items: [FrostSearchSuggestion(label: 'Flutter video', onSelected: () {})],
+                  children: [FrostSearchSuggestionRow(label: 'Flutter video', onSelected: () {})],
                 ),
-              ],
+              ]),
             ),
           ),
         ),

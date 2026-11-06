@@ -1,14 +1,10 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../display/data_dot.dart';
-import '../feedback/activity_indicator.dart';
 import '../foundation/control_scope.dart';
 import '../foundation/icon_data.dart';
-import '../foundation/radius.dart';
 import '../foundation/scope.dart';
 import '../foundation/sizes.dart';
 import '../foundation/spacing.dart';
@@ -20,23 +16,16 @@ import '../layout/_header_search_scope.dart';
 import '../layout/column_placement.dart';
 import '../layout/content_viewport.dart';
 import '../layout/window_caption_scope.dart';
-import '../lists/_list_input.dart';
-import '../lists/_row_scope.dart';
-import '../lists/list.dart';
-import '../lists/list_row.dart';
 import '../overlays/_anchored_panel_layout.dart';
 import '../overlays/_popover_surface.dart';
 import '../overlays/adaptive_panel.dart';
-import '../primitives/_click_surface_visuals.dart';
 import '../primitives/_directional_icon.dart';
-import '../primitives/click_surface.dart';
-import '../primitives/glyph.dart';
 import '../primitives/keyline.dart';
 import '../primitives/presence.dart';
-import '../primitives/text.dart';
 import '_field_clear_button.dart';
 import '_field_options.dart';
 import '_field_row.dart';
+import '_search_options.dart';
 import 'buttons.dart';
 import 'field_appearance.dart';
 import 'search_suggestion.dart';
@@ -75,8 +64,8 @@ enum FrostSuggestionPlacement {
 /// Search field using the caller's controller directly, including token rules.
 ///
 /// The default constructor is the plain field. [FrostSearchInput.suggesting]
-/// adds suggestions, progress and a status message, listed in an anchored
-/// panel or in the page ([FrostSuggestionPlacement]); they never take editing
+/// adds a dropdown of App content, shown in an anchored
+/// panel or in the page ([FrostSuggestionPlacement]); it never takes editing
 /// focus from the field.
 class FrostSearchInput extends StatelessWidget {
   const FrostSearchInput({
@@ -93,23 +82,20 @@ class FrostSearchInput extends StatelessWidget {
     this.size,
     this.appearance,
     super.key,
-  }) : suggestions = const [],
-       loading = false,
-       message = null,
+  }) : content = null,
        placement = FrostSuggestionPlacement.overlay,
        _suggesting = false;
 
-  /// A search field with suggestions. They show while the field has focus and
-  /// there are suggestions, [loading] or a [message]; Escape, choosing an item
-  /// or tapping outside hides them until the query changes or focus returns.
+  /// A search field with a dropdown of App content. It shows while the field
+  /// has focus and [content] is not null; Escape, selecting a
+  /// [FrostSearchOption] or tapping outside hides it until the query changes
+  /// or focus returns.
   const FrostSearchInput.suggesting({
     required this.controller,
     required this.focusNode,
     required this.placeholder,
     required this.onSubmitted,
-    required this.suggestions,
-    this.loading = false,
-    this.message,
+    required this.content,
     this.placement = FrostSuggestionPlacement.adaptive,
     this.onClear,
     this.onDismiss,
@@ -146,17 +132,18 @@ class FrostSearchInput extends StatelessWidget {
   final FrostControlSize? size;
   final FrostFieldAppearance? appearance;
 
-  /// Suggestion groups of [FrostSearchInput.suggesting]; empty for the plain
+  /// The dropdown of [FrostSearchInput.suggesting]: any widget the App builds,
+  /// such as [FrostSearchSection]s of [FrostSearchSuggestionRow]s, a grid of
+  /// cards made selectable with [FrostSearchOption], and a
+  /// [FrostSearchStatus]. Null shows no dropdown; always null for the plain
   /// field.
-  final List<FrostSearchSuggestionGroup> suggestions;
-
-  /// Shows progress in the suggestion list, retaining existing items. Progress
-  /// is not selectable and does not intercept editing keys.
-  final bool loading;
-
-  /// Application-provided loading, empty-result, or failure explanation,
-  /// shown in the suggestion list even when suggestions are empty.
-  final String? message;
+  ///
+  /// Frost scrolls the content vertically inside the dropdown's height, so
+  /// lay it out without scrolling of its own: Column, Wrap, or a
+  /// LayoutBuilder that picks a column count. The content gets the dropdown's
+  /// bounded width, and a grid reflows when that width changes. It never takes
+  /// focus; the field's arrow keys and Enter reach its options.
+  final Widget? content;
 
   /// Where the suggestions show; [FrostSuggestionPlacement.adaptive] by default.
   final FrostSuggestionPlacement placement;
@@ -353,15 +340,8 @@ class _SearchField extends StatelessWidget {
   );
 }
 
-// A null item is the group's title row with its action; it is highlighted and
-// activated like the items so the action stays reachable from the field.
-typedef _Suggestion = ({FrostSearchSuggestionGroup group, FrostSearchSuggestion? item, bool titled});
-
-bool _hasAction(FrostSearchSuggestionGroup group) => group.actionLabel != null && group.onAction != null;
-Object _identity(_Suggestion entry) => entry.item ?? entry.group;
-
-/// [FrostSearchInput.suggesting]: the field with its suggestion list, keyboard
-/// highlight and overlay panel.
+/// [FrostSearchInput.suggesting]: the field with its dropdown of App content,
+/// keyboard highlight and overlay panel.
 class _SuggestingSearchInput extends StatefulWidget {
   const _SuggestingSearchInput({required this.input});
   final FrostSearchInput input;
@@ -373,26 +353,23 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
   final _overlay = OverlayPortalController();
   final _fieldKey = GlobalKey();
   final _listKey = GlobalKey();
-  final _list = FrostListInputController<_Suggestion>();
+  final _scroll = ScrollController(keepScrollOffset: false);
   final _highlightRevision = ValueNotifier<int>(0);
+  late final _options = FrostSearchOptions(onSelect: _select, onHighlight: () => _highlightRevision.value++);
   FrostHeaderSearchBody? _body;
-  List<_Suggestion> _entries = const [], _lastEntries = const [];
-  _Suggestion? _highlighted;
+  // The content last shown, kept while the dropdown fades out.
+  Widget? _lastContent;
   String _text = '';
   bool _suppressed = false;
-  int _generation = 0;
-  // The list that is built, which is still the previous one while a new
-  // generation waits for this widget's build.
-  int _builtGeneration = 0;
   bool _keptOpen = false;
   // False while the field is in a subtree with its tickers off, such as title
   // content the shell keeps offstage: the field keeps its text and focus, and
-  // its list is not shown.
+  // its dropdown is not shown.
   bool _active = true;
 
   FrostSearchInput get _input => widget.input;
 
-  /// Where the list goes, read once per build.
+  /// Where the dropdown goes, read once per build.
   _Placement _placement = _Placement.overlay;
   _Placement _resolvePlacement() {
     switch (_input.placement) {
@@ -409,45 +386,20 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
     }
   }
 
-  /// The list sits in the page rather than in a floating panel.
+  /// The dropdown sits in the page rather than in a floating panel.
   bool get _inline => _placement != _Placement.overlay;
-  bool get _visible => _active && _input.focusNode.hasFocus && !_suppressed && (_entries.isNotEmpty || _input.loading || _input.message != null);
+  bool get _visible => _active && _input.focusNode.hasFocus && !_suppressed && _input.content != null;
 
   @override
   void initState() {
     super.initState();
     _text = _input.controller.text;
-    _readEntries();
+    _lastContent = _input.content;
     _input.controller.addListener(_queryChanged);
     _input.focusNode.addListener(_focusChanged);
     // Always attach a portal. Visibility is derived during layout so supplied
-    // suggestions get correct geometry on the very first frame.
+    // content gets correct geometry on the very first frame.
     _overlay.show();
-  }
-
-  void _readEntries() {
-    _entries = [
-      for (final group in _input.suggestions)
-        if (group.items.isNotEmpty) ...[
-          if (_hasAction(group)) (group: group, item: null, titled: true),
-          for (var i = 0; i < group.items.length; i++) (group: group, item: group.items[i], titled: i == 0 && !_hasAction(group) && group.title != null),
-        ],
-    ];
-    if (!listEquals(_entries, _lastEntries) && _list.attached && _builtGeneration == _generation) {
-      // A remove button can temporarily hover another row; list mutations
-      // restore the keyboard item, including the input's announcement.
-      _highlighted = _list.keyboardItem;
-    }
-    if (_highlighted != null) {
-      final next = _entries.where((entry) => identical(_identity(entry), _identity(_highlighted!))).firstOrNull;
-      if (next != null) {
-        _highlighted = next;
-      } else {
-        final index = _lastEntries.indexOf(_highlighted!);
-        _highlighted = _entries.isEmpty ? null : _entries[index.clamp(0, _entries.length - 1)];
-      }
-    }
-    if (_entries.isNotEmpty) _lastEntries = _entries;
   }
 
   @override
@@ -464,27 +416,30 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
       old.focusNode.removeListener(_focusChanged);
       _input.focusNode.addListener(_focusChanged);
     }
-    _readEntries();
+  }
+
+  /// A new query, focus entry or keep-open selection: the dropdown shows
+  /// again with nothing highlighted.
+  void _restart({bool keptOpen = false, bool scrollToTop = true}) {
+    setState(() {
+      _suppressed = false;
+      _keptOpen = keptOpen;
+      _options.reset();
+    });
+    if (!scrollToTop) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _scroll.hasClients) _scroll.jumpTo(0);
+    });
   }
 
   void _queryChanged() {
     if (_text == _input.controller.text) return;
     _text = _input.controller.text;
-    setState(() {
-      _suppressed = false;
-      _highlighted = null;
-      _keptOpen = false;
-      _generation++;
-    });
+    _restart();
   }
 
   void _focusChanged() {
-    setState(() {
-      _suppressed = false;
-      _highlighted = null;
-      _keptOpen = false;
-      _generation++;
-    });
+    _restart();
     _reportFocus(context, _input.focusNode);
   }
 
@@ -492,43 +447,37 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
     if (!mounted) return;
     setState(() {
       _suppressed = true;
-      _highlighted = null;
+      _options.clear();
     });
   }
 
-  void _select(_Suggestion entry) {
-    if (entry.item == null) {
-      // A group action (clear, manage) changes the suggestions in place.
-      entry.group.onAction?.call();
+  void _select(VoidCallback onSelected, FrostSearchOptionExit exit) {
+    if (exit == FrostSearchOptionExit.stay) {
+      // A section action (clear, manage) changes the content in place.
+      onSelected();
       return;
     }
-    final keepsOpen = entry.item!.keepsOpen || entry.group.keepsOpen;
     try {
-      entry.item!.onSelected();
+      onSelected();
     } finally {
       if (mounted) {
-        if (keepsOpen) {
+        if (exit == FrostSearchOptionExit.reopen) {
           _reopen();
         } else {
-          // Updating the query as part of choosing an item is still this selection.
-          // Reopen only for a later query edit or a new focus entry.
+          // Updating the query as part of choosing an option is still this
+          // selection. Reopen only for a later query edit or a new focus entry.
           _dismiss();
         }
       }
     }
   }
 
-  /// A keep-open selection: the list stays up for the new query with nothing
-  /// highlighted, so Enter submits. A mouse left over the chosen row highlights
-  /// again once it moves; an arrow key starts at the first item.
+  /// A keep-open selection: the dropdown stays up with nothing highlighted, so
+  /// Enter submits. A mouse left over the chosen option highlights again once
+  /// it moves; an arrow key starts a new highlight.
   void _reopen() {
     _input.focusNode.requestFocus();
-    setState(() {
-      _suppressed = false;
-      _highlighted = null;
-      _keptOpen = true;
-      _generation++;
-    });
+    _restart(keptOpen: true, scrollToTop: false);
   }
 
   KeyEventResult _key(FocusNode node, KeyEvent event) {
@@ -545,18 +494,12 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
       _input._submit(_input.controller.text);
       return KeyEventResult.handled;
     }
-    if (event.logicalKey == LogicalKeyboardKey.arrowDown && !_visible && _entries.isNotEmpty) {
-      setState(() {
-        _suppressed = false;
-        _highlighted = null;
-        _generation++;
-      });
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown && !_visible && _input.content != null) {
+      _restart();
       return KeyEventResult.handled;
     }
-    if (_visible &&
-        (event.logicalKey == LogicalKeyboardKey.arrowDown || event.logicalKey == LogicalKeyboardKey.arrowUp || event.logicalKey == LogicalKeyboardKey.enter)) {
-      final result = _list.handle?.call(event) ?? KeyEventResult.ignored;
-      if (result == KeyEventResult.handled) return result;
+    if (_visible && _arrows.contains(event.logicalKey) && !_modifiedSideways(event) && _options.move(event.logicalKey) == KeyEventResult.handled) {
+      return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.enter) {
       _submit(_input.controller.text);
@@ -565,13 +508,19 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
     return KeyEventResult.ignored;
   }
 
+  static final _arrows = {LogicalKeyboardKey.arrowDown, LogicalKeyboardKey.arrowUp, LogicalKeyboardKey.arrowLeft, LogicalKeyboardKey.arrowRight};
+
+  // Left and Right with a modifier select text or move by word: the editor's.
+  static bool _modifiedSideways(KeyEvent event) {
+    if (event.logicalKey != LogicalKeyboardKey.arrowLeft && event.logicalKey != LogicalKeyboardKey.arrowRight) return false;
+    final keyboard = HardwareKeyboard.instance;
+    return keyboard.isShiftPressed || keyboard.isControlPressed || keyboard.isAltPressed || keyboard.isMetaPressed;
+  }
+
   void _submit(String value) {
-    if (_visible && _highlighted != null) {
-      _select(_highlighted!);
-    } else {
-      if (_keptOpen) _dismiss();
-      _input._submit(value);
-    }
+    if (_visible && _options.activate()) return;
+    if (_keptOpen) _dismiss();
+    _input._submit(value);
   }
 
   @override
@@ -580,120 +529,35 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
     _input.controller.removeListener(_queryChanged);
     _input.focusNode.removeListener(_focusChanged);
     _highlightRevision.dispose();
+    _options.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
-  String? _announcement() {
-    final index = _highlighted == null ? -1 : _entries.indexOf(_highlighted!);
-    if (index < 0) return null;
-    final description = switch (_highlighted!) {
-      (item: final item?, group: _, titled: _) => '${item.label}${item.inlineDetail && item.detail != null ? ', ${item.detail}' : ''}',
-      (item: null, :final group, titled: _) => [group.actionLabel!, ?group.title].join(', '),
-    };
-    return '$description ${FrostScope.labelsOf(context).itemPosition(index + 1, _entries.length)}';
-  }
+  String? _announcement() => _options.announcement();
 
+  /// The App's content in the dropdown's scroll view. The scroll view keeps
+  /// the full width for its scrollbar; a page dropdown's content takes the
+  /// page's content column inside it.
   Widget _suggestionList(BuildContext context) => KeyedSubtree(
     key: _listKey,
-    child: FrostListInput<_Suggestion>(
-      controller: _list,
-      hoverNeedsMove: _keptOpen,
-      footer: _input.loading || _input.message != null
-          ? _suggestionColumn(
-              Padding(
-                // A page list has no panel inset; a status-only line starts
-                // where a first row's text would rather than on the field.
-                padding: EdgeInsets.only(
-                  top: _entries.isNotEmpty
-                      ? FrostGap.related
-                      : _inline
-                      ? FrostGap.group
-                      : 0,
-                ),
-                child: _RowAligned(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_input.loading) FrostActivityIndicator(size: FrostControlSize.compact, semanticLabel: FrostScope.labelsOf(context).loading),
-                      if (_input.loading && _input.message != null) const SizedBox(width: FrostGap.related),
-                      if (_input.message case final message?)
-                        Expanded(
-                          child: FrostText(message, role: FrostTextRole.footnote, tone: FrostTextTone.secondary),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          : null,
-      identity: _identity,
-      onHighlight: (item, _) {
-        _highlighted = item;
-        _highlightRevision.value++;
-      },
-      child: FrostList<_Suggestion>(
-        key: ValueKey(_generation),
-        items: _visible ? _entries : _lastEntries,
-        reserveIconColumn: (_visible ? _entries : _lastEntries).any((entry) => entry.item?.icon != null || entry.item?.dataColor != null),
-        onSelected: _select,
-        itemBuilder: (context, entry, _) {
-          final titlePadding = EdgeInsets.only(
-            top: identical(_identity(entry), _identity((_visible ? _entries : _lastEntries).first)) ? 0 : frostPopoverContentInset,
-            bottom: FrostGap.inline,
-          );
-          final item = entry.item;
-          if (item == null) {
-            return _suggestionColumn(
-              Padding(
-                padding: titlePadding,
-                child: _RowAligned(
-                  child: _GroupTitle(title: entry.group.title, actionLabel: entry.group.actionLabel!),
-                ),
-              ),
-            );
-          }
-          return _suggestionColumn(
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (entry.titled)
-                  Padding(
-                    padding: titlePadding,
-                    child: _RowAligned(
-                      child: FrostText(entry.group.title!, role: FrostTextRole.caption, tone: FrostTextTone.secondary),
-                    ),
-                  ),
-                FrostListRow(
-                  title: item.label,
-                  subtitle: switch (item.detail) {
-                    null => null,
-                    final detail => item.inlineDetail ? FrostRowSubtitle.inline(detail) : FrostRowSubtitle(detail),
-                  },
-                  leading: item.dataColor == null
-                      ? (item.icon == null ? null : FrostGlyph.icon(item.icon!))
-                      : FrostLeading.custom(FrostDataDot(item.dataColor!)),
-                  value: item.value,
-                  trailing: item.onRemove == null
-                      ? null
-                      : FrostButton.icon(
-                          icon: FrostIconSet.of(context).close,
-                          label: FrostScope.labelsOf(context).remove,
-                          size: FrostControlSize.compact,
-                          onPressed: item.onRemove,
-                        ),
-                ),
-              ],
-            ),
-          );
-        },
+    child: FrostBleed(
+      amount: FrostGap.of(context).hitInset,
+      child: FrostSearchOptionsBuilder(
+        options: _options,
+        inline: _inline,
+        child: SingleChildScrollView(
+          controller: _scroll,
+          child: FrostSearchContentRoot(child: _suggestionColumn(_input.content ?? _lastContent ?? const SizedBox.shrink())),
+        ),
       ),
     ),
   );
 
-  // A page list takes the page's content column, unless the App already placed
-  // it inside one (a browse layout's slivers, say): a second column would inset
-  // the titles and rows again and leave them short of the field and Cancel.
+  // A page dropdown takes the page's content column, unless the App already
+  // placed it inside one (a browse layout's slivers, say): a second column
+  // would inset the titles and rows again and leave them short of the field
+  // and Cancel.
   Widget _suggestionColumn(Widget child) => !_inline
       ? child
       : Builder(
@@ -818,9 +682,15 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
 
   @override
   Widget build(BuildContext context) {
-    _builtGeneration = _generation;
     _active = TickerMode.valuesOf(context).enabled;
     _placement = _resolvePlacement();
+    _options
+      ..hoverNeedsMove = _keptOpen
+      ..textDirection = Directionality.of(context)
+      ..itemPosition = FrostScope.labelsOf(context).itemPosition
+      // New content may put another option where the highlight was.
+      ..refreshAnnouncement();
+    if (_input.content != null) _lastContent = _input.content;
     final body = _placement == _Placement.body ? FrostHeaderSearchBodyScope.maybeOf(context) : null;
     if (!identical(body, _body) && (_body?.showing ?? false)) _body!.showing = false;
     _body = body;
@@ -917,78 +787,6 @@ class _InlineSuggestions extends StatelessWidget {
       );
     },
   );
-}
-
-/// A suggestion group's title with its trailing text action. The list item's
-/// keyboard highlight and Enter belong to the action, never to the title text.
-class _GroupTitle extends StatefulWidget {
-  const _GroupTitle({required this.title, required this.actionLabel});
-  final String? title;
-  final String actionLabel;
-  @override
-  State<_GroupTitle> createState() => _GroupTitleState();
-}
-
-class _GroupTitleState extends State<_GroupTitle> {
-  FrostListItemHandle? _handle;
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final handle = FrostListItemScope.of(context)?.handle;
-    if (_handle != handle) _handle?.activate = null;
-    _handle = handle?..activate = _activate;
-  }
-
-  void _activate() => FrostListItemScope.of(context)?.onSelected?.call();
-
-  @override
-  void dispose() {
-    _handle?.activate = null;
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Expanded(
-        child: widget.title == null
-            ? const SizedBox.shrink()
-            : FrostText(widget.title!, role: FrostTextRole.caption, tone: FrostTextTone.secondary, maxLines: 1),
-      ),
-      const SizedBox(width: FrostGap.related),
-      // The action text ends on the content edge that the title starts on;
-      // its highlight padding is spent outside that line.
-      Transform.translate(
-        offset: Offset(Directionality.of(context) == TextDirection.rtl ? -_actionInset : _actionInset, 0),
-        child: FrostClickHighlight(
-          highlighted: FrostListItemScope.of(context)?.highlighted ?? false,
-          child: FrostClickSurface(
-            onTap: _activate,
-            shape: FrostClickShape.rounded(FrostRadius.borderRadius(FrostRadius.xs)),
-            child: Semantics(
-              button: true,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: _actionInset, vertical: 2),
-                child: FrostText(widget.actionLabel, role: FrostTextRole.caption, tone: FrostTextTone.accent, maxLines: 1),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ],
-  );
-}
-
-const _actionInset = 6.0;
-
-/// A non-row line in the suggestion list (a group title, the status line),
-/// inset by the same list bleed rows inset their content by, so titles, rows
-/// and their trailing values share one pair of edges.
-class _RowAligned extends StatelessWidget {
-  const _RowAligned({required this.child});
-  final Widget child;
-  @override
-  Widget build(BuildContext context) => Padding(padding: FrostListItemScope.of(context)?.viewportInset ?? frostBleedOutsetsOf(context), child: child);
 }
 
 /// Centres the search row in its page column with equal vertical breathing room.

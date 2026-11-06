@@ -2,20 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
-import 'package:frost_ui/src/lists/_list_input.dart';
+import 'package:frost_ui/src/controls/_search_options.dart';
 import 'package:frost_ui/src/overlays/_popover_surface.dart';
 
 import 'support.dart';
 
 void main() {
-  final suggestions = [
-    FrostSearchSuggestionGroup(
-      items: [
-        FrostSearchSuggestion(label: 'First', onSelected: () {}),
-        FrostSearchSuggestion(label: 'Last', onSelected: () {}),
-      ],
-    ),
-  ];
+  final suggestions = FrostSearchSection(
+    children: [
+      FrostSearchSuggestionRow(label: 'First', onSelected: () {}),
+      FrostSearchSuggestionRow(label: 'Last', onSelected: () {}),
+    ],
+  );
 
   void viewport(WidgetTester tester) {
     tester.view.devicePixelRatio = 1;
@@ -24,7 +22,8 @@ void main() {
     addTearDown(() => tester.pumpWidget(const SizedBox()));
   }
 
-  Finder list() => find.byWidgetPredicate((w) => w is FrostList);
+  // The dropdown's scroll view, in the page for inline placement.
+  Finder list() => find.ancestor(of: find.byType(FrostSearchContentRoot), matching: find.byType(SingleChildScrollView));
 
   testWidgets('inline list takes the finite room below the field, above the page inset for the keyboard', (tester) async {
     viewport(tester);
@@ -48,7 +47,7 @@ void main() {
                 focusNode: focus,
                 placeholder: 'Search',
                 onSubmitted: (_) {},
-                suggestions: suggestions,
+                content: suggestions,
                 placement: FrostSuggestionPlacement.inline,
               ),
             ),
@@ -84,7 +83,7 @@ void main() {
               focusNode: focus,
               placeholder: 'Search',
               onSubmitted: (_) {},
-              suggestions: suggestions,
+              content: suggestions,
               placement: FrostSuggestionPlacement.inline,
             ),
             const Text('Below'),
@@ -123,7 +122,7 @@ void main() {
                   focusNode: focus,
                   placeholder: 'Search',
                   onSubmitted: (_) {},
-                  suggestions: suggestions,
+                  content: suggestions,
                   placement: inline ? FrostSuggestionPlacement.inline : FrostSuggestionPlacement.overlay,
                 ),
               ),
@@ -177,7 +176,7 @@ void main() {
                             focusNode: focus,
                             placeholder: 'Search',
                             onSubmitted: (_) {},
-                            suggestions: suggestions,
+                            content: suggestions,
                           ),
                         ),
                       ),
@@ -216,7 +215,7 @@ void main() {
           focusNode: focus,
           placeholder: 'Search',
           onSubmitted: (_) {},
-          suggestions: const [],
+          content: null,
           placement: FrostSuggestionPlacement.inline,
         ),
       ),
@@ -240,7 +239,7 @@ void main() {
       focus.dispose();
     });
 
-    Future<void> pump(WidgetTester tester, {bool loading = false, String? message, List<FrostSearchSuggestionGroup> items = const []}) async {
+    Future<void> pump(WidgetTester tester, {bool loading = false, String? message, List<Widget> items = const []}) async {
       await tester.pumpWidget(
         frostTestApp(
           FrostSearchInput.suggesting(
@@ -248,9 +247,7 @@ void main() {
             focusNode: focus,
             placeholder: 'Search',
             onSubmitted: (_) {},
-            suggestions: items,
-            loading: loading,
-            message: message,
+            content: searchContent(items, loading: loading, message: message),
             placement: FrostSuggestionPlacement.inline,
           ),
           platform: TargetPlatform.android,
@@ -258,7 +255,7 @@ void main() {
       );
     }
 
-    Finder listInput() => find.byWidgetPredicate((w) => w is FrostListInput);
+    Finder listInput() => find.byType(FrostSearchContentRoot);
     Finder inList(Finder finder) => find.descendant(of: listInput(), matching: finder);
 
     testWidgets('loading alone shows the list with progress', (tester) async {
@@ -308,8 +305,8 @@ void main() {
         tester,
         loading: true,
         items: [
-          FrostSearchSuggestionGroup(
-            items: [FrostSearchSuggestion(label: 'cat', onSelected: () {})],
+          FrostSearchSection(
+            children: [FrostSearchSuggestionRow(label: 'cat', onSelected: () {})],
           ),
         ],
       );
@@ -345,14 +342,14 @@ void main() {
           focusNode: focus,
           placeholder: 'Search',
           onSubmitted: calls.add,
-          suggestions: [
-            FrostSearchSuggestionGroup(
-              items: [
-                FrostSearchSuggestion(label: 'First', onSelected: () => calls.add('First')),
-                FrostSearchSuggestion(label: 'Last', onSelected: () => calls.add('Last')),
+          content: searchContent([
+            FrostSearchSection(
+              children: [
+                FrostSearchSuggestionRow(label: 'First', onSelected: () => calls.add('First')),
+                FrostSearchSuggestionRow(label: 'Last', onSelected: () => calls.add('Last')),
               ],
             ),
-          ],
+          ]),
           placement: FrostSuggestionPlacement.inline,
         ),
       ),
@@ -394,7 +391,7 @@ void main() {
           alignment: Alignment.topCenter,
           child: SizedBox(
             height: 600,
-            child: FrostSearchInput.suggesting(controller: controller, focusNode: focus, placeholder: 'Search', onSubmitted: (_) {}, suggestions: suggestions),
+            child: FrostSearchInput.suggesting(controller: controller, focusNode: focus, placeholder: 'Search', onSubmitted: (_) {}, content: suggestions),
           ),
         ),
       ),

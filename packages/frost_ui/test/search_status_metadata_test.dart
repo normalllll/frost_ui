@@ -44,15 +44,15 @@ void main() {
               focusNode: focus,
               placeholder: 'Search',
               onSubmitted: (_) {},
-              suggestions: [
-                FrostSearchSuggestionGroup(
-                  items: [
-                    FrostSearchSuggestion(label: 'Artist', detail: 'Translation', dataColor: 2, value: '1234', onSelected: () {}),
-                    FrostSearchSuggestion(label: 'Plain', onSelected: () {}),
-                    FrostSearchSuggestion(label: 'History', icon: testIcons.clock, onSelected: () {}),
+              content: searchContent([
+                FrostSearchSection(
+                  children: [
+                    FrostSearchSuggestionRow(label: 'Artist', detail: 'Translation', dataColor: 2, value: '1234', onSelected: () {}),
+                    FrostSearchSuggestionRow(label: 'Plain', onSelected: () {}),
+                    FrostSearchSuggestionRow(label: 'History', icon: testIcons.clock, onSelected: () {}),
                   ],
                 ),
-              ],
+              ]),
             ),
           ],
         ),
@@ -86,13 +86,11 @@ void main() {
         builder: (_, setState) {
           update = setState;
           return FrostSearchInput.suggesting(
-            suggestions: const [],
             controller: controller,
             focusNode: focus,
             placeholder: 'Search',
             onSubmitted: calls.add,
-            loading: loading,
-            message: message,
+            content: searchContent(const [], loading: loading, message: message),
           );
         },
       ),
@@ -136,7 +134,7 @@ void main() {
     addTearDown(focus.dispose);
     var loading = false, selected = 0, submitted = 0;
     String? message;
-    var items = [FrostSearchSuggestion(label: 'Old match', onSelected: () => selected++)];
+    var items = [FrostSearchSuggestionRow(label: 'Old match', onSelected: () => selected++)];
     late StateSetter update;
     await mount(
       tester,
@@ -150,9 +148,11 @@ void main() {
               focusNode: focus,
               placeholder: 'Search',
               onSubmitted: (_) => submitted++,
-              loading: loading,
-              message: message,
-              suggestions: [FrostSearchSuggestionGroup(items: items)],
+              content: searchContent(
+                [FrostSearchSection(children: items)],
+                loading: loading,
+                message: message,
+              ),
             );
           },
         ),

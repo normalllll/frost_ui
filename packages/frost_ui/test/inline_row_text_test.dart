@@ -123,11 +123,11 @@ void main() {
           focusNode: focus,
           placeholder: 'Search',
           onSubmitted: (_) {},
-          suggestions: [
-            FrostSearchSuggestionGroup(
-              items: [FrostSearchSuggestion(label: 'sky', detail: detail, inlineDetail: true, value: '98K', onSelected: () {})],
+          content: searchContent([
+            FrostSearchSection(
+              children: [FrostSearchSuggestionRow(label: 'sky', detail: detail, inlineDetail: true, value: '98K', onSelected: () {})],
             ),
-          ],
+          ]),
           placement: FrostSuggestionPlacement.inline,
         ),
       ),

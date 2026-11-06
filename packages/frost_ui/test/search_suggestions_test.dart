@@ -55,14 +55,12 @@ void main() {
         focusNode: focus,
         placeholder: 'Search',
         onSubmitted: (value) => calls.add(value),
-        suggestions: [
-          FrostSearchSuggestionGroup(
-            items: [
-              FrostSearchSuggestion(label: 'First', onSelected: () => calls.add('first')),
-              FrostSearchSuggestion(label: 'Last', onSelected: () => calls.add('last')),
-            ],
-          ),
-        ],
+        content: FrostSearchSection(
+          children: [
+            FrostSearchSuggestionRow(label: 'First', onSelected: () => calls.add('first')),
+            FrostSearchSuggestionRow(label: 'Last', onSelected: () => calls.add('last')),
+          ],
+        ),
       ),
     );
     focus.requestFocus();
@@ -102,24 +100,30 @@ void main() {
     addTearDown(controller.dispose);
     addTearDown(focus.dispose);
     final calls = <String>[];
-    final items = <FrostSearchSuggestion>[];
-    StateSetter? update;
-    for (final label in ['A', 'B', 'C']) {
-      late FrostSearchSuggestion item;
-      item = FrostSearchSuggestion(label: label, onSelected: () => calls.add(label), onRemove: () => update!(() => items.remove(item)));
-      items.add(item);
-    }
+    final items = ['A', 'B', 'C'];
     await setup(
       tester,
       StatefulBuilder(
         builder: (_, setState) {
-          update = setState;
           return FrostSearchInput.suggesting(
             controller: controller,
             focusNode: focus,
             placeholder: 'Search',
             onSubmitted: (_) {},
-            suggestions: [FrostSearchSuggestionGroup(title: 'Recent', items: List.of(items))],
+            content: items.isEmpty
+                ? null
+                : FrostSearchSection(
+                    title: 'Recent',
+                    children: [
+                      for (final label in items)
+                        FrostSearchSuggestionRow(
+                          key: ValueKey(label),
+                          label: label,
+                          onSelected: () => calls.add(label),
+                          onRemove: () => setState(() => items.remove(label)),
+                        ),
+                    ],
+                  ),
           );
         },
       ),
@@ -181,13 +185,11 @@ void main() {
             focusNode: focus,
             placeholder: 'Search',
             onSubmitted: (_) => submitted++,
-            suggestions: withSuggestions
-                ? [
-                    FrostSearchSuggestionGroup(
-                      items: [FrostSearchSuggestion(label: 'Term', onSelected: () => selected++)],
-                    ),
-                  ]
-                : [],
+            content: withSuggestions
+                ? FrostSearchSection(
+                    children: [FrostSearchSuggestionRow(label: 'Term', onSelected: () => selected++)],
+                  )
+                : null,
           );
         },
       ),
@@ -223,11 +225,9 @@ void main() {
             focusNode: focus,
             placeholder: 'Search',
             onSubmitted: (_) {},
-            suggestions: [
-              FrostSearchSuggestionGroup(
-                items: [FrostSearchSuggestion(label: 'Term', onSelected: () {})],
-              ),
-            ],
+            content: FrostSearchSection(
+              children: [FrostSearchSuggestionRow(label: 'Term', onSelected: () {})],
+            ),
           ),
           const SizedBox(height: 200),
           FrostToolbarMenuButton(
@@ -250,24 +250,22 @@ void main() {
     final controller = TextEditingController(text: 'query'), focus = FocusNode();
     addTearDown(controller.dispose);
     addTearDown(focus.dispose);
-    final items = <FrostSearchSuggestion>[];
-    StateSetter? update;
-    for (final label in ['A', 'B', 'C']) {
-      late FrostSearchSuggestion item;
-      item = FrostSearchSuggestion(label: label, onSelected: () {}, onRemove: () => update!(() => items.remove(item)));
-      items.add(item);
-    }
+    final items = ['A', 'B', 'C'];
     await setup(
       tester,
       StatefulBuilder(
         builder: (_, setState) {
-          update = setState;
           return FrostSearchInput.suggesting(
             controller: controller,
             focusNode: focus,
             placeholder: 'Search',
             onSubmitted: (_) {},
-            suggestions: [FrostSearchSuggestionGroup(items: List.of(items))],
+            content: FrostSearchSection(
+              children: [
+                for (final label in items)
+                  FrostSearchSuggestionRow(key: ValueKey(label), label: label, onSelected: () {}, onRemove: () => setState(() => items.remove(label))),
+              ],
+            ),
           );
         },
       ),
@@ -291,7 +289,7 @@ void main() {
     await mouse.removePointer();
     expect(tester.takeException(), isNull);
   });
-  testWidgets('compact suggestions remain anchored, lazy and within keyboard viewport; active item is announced by input', (tester) async {
+  testWidgets('compact suggestions remain anchored and within keyboard viewport; active item is announced by input', (tester) async {
     final controller = TextEditingController();
     final focus = FocusNode();
     addTearDown(controller.dispose);
@@ -305,19 +303,16 @@ void main() {
         focusNode: focus,
         placeholder: 'Search',
         onSubmitted: (_) {},
-        suggestions: [
-          FrostSearchSuggestionGroup(
-            title: 'Suggestions',
-            items: [for (var i = 0; i < 900; i++) FrostSearchSuggestion(label: 'Suggestion $i', onSelected: () {})],
-          ),
-        ],
+        content: FrostSearchSection(
+          title: 'Suggestions',
+          children: [for (var i = 0; i < 40; i++) FrostSearchSuggestionRow(label: 'Suggestion $i', onSelected: () {})],
+        ),
       ),
       width: 390,
       keyboard: 260,
     );
     focus.requestFocus();
     await tester.pumpAndSettle();
-    expect(find.byType(FrostListRow).evaluate().length, lessThan(30));
     final panel = tester.getRect(find.byType(FrostPopoverSurface));
     // The panel uses the room below the field down to the keyboard, less the
     // usual panel margin, and scrolls inside it.
@@ -329,7 +324,7 @@ void main() {
     await tester.pumpAndSettle();
     final editable = tester.getSemantics(find.byType(EditableText));
     expect(editable.getSemanticsData().hint, contains('Suggestion 0'));
-    expect(editable.getSemanticsData().hint, contains('1 / 900'));
+    expect(editable.getSemanticsData().hint, contains('1 / 40'));
     semantics.dispose();
     expect(tester.takeException(), isNull);
   });

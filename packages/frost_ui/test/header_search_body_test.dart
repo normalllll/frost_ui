@@ -50,22 +50,22 @@ void main() {
             focusNode: focus,
             placeholder: 'Search',
             onSubmitted: calls.add,
-            suggestions: [
+            content: searchContent([
               if (suggestions) ...[
-                FrostSearchSuggestionGroup(
+                FrostSearchSection(
                   title: 'Recent',
                   actionLabel: 'Clear',
                   onAction: () => calls.add('clear'),
-                  items: [
-                    for (final tag in ['catgirl', 'landscape']) FrostSearchSuggestion(label: tag, onSelected: () => calls.add(tag)),
+                  children: [
+                    for (final tag in ['catgirl', 'landscape']) FrostSearchSuggestionRow(label: tag, onSelected: () => calls.add(tag)),
                   ],
                 ),
-                FrostSearchSuggestionGroup(
+                FrostSearchSection(
                   title: 'Tags',
-                  items: [for (var i = 0; i < 30; i++) FrostSearchSuggestion(label: 'tag $i', onSelected: () => calls.add('tag $i'))],
+                  children: [for (var i = 0; i < 30; i++) FrostSearchSuggestionRow(label: 'tag $i', onSelected: () => calls.add('tag $i'))],
                 ),
               ],
-            ],
+            ]),
           ),
           actions: [FrostToolbarItem.action(icon: testIcons.filter, label: 'Filter', onPressed: () {})],
         ),

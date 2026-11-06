@@ -251,11 +251,11 @@ void main() {
                 focusNode: focus,
                 placeholder: 'Search',
                 onSubmitted: calls.add,
-                suggestions: [
-                  FrostSearchSuggestionGroup(
-                    items: [FrostSearchSuggestion(label: 'catgirl', onSelected: () => calls.add('catgirl'))],
+                content: searchContent([
+                  FrostSearchSection(
+                    children: [FrostSearchSuggestionRow(label: 'catgirl', onSelected: () => calls.add('catgirl'))],
                   ),
-                ],
+                ]),
               ),
             ),
             const Expanded(child: Text('Landing')),

@@ -25,6 +25,7 @@ final displayCases = _exempt(_cases);
 
 final _cases = <DisplayCase>[
   // display/
+  DisplayCase('FrostSearchStatus.new', FrostSearchStatus, (_) => searchDropdown(const FrostSearchStatus(loading: true, message: longLabel))),
   DisplayCase('FrostAvatar.new', FrostAvatar, (_) => const FrostAvatar(initials: 'AB', semanticLabel: 'Avatar')),
   DisplayCase('FrostAvatar.person', FrostAvatar, (_) => const FrostAvatar.person(name: 'Alice', semanticLabel: 'Alice')),
   DisplayCase('FrostAvatar.skeleton', FrostAvatar, (_) => FrostAvatar.skeleton(size: FrostAvatarSize.regular)),

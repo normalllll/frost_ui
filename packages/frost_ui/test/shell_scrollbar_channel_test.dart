@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
+import 'package:frost_ui/src/controls/_search_options.dart';
 import 'package:frost_ui/src/layout/_page_scroll_behavior.dart';
 import 'package:frost_ui/src/primitives/_page_outline.dart';
 
@@ -101,12 +102,11 @@ void main() {
             focusNode: focus,
             placeholder: 'Search',
             onSubmitted: (_) {},
-            message: 'Status',
-            suggestions: [
-              FrostSearchSuggestionGroup(
-                items: [FrostSearchSuggestion(label: 'First', onSelected: () {})],
+            content: searchContent([
+              FrostSearchSection(
+                children: [FrostSearchSuggestionRow(label: 'First', onSelected: () {})],
               ),
-            ],
+            ], message: 'Status'),
             placement: FrostSuggestionPlacement.inline,
           ),
         ),
@@ -117,8 +117,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(focus.hasFocus, isTrue, reason: 'field must retain focus to show suggestions');
     expect(find.text('First'), findsOneWidget);
-    final list = find.byWidgetPredicate((widget) => widget is FrostList);
-    expect(tester.getRect(find.descendant(of: list, matching: find.byWidgetPredicate((widget) => widget is Viewport))).right, 560);
+    final list = find.ancestor(of: find.byType(FrostSearchContentRoot), matching: find.byType(SingleChildScrollView));
+    expect(tester.getRect(list).right, 560);
     final row = tester.getRect(find.byType(FrostListRow));
     expect(row.right, tester.getRect(find.byType(FrostTextField)).right);
     expect(row.right, lessThanOrEqualTo(548));

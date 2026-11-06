@@ -26,7 +26,7 @@ export 'src/controls/picker.dart' show FrostPicker;
 export 'src/controls/picker_option.dart' show FrostPickerOption;
 export 'src/controls/search_entry.dart';
 export 'src/controls/search_input.dart' hide FrostSearchInputRegion;
-export 'src/controls/search_suggestion.dart' show FrostSearchSuggestion, FrostSearchSuggestionGroup;
+export 'src/controls/search_suggestion.dart' show FrostSearchOption, FrostSearchSection, FrostSearchStatus, FrostSearchSuggestionRow;
 export 'src/controls/shortcuts.dart' show FrostShortcut, FrostShortcuts;
 export 'src/controls/slider.dart' show FrostSlider;
 export 'src/controls/stepper.dart' show FrostStepper;
