@@ -65,12 +65,14 @@ sealed class FrostRowSubtitle {
   /// subtitle: secondary by default, tertiary for quieter detail such as a
   /// file name, or a status tone for a failure. [content] marks content text
   /// (see [FrostText.content]), such as a person's or a work's name.
-  const factory FrostRowSubtitle(String text, {FrostTextTone tone, bool content}) = _TextSubtitle;
+  /// [maxLines] caps a long description and ends it with an ellipsis; the
+  /// accessibility value stays the full text. Null wraps without a limit.
+  const factory FrostRowSubtitle(String text, {FrostTextTone tone, bool content, int? maxLines}) = _TextSubtitle;
 
   /// A semantic status dot before the ordinary subtitle; the text stays the
   /// only accessibility value. [tone] inks the text as for the ordinary
   /// subtitle, such as negative for a failure.
-  const factory FrostRowSubtitle.status(String text, FrostStatusTone status, {FrostTextTone tone, bool content}) = _StatusSubtitle;
+  const factory FrostRowSubtitle.status(String text, FrostStatusTone status, {FrostTextTone tone, bool content, int? maxLines}) = _StatusSubtitle;
 
   /// A path in tabular figures, wrapped and selected as one original value.
   const factory FrostRowSubtitle.path(String path) = _PathSubtitle;
@@ -84,16 +86,18 @@ sealed class FrostRowSubtitle {
 }
 
 final class _TextSubtitle extends FrostRowSubtitle {
-  const _TextSubtitle(super.text, {this.tone = FrostTextTone.secondary, this.content = false}) : super._();
+  const _TextSubtitle(super.text, {this.tone = FrostTextTone.secondary, this.content = false, this.maxLines}) : assert(maxLines == null || maxLines > 0), super._();
   final FrostTextTone tone;
   final bool content;
+  final int? maxLines;
 }
 
 final class _StatusSubtitle extends FrostRowSubtitle {
-  const _StatusSubtitle(super.text, this.status, {this.tone = FrostTextTone.secondary, this.content = false}) : super._();
+  const _StatusSubtitle(super.text, this.status, {this.tone = FrostTextTone.secondary, this.content = false, this.maxLines}) : assert(maxLines == null || maxLines > 0), super._();
   final FrostTextTone tone;
   final FrostStatusTone status;
   final bool content;
+  final int? maxLines;
 }
 
 final class _PathSubtitle extends FrostRowSubtitle {
@@ -316,12 +320,12 @@ class _FrostListRowState extends State<FrostListRow> {
     final inside = FrostKeyline.maybeOf(context)?.insideContainer ?? false;
     final tokens = FrostThemeTokens.of(context);
     final subtitle = widget.subtitle?.text;
-    final (subtitleTone, subtitleStatus, inlineSubtitle, path, contentSubtitle) = switch (widget.subtitle) {
-      _TextSubtitle(:final tone, :final content) => (tone, null, false, false, content),
-      _StatusSubtitle(:final tone, :final status, :final content) => (tone, status, false, false, content),
-      _PathSubtitle() => (FrostTextTone.secondary, null, false, true, false),
-      _InlineSubtitle(:final tone, :final content) => (tone, null, true, false, content),
-      null => (FrostTextTone.secondary, null, false, false, false),
+    final (subtitleTone, subtitleStatus, inlineSubtitle, path, contentSubtitle, subtitleLines) = switch (widget.subtitle) {
+      _TextSubtitle(:final tone, :final content, :final maxLines) => (tone, null, false, false, content, maxLines),
+      _StatusSubtitle(:final tone, :final status, :final content, :final maxLines) => (tone, status, false, false, content, maxLines),
+      _PathSubtitle() => (FrostTextTone.secondary, null, false, true, false, null),
+      _InlineSubtitle(:final tone, :final content) => (tone, null, true, false, content, null),
+      null => (FrostTextTone.secondary, null, false, false, false, null),
     };
     final subtitleColor = selected
         ? tokens.selectionInk
@@ -512,7 +516,7 @@ class _FrostListRowState extends State<FrostListRow> {
                                       child: FrostPathText(subtitle, role: FrostTextRole.footnote),
                                     )
                                   else
-                                    _RowSubtitle(subtitle, status: subtitleStatus, color: subtitleColor, content: contentSubtitle),
+                                    _RowSubtitle(subtitle, status: subtitleStatus, color: subtitleColor, content: contentSubtitle, maxLines: subtitleLines),
                                 ],
                               ],
                             ),
@@ -612,8 +616,9 @@ class _FrostListRowState extends State<FrostListRow> {
 }
 
 class _RowText extends StatelessWidget {
-  const _RowText(this.text, {required this.role, required this.color, this.singleLine = false, this.content = false});
-  final bool singleLine, content;
+  const _RowText(this.text, {required this.role, required this.color, bool singleLine = false, int? maxLines, this.content = false}) : maxLines = singleLine ? 1 : maxLines;
+  final bool content;
+  final int? maxLines;
   final String text;
   final FrostTextRole role;
   final Color color;
@@ -626,8 +631,8 @@ class _RowText extends StatelessWidget {
       child: Text(
         text,
         style: content ? frostContentTextStyle(context, text) : null,
-        maxLines: singleLine ? 1 : null,
-        overflow: singleLine ? TextOverflow.ellipsis : null,
+        maxLines: maxLines,
+        overflow: maxLines == null ? null : TextOverflow.ellipsis,
       ),
     ),
   );
@@ -671,14 +676,15 @@ class _SelectionColumn extends StatelessWidget {
 }
 
 class _RowSubtitle extends StatelessWidget {
-  const _RowSubtitle(this.text, {required this.status, required this.color, required this.content});
+  const _RowSubtitle(this.text, {required this.status, required this.color, required this.content, required this.maxLines});
   final String text;
+  final int? maxLines;
   final bool content;
   final FrostStatusTone? status;
   final Color color;
   @override
   Widget build(BuildContext context) {
-    final label = _RowText(text, role: FrostTextRole.footnote, color: color, content: content);
+    final label = _RowText(text, role: FrostTextRole.footnote, color: color, content: content, maxLines: maxLines);
     if (status == null) return label;
     final style = FrostTypography.of(context).style(FrostTextRole.footnote, tabular: true);
     return _StatusSubtitleLayout(

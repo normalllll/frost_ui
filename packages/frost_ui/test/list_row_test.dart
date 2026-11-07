@@ -274,4 +274,28 @@ void main() {
     await mouse.removePointer();
     expect(tester.takeException(), isNull);
   });
+  for (final status in [false, true]) {
+    testWidgets('subtitle maxLines caps lines with an ellipsis and keeps the full value status=$status', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final text = List.filled(30, 'A long plan description').join(' ');
+      await showRow(
+        tester,
+        FrostListRow(
+          title: 'Full plan',
+          subtitle: status ? FrostRowSubtitle.status(text, FrostStatusTone.positive, maxLines: 2) : FrostRowSubtitle(text, maxLines: 2),
+          onPressed: () {},
+        ),
+        width: 300,
+      );
+      final paragraph = tester.renderObject<RenderParagraph>(find.text(text));
+      expect(paragraph.maxLines, 2);
+      expect(paragraph.overflow, TextOverflow.ellipsis);
+      expect(paragraph.didExceedMaxLines, isTrue);
+      expect(tester.getSemantics(find.byType(FrostListRow)).getSemanticsData().value, text);
+      await showRow(tester, FrostListRow(title: 'Full plan', subtitle: FrostRowSubtitle(text), onPressed: () {}), width: 300);
+      expect(tester.renderObject<RenderParagraph>(find.text(text)).maxLines, isNull);
+      semantics.dispose();
+      expect(tester.takeException(), isNull);
+    });
+  }
 }
