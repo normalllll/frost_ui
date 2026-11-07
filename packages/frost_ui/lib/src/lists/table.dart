@@ -77,8 +77,8 @@ class FrostTableCompactRow {
   final String? subtitle;
 }
 
-/// A lazy table with a fixed header; provide a finite height. Sorting belongs
-/// to the caller. Header and rows scroll horizontally together. Resized widths
+/// A lazy table with a fixed header; provide a finite height, or set
+/// [shrinkWrap]. Sorting belongs to the caller. Header and rows scroll horizontally together. Resized widths
 /// are stored under this widget's key in the nearest PageStorage bucket.
 ///
 /// With selection, rows follow the shared selectable list's rules, taking effect
@@ -94,6 +94,7 @@ class FrostTable<T> extends StatefulWidget {
     this.selection,
     this.onActivate,
     this.compactRow,
+    this.shrinkWrap = false,
     super.key,
   }) : assert(columns.length > 0);
   final List<FrostTableColumn<T>> columns;
@@ -104,6 +105,11 @@ class FrostTable<T> extends StatefulWidget {
   final FrostSelection<T>? selection;
   final ValueChanged<T>? onActivate;
   final FrostTableCompactRow Function(BuildContext context, T row)? compactRow;
+
+  /// Takes the height of the header and every row instead of scrolling them,
+  /// for a small table that runs with a page's text. It still scrolls sideways
+  /// when its columns are wider than the page.
+  final bool shrinkWrap;
   @override
   State<FrostTable<T>> createState() => _TableState<T>();
 }
@@ -375,6 +381,8 @@ class _TableState<T> extends State<FrostTable<T>> {
       onFocusChange: _focusChanged,
       child: ListView.builder(
         controller: _vertical,
+        shrinkWrap: widget.shrinkWrap,
+        physics: widget.shrinkWrap ? const NeverScrollableScrollPhysics() : null,
         itemCount: widget.rows.length,
         itemBuilder: (context, index) => FrostClickHighlight(
           key: _rowKeys.putIfAbsent(index, () => GlobalKey()),
@@ -419,42 +427,46 @@ class _TableState<T> extends State<FrostTable<T>> {
         builder: (context, constraints) {
           final widths = _widths(context, constraints.maxWidth);
           final total = widths.fold(0.0, (a, b) => a + b);
+          Widget rows(BuildContext context, ViewportOffset offset) {
+            final crossAxis = Directionality.of(context) == TextDirection.ltr ? AxisDirection.right : AxisDirection.left;
+            final slivers = [
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _row(context, index, widths),
+                  childCount: widget.rows.length,
+                  addSemanticIndexes: false,
+                ),
+              ),
+            ];
+            return widget.shrinkWrap
+                ? ShrinkWrappingViewport(offset: offset, axisDirection: AxisDirection.down, crossAxisDirection: crossAxis, slivers: slivers)
+                : Viewport(offset: offset, axisDirection: AxisDirection.down, crossAxisDirection: crossAxis, slivers: slivers);
+          }
+
+          final body = Scrollable(
+            controller: _vertical,
+            excludeFromSemantics: true,
+            physics: widget.shrinkWrap ? const NeverScrollableScrollPhysics() : null,
+            axisDirection: AxisDirection.down,
+            viewportBuilder: rows,
+          );
           return SingleChildScrollView(
             controller: _horizontal,
             scrollDirection: Axis.horizontal,
             child: SizedBox(
               width: total,
-              height: constraints.maxHeight,
+              height: widget.shrinkWrap ? null : constraints.maxHeight,
               child: Semantics(
                 role: SemanticsRole.table,
                 container: true,
                 explicitChildNodes: true,
                 label: FrostScope.labelsOf(context).tableDimensions(widget.rows.length, widget.columns.length),
                 child: Column(
+                  mainAxisSize: widget.shrinkWrap ? MainAxisSize.min : MainAxisSize.max,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _header(context, widths),
-                    Expanded(
-                      child: Scrollable(
-                        controller: _vertical,
-                        excludeFromSemantics: true,
-                        axisDirection: AxisDirection.down,
-                        viewportBuilder: (context, offset) => Viewport(
-                          offset: offset,
-                          axisDirection: AxisDirection.down,
-                          crossAxisDirection: Directionality.of(context) == TextDirection.ltr ? AxisDirection.right : AxisDirection.left,
-                          slivers: [
-                            SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) => _row(context, index, widths),
-                                childCount: widget.rows.length,
-                                addSemanticIndexes: false,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    if (widget.shrinkWrap) body else Expanded(child: body),
                   ],
                 ),
               ),

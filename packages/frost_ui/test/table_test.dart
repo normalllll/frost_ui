@@ -671,4 +671,36 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+  for (final (width, scale) in [(800.0, 1.0), (800.0, 2.0), (400.0, 1.0), (400.0, 2.0)]) {
+    testWidgets('a shrink-wrapped table runs with page text at width $width scale $scale', (tester) async {
+      await tester.pumpWidget(
+        view(
+          CustomScrollView(
+            slivers: [
+              SliverList.list(
+                children: [
+                  const Text('Before'),
+                  FrostTable<int>(columns: columns(), rows: const [0, 1, 2], shrinkWrap: true),
+                  const Text('After'),
+                ],
+              ),
+            ],
+          ),
+          width: width,
+          scale: scale,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final table = tester.getRect(find.byType(FrostTable<int>));
+      final last = tester.getRect(find.textContaining(width < 600 ? 'Name 2' : 'Item 2'));
+      expect(tester.getRect(find.text('Before')).bottom, table.top);
+      expect(tester.getRect(find.text('After', skipOffstage: false)).top, table.bottom);
+      expect(table.bottom, greaterThanOrEqualTo(last.bottom));
+      expect(table.bottom - last.bottom, lessThan(last.height + 24));
+      for (final row in [0, 1]) {
+        expect(find.textContaining(width < 600 ? 'Name $row' : 'Item $row'), findsOneWidget);
+      }
+    });
+  }
 }
