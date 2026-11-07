@@ -160,6 +160,30 @@ void main() {
       expect(highlighted, findsNothing);
     });
 
+    testWidgets('a selected secondary destination takes the sidebar highlight; the bottom bar keeps the opener', (tester) async {
+      Widget app() => _shell(
+        expanded: true,
+        selected: 0,
+        secondary: FrostShellSecondary(destinations: [_destination('Settings')], selectedIndex: 0, onSelected: (_) {}),
+      );
+      _window(tester, 1400, 800);
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      final selected = tester.widgetList<FrostNavItem>(find.byType(FrostNavItem)).where((item) => item.selected).map((item) => item.label);
+      expect(selected.where((label) => label != 'L.more'), ['Settings'], reason: 'no primary destination is highlighted');
+
+      _window(tester, 390, 800);
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      final highlighted = find.descendant(
+        of: find.byType(FrostShell),
+        matching: find.byWidgetPredicate((widget) => widget is Semantics && widget.properties.selected == true),
+      );
+      expect(highlighted, findsOneWidget);
+      expect(find.descendant(of: highlighted, matching: find.text('Home')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('the collapsed sidebar announces and shows what its hidden destinations report', (tester) async {
       _window(tester, 1400, 800);
       final semantics = tester.ensureSemantics();

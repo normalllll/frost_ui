@@ -139,7 +139,8 @@ class FrostShellSecondary {
 
   /// The secondary destination the current page belongs to, if any. With an
   /// optional base tab, supply it even while content tabs are in front; see
-  /// [FrostShell.selectedIndex].
+  /// [FrostShell.selectedIndex]. While it is set the sidebar highlights no
+  /// primary destination.
   final int? selectedIndex;
   final ValueChanged<int> onSelected;
 }
@@ -212,6 +213,11 @@ class FrostShell extends StatefulWidget {
   /// are in front. The sidebar then clears its highlight and activates the base
   /// before dispatching a destination change; returning to the same destination
   /// preserves its stack without invoking [onDestinationSelected].
+  ///
+  /// On a secondary page, keep the destination that opened it: the bottom bar
+  /// under the page highlights it while the page moves in and out. The sidebar,
+  /// which lists the secondary destinations too, highlights only the selected
+  /// [FrostShellSecondary.selectedIndex].
   final int? selectedIndex;
 
   /// Whether the current page is the selected destination's own root page,
@@ -397,18 +403,22 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
     });
   }
 
+  /// The primary destination the page belongs to; none on a secondary page,
+  /// whose opener [FrostShell.selectedIndex] names only for the bottom bar.
+  int? get _currentPrimary => widget.secondary?.selectedIndex != null ? null : widget.selectedIndex;
+
   void _selectIndex(int index) {
     final tabs = widget.tabs?.controller;
     if (tabs?.baseTab != null && !tabs!.isBaseTabActive) {
       tabs.activate(0);
       // Returning from a content tab to the same destination must preserve the
       // base tab's route stack and scroll. Reselection applies on the next tap.
-      if (index == widget.selectedIndex) return;
+      if (index == _currentPrimary) return;
       _destinationRoute.clearPagesAbove();
       widget.onDestinationSelected(index);
       return;
     }
-    if (index == widget.selectedIndex && widget.atDestinationRoot) {
+    if (index == _currentPrimary && widget.atDestinationRoot) {
       _primaryReselection.value = (index: index, sequence: _primaryReselection.value.sequence + 1);
       return;
     }
@@ -698,7 +708,7 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
                                             destinations: widget.destinations,
                                             selectedIndex: widget.tabs?.controller.baseTab != null && !widget.tabs!.controller.isBaseTabActive
                                                 ? null
-                                                : widget.selectedIndex,
+                                                : _currentPrimary,
                                             secondary: _sidebarSecondary(),
                                             expandedWidth: expandedWidth,
                                             ellipsizesLabels: ellipsizesLabels,

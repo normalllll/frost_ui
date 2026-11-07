@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
+import '../foundation/_layout_scope.dart';
 import '../foundation/density.dart';
 import '../foundation/metrics.dart';
 import '../foundation/scope.dart';
@@ -18,14 +19,29 @@ import '../motion/page_transition.dart';
 /// keeps its interactive pose and cancellation behavior. Plain or solid pages
 /// keep their original exit duration.
 class FrostDetailPage<T> extends Page<T> {
-  const FrostDetailPage({required this.child, this.opaque = true, super.key, super.name, super.arguments, super.restorationId}) : _media = false;
+  const FrostDetailPage({required this.child, this.opaque = true, super.key, super.name, super.arguments, super.restorationId})
+    : _media = false,
+      _secondaryDestination = false;
 
   /// Stationary Hero-compatible content timing, with native route progress.
   /// Android gestures drive route progress directly and commit through normal
   /// Navigator.pop, so the in-flight Hero never restarts at full size.
-  const FrostDetailPage.media({required this.child, this.opaque = true, super.key, super.name, super.arguments, super.restorationId}) : _media = true;
+  const FrostDetailPage.media({required this.child, this.opaque = true, super.key, super.name, super.arguments, super.restorationId})
+    : _media = true,
+      _secondaryDestination = false;
 
-  final bool _media;
+  /// The root page of a [FrostShellSecondary] destination. In the sidebar
+  /// layout, where the secondary destinations sit beside the primary ones,
+  /// selecting one is a switch: this page replaces the page with no motion, as
+  /// a primary destination does, and covers it from its first frame. With the
+  /// bottom bar, where the page is opened from another one, it is pushed and
+  /// goes back as an ordinary detail page. Pages pushed above it move as usual.
+  const FrostDetailPage.secondaryDestination({required this.child, super.key, super.name, super.arguments, super.restorationId})
+    : _media = false,
+      opaque = true,
+      _secondaryDestination = true;
+
+  final bool _media, _secondaryDestination;
 
   final Widget child;
 
@@ -40,11 +56,17 @@ class FrostDetailPage<T> extends Page<T> {
 
 class _FrostDetailRoute<T> extends PageRoute<T> {
   _FrostDetailRoute({required FrostDetailPage<T> page, required BuildContext context})
-    : _duration = _durationFor(page, context, forward: true),
+    : _switches = _switchesIn(page, context),
+      _duration = _durationFor(page, context, forward: true),
       _reverseDuration = _durationFor(page, context, forward: false),
       super(settings: page);
 
+  /// A secondary destination's root in the sidebar layout; read when the
+  /// page is pushed.
+  static bool _switchesIn(FrostDetailPage<Object?> page, BuildContext context) => page._secondaryDestination && FrostAdaptiveLayoutData.horizontalOf(context);
+
   static Duration _durationFor(FrostDetailPage<Object?> page, BuildContext context, {required bool forward}) {
+    if (_switchesIn(page, context)) return Duration.zero;
     if (!page._media && FrostDensity.of(context).usesPointer && MediaQuery.disableAnimationsOf(context)) return const Duration(milliseconds: 100);
     final native = _nativeBuilder(page, context);
     return FrostMotion.duration(context, forward ? native?.transitionDuration ?? FrostMotion.page : native?.reverseTransitionDuration ?? FrostMotion.exit);
@@ -60,6 +82,7 @@ class _FrostDetailRoute<T> extends PageRoute<T> {
     return null;
   }
 
+  final bool _switches;
   final _glass = FrostRevealHandle();
   final Duration _duration;
   final Duration _reverseDuration;
@@ -90,7 +113,8 @@ class _FrostDetailRoute<T> extends PageRoute<T> {
   @override
   Widget buildTransitions(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) => frostOwnedPageTransition(
     context,
-    animation,
+    // A switch has no entrance; pages pushed above still move it out.
+    _switches ? kAlwaysCompleteAnimation : animation,
     secondaryAnimation,
     child,
     revealHandle: _glass,
