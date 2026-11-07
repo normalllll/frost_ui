@@ -4,7 +4,9 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
+import '../foundation/_tab_metrics.dart';
 import '../foundation/spacing.dart';
+import '../primitives/keyline.dart';
 import '_chrome_scroll_away.dart';
 import '_header_row_span.dart';
 import '_header_search_body.dart';
@@ -19,6 +21,9 @@ import '_header_search_body.dart';
 /// the content scrolls on and returns when it scrolls back. Focus in the
 /// header row, its search field included, keeps it shown. The choice follows
 /// the width the header actually has, not the platform or input.
+///
+/// A row of its own keeps the page's side inset: the first tab label starts on
+/// it, like the content below, and [trailing] ends on it.
 class FrostHeaderSections extends StatefulWidget {
   const FrostHeaderSections({required this.header, required this.tabs, this.trailing, super.key});
 
@@ -44,6 +49,7 @@ class _HeaderSectionsState extends State<FrostHeaderSections> {
   @override
   Widget build(BuildContext context) {
     final search = FrostHeaderSearchBodyScope.maybeOf(context);
+    final keyline = FrostKeyline.maybeOf(context);
     // While the header search lists its suggestions over the body, the tab row
     // is under them: it leaves focus traversal as well as paint.
     Widget concealed(Widget child) => search == null
@@ -59,6 +65,9 @@ class _HeaderSectionsState extends State<FrostHeaderSections> {
       away: FrostChromeScrollAwayScope.maybeOf(context),
       focused: _focused,
       direction: Directionality.of(context),
+      // A content column's keyline already puts the header and the tab bar's
+      // first label on the content edge; without one the header pads itself.
+      inset: keyline == null || keyline.insideContainer ? FrostGap.of(context).page : 0,
       header: FrostHeaderRowSpanScope(
         span: _span,
         // Passive: only reports whether focus is anywhere in the header row.
@@ -78,6 +87,7 @@ class _SectionedHeaderLayout extends SlottedMultiChildRenderObjectWidget<_Slot, 
     required this.away,
     required this.focused,
     required this.direction,
+    required this.inset,
     required this.search,
     required this.header,
     required this.tabs,
@@ -87,6 +97,10 @@ class _SectionedHeaderLayout extends SlottedMultiChildRenderObjectWidget<_Slot, 
   final FrostChromeScrollAway? away;
   final bool focused;
   final TextDirection direction;
+
+  /// The page's side inset, which a row of its own keeps; 0 when a content
+  /// column's keyline already places it.
+  final double inset;
   final FrostHeaderSearchBody? search;
   final Widget header, tabs;
   final Widget? trailing;
@@ -103,18 +117,26 @@ class _SectionedHeaderLayout extends SlottedMultiChildRenderObjectWidget<_Slot, 
 
   @override
   _RenderSectionedHeader createRenderObject(BuildContext context) =>
-      _RenderSectionedHeader(span: span, away: away, focused: focused, direction: direction, search: search);
+      _RenderSectionedHeader(span: span, away: away, focused: focused, direction: direction, inset: inset, search: search);
 
   @override
   void updateRenderObject(BuildContext context, _RenderSectionedHeader renderObject) => renderObject
     ..away = away
     ..focused = focused
     ..direction = direction
+    ..inset = inset
     ..search = search;
 }
 
 class _RenderSectionedHeader extends RenderBox with SlottedContainerRenderObjectMixin<_Slot, RenderBox> {
-  _RenderSectionedHeader({required this._span, required this._away, required this._focused, required this._direction, required this._search});
+  _RenderSectionedHeader({
+    required this._span,
+    required this._away,
+    required this._focused,
+    required this._direction,
+    required this._inset,
+    required this._search,
+  });
 
   FrostHeaderSearchBody? _search;
   set search(FrostHeaderSearchBody? value) {
@@ -147,6 +169,13 @@ class _RenderSectionedHeader extends RenderBox with SlottedContainerRenderObject
   set direction(TextDirection value) {
     if (_direction == value) return;
     _direction = value;
+    markNeedsLayout();
+  }
+
+  double _inset;
+  set inset(double value) {
+    if (_inset == value) return;
+    _inset = value;
     markNeedsLayout();
   }
 
@@ -240,12 +269,17 @@ class _RenderSectionedHeader extends RenderBox with SlottedContainerRenderObject
     if (_merged) {
       size = constraints.constrain(Size(width, _headerHeight));
     } else {
-      final trailingWidth = trailing == null ? 0.0 : trailing.size.width + _trailingGap;
-      tabs.layout(BoxConstraints(maxWidth: math.max(0, width - trailingWidth), maxHeight: constraints.maxHeight), parentUsesSize: true);
+      // The first label starts on the side inset; tab labels carry their own.
+      final start = math.max(0.0, _inset - frostTabInset);
+      final end = trailing == null ? start : _inset + trailing.size.width + _trailingGap;
+      tabs.layout(BoxConstraints(maxWidth: math.max(0, width - start - end), maxHeight: constraints.maxHeight), parentUsesSize: true);
       final row = math.max(tabs.size.height, trailing?.size.height ?? 0);
-      (tabs.parentData! as BoxParentData).offset = Offset(ltr ? 0 : width - tabs.size.width, _headerHeight + (row - tabs.size.height) / 2);
+      (tabs.parentData! as BoxParentData).offset = Offset(ltr ? start : width - start - tabs.size.width, _headerHeight + (row - tabs.size.height) / 2);
       if (trailing != null) {
-        (trailing.parentData! as BoxParentData).offset = Offset(ltr ? width - trailing.size.width : 0, _headerHeight + (row - trailing.size.height) / 2);
+        (trailing.parentData! as BoxParentData).offset = Offset(
+          ltr ? width - _inset - trailing.size.width : _inset,
+          _headerHeight + (row - trailing.size.height) / 2,
+        );
       }
       size = constraints.constrain(Size(width, _headerHeight + row));
     }
@@ -266,7 +300,13 @@ class _RenderSectionedHeader extends RenderBox with SlottedContainerRenderObject
     final center = origin.dy + _span.height / 2;
     final before = _span.contentBefore ? _clusterGap : 0.0;
     final width = _sectionsWidth;
-    final start = _direction == TextDirection.ltr ? origin.dx + _span.start + before : origin.dx + _span.end - before - width;
+    // With nothing before them, the first label starts on the side inset, as
+    // in a row of their own. Under a keyline the tab bar finds that edge itself.
+    final own = !_span.contentBefore && _inset > 0;
+    final edge = math.max(0.0, _inset - frostTabInset);
+    final start = _direction == TextDirection.ltr
+        ? (own ? edge : origin.dx + _span.start + before)
+        : (own ? size.width - edge - width : origin.dx + _span.end - before - width);
     final tabsX = _direction == TextDirection.ltr ? start : start + width - tabs.size.width;
     final tabsOffset = Offset(tabsX, center - tabs.size.height / 2);
     if (trailing == null) return (tabsOffset, null);

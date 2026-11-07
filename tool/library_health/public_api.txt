@@ -314,6 +314,7 @@ ctor	FrostDataDot.new	display/data_dot.dart	index,key	baseline-20261102
 ctor	FrostDatePicker.new	controls/date_picker.dart	clearable,error,firstDate,help,key,label,lastDate,onChanged,placeholder,size,value	baseline-20261102
 ctor	FrostDateRangePicker.new	controls/date_range_picker.dart	error,firstDate,help,key,label,lastDate,onChanged,placeholder,size,value	baseline-20261102
 ctor	FrostDetailPage.media	navigation/detail_page.dart	arguments,child,key,name,opaque,restorationId	baseline-20261102
+ctor	FrostDetailPage.secondaryDestination	navigation/detail_page.dart	arguments,child,key,name,restorationId	reviewed:20261108:shell cannot tell secondary roots apart; marker ctor needed
 ctor	FrostDetailPage.new	navigation/detail_page.dart	arguments,child,key,name,opaque,restorationId	baseline-20261102
 ctor	FrostDialog.new	overlays/dialogs.dart	actions,content,key,leadingAction,scrollable,showsCloseButton,size,title	baseline-20261102
 ctor	FrostDialogAction.new	overlays/dialogs.dart	enabled,isDefault,label,onPressed,role,value	baseline-20261102
@@ -330,6 +331,7 @@ ctor	FrostErrorDetails.new	feedback/error_content.dart	details,initiallyExpanded
 ctor	FrostErrorDetails.quiet	feedback/error_content.dart	details,initiallyExpanded,key	baseline-20261102
 ctor	FrostErrorPresenter.new	foundation/scope.dart	action,details,icon,message,title	baseline-20261102
 ctor	FrostExpandableText.new	display/expandable_text.dart	expanded,key,maxLines,onExpandedChanged,role,text	baseline-20261102
+ctor	FrostExpandableText.rich	display/expandable_text.dart	expanded,key,maxLines,onExpandedChanged,onHashtag,onLink,onMention,role,text	reviewed:20261108:truncation needs frost layout; rich ctor mirrors FrostRichText
 ctor	FrostFieldScope.new	controls/field_appearance.dart	appearance,child,key	baseline-20261102
 ctor	FrostFilterBar.new	display/filter_bar.dart	chips,key,onClearAll	baseline-20261102
 ctor	FrostFilterChip.new	display/filter_chip.dart	key,label,onClear,onPressed,value	baseline-20261102
@@ -440,9 +442,9 @@ ctor	FrostRichText.new	display/rich_text.dart	key,onHashtag,onLink,onMention,rol
 ctor	FrostRollingText.new	motion/rolling_text.dart	key,style,text	baseline-20261102
 ctor	FrostRowLeadingExtent.new	lists/_row_scope.dart	child,extent,key	baseline-20261102
 ctor	FrostRowSubtitle.inline	lists/list_row.dart	content,text,tone	baseline-20261102
-ctor	FrostRowSubtitle.new	lists/list_row.dart	content,text,tone	baseline-20261102
+ctor	FrostRowSubtitle.new	lists/list_row.dart	content,maxLines,text,tone	reviewed:20261108:row subtitle has no custom slot; maxLines is minimal
 ctor	FrostRowSubtitle.path	lists/list_row.dart	path	baseline-20261102
-ctor	FrostRowSubtitle.status	lists/list_row.dart	content,status,text,tone	baseline-20261102
+ctor	FrostRowSubtitle.status	lists/list_row.dart	content,maxLines,status,text,tone	reviewed:20261108:same text slot as plain subtitle; keeps variants alike
 ctor	FrostScope.new	foundation/scope.dart	child,config,key,reduceTransparency	baseline-20261102
 ctor	FrostSearchEntry.new	controls/search_entry.dart	focusNode,key,onPressed,placeholder,shortcutLabel,size,value	baseline-20261102
 ctor	FrostSearchInput.new	controls/search_input.dart	actions,appearance,autofocus,controller,focusNode,hint,key,leadingIcon,onClear,onDismiss,onSubmitted,placeholder,size	reviewed:20261104:pass: actions cannot show before the clear key, show only after focus leaves, and hide first when width runs short, so the hint parameter is needed; hintLabel keeps the platform-dependent hint shown before and frostShortcutLabel is not public, so no smaller interface exists
@@ -508,7 +510,7 @@ ctor	FrostTabBar.new	controls/tab_bar.dart	controller,key,onTap,scrollable,showD
 ctor	FrostTabHost.new	navigation/tabs.dart	builder,controller,key,onNewTab,onReopen	baseline-20261102
 ctor	FrostTabLabel.new	navigation/tabs.dart	leading,title	baseline-20261102
 ctor	FrostTabStrip.new	navigation/tabs.dart	closeTooltip,controller,key,label,maxTabWidth,minTabWidth,newTabIcon,newTabTooltip,onNewTab	baseline-20261102
-ctor	FrostTable.new	lists/table.dart	columns,compactRow,key,onActivate,onSort,rows,selection,sortAscending,sortColumn	baseline-20261102
+ctor	FrostTable.new	lists/table.dart	columns,compactRow,key,onActivate,onSort,rows,selection,shrinkWrap,sortAscending,sortColumn	reviewed:20261108:unbounded in-flow table not composable; shrinkWrap flag
 ctor	FrostTableColumn.new	lists/table.dart	cell,label,minWidth,numeric,primary,sortKey,text,width	baseline-20261102
 ctor	FrostTableCompactRow.new	lists/table.dart	leading,subtitle,trailing	baseline-20261102
 ctor	FrostTabsController.new	navigation/tabs.dart	initial,onRemoved	baseline-20261102
@@ -659,6 +661,7 @@ member	FrostAvatarSize.large	display/_avatar_size.dart	-	baseline-20261102
 member	FrostAvatarSize.regular	display/_avatar_size.dart	-	baseline-20261102
 member	FrostAvatarSize.small	display/_avatar_size.dart	-	baseline-20261102
 member	FrostAvatarSize.xlarge	display/_avatar_size.dart	-	baseline-20261102
+member	FrostAvatarSize.xxlarge	display/_avatar_size.dart	-	reviewed:20261108:no 72 size reachable; enum value is the smallest fix
 member	FrostBadgeStyle.solid	display/badge.dart	-	baseline-20261102
 member	FrostBadgeStyle.tinted	display/badge.dart	-	baseline-20261102
 member	FrostBadgeTone.accent	display/badge.dart	-	baseline-20261102
@@ -1128,3 +1131,7 @@ var	frostClickCursor	foundation/feedback.dart	-	baseline-20261102
 var	frostRefreshPhysics	feedback/refresh_indicator.dart	-	baseline-20261102
 var	frostShellTabMaxWidth	navigation/shell_tabs.dart	-	baseline-20261102
 var	frostShellTabMinWidth	navigation/shell_tabs.dart	-	baseline-20261102
+class	FrostSelectionArea	primitives/selection_area.dart	-	reviewed:20261108:wrapper bundles frost handles, menu, esc; clearSelection needed
+ctor	FrostSelectionArea.new	primitives/selection_area.dart	child,key,onSelectionChanged	reviewed:20261108:wrapper over frost chrome; callback and clear needed
+class	FrostSelectionAreaState	primitives/selection_area.dart	-	reviewed:20261108:wrapper bundles frost handles, menu, esc; clearSelection needed
+member	FrostSelectionAreaState.clearSelection	primitives/selection_area.dart	-	reviewed:20261108:wrapper bundles frost handles, menu, esc; clearSelection needed

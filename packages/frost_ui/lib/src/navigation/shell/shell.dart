@@ -51,6 +51,7 @@ import '../../primitives/glyph.dart';
 import '../../primitives/icon.dart' show FrostIcon;
 import '../../primitives/surface.dart';
 import '../../primitives/text.dart';
+import '../_destination_root.dart';
 import '../_destination_status.dart';
 import '../_navigation_tile.dart';
 import '../_shell_back_scope.dart';

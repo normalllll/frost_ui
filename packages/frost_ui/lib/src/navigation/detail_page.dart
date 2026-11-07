@@ -7,6 +7,7 @@ import '../foundation/metrics.dart';
 import '../foundation/scope.dart';
 import '../motion/_material_reveal.dart';
 import '../motion/page_transition.dart';
+import '_destination_root.dart';
 
 /// A pushed detail page with the shared page transition. It is a plain
 /// [Page], so any router that takes pages (go_router's pageBuilder,
@@ -109,7 +110,8 @@ class _FrostDetailRoute<T> extends PageRoute<T> {
   @override
   String? get barrierLabel => null;
   @override
-  Widget buildPage(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) => _page.child;
+  Widget buildPage(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) =>
+      _page._secondaryDestination ? FrostDestinationRoot(route: this, child: _page.child) : _page.child;
   @override
   Widget buildTransitions(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) => frostOwnedPageTransition(
     context,

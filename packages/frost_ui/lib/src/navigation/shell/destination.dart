@@ -23,7 +23,11 @@ class FrostShellDestination extends StatelessWidget {
         Expanded(
           child: FrostToastViewport(
             key: const ValueKey('frost-destination-toast-viewport'),
-            child: MediaQuery.removePadding(context: context, removeBottom: navigation.enabled, child: child),
+            child: MediaQuery.removePadding(
+              context: context,
+              removeBottom: navigation.enabled,
+              child: FrostDestinationRoot(route: ModalRoute.of(context), child: child),
+            ),
           ),
         ),
         if (navigation.enabled) navigation.navigation,

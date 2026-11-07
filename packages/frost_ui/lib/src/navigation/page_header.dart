@@ -22,6 +22,7 @@ import '../primitives/_directional_icon.dart';
 import '../primitives/_page_outline.dart';
 import '../primitives/keyline.dart';
 import '../primitives/text.dart';
+import '_destination_root.dart';
 import '_page_header_leading.dart';
 import '_shell_back_scope.dart';
 import '_toolbar_middle_scope.dart';
@@ -60,6 +61,10 @@ class FrostPageHeaderSearchController extends ChangeNotifier {
 /// Cancel, Escape and system Back collapse it, keeping the query; submitting
 /// does not, so an App that navigates after a query collapses it through
 /// [searchController]. Rows with enough room keep their layout.
+///
+/// In the sidebar layout the root page of a shell destination leaves [title]
+/// to the sidebar and keeps it for screen readers only. A header with nothing
+/// else to show is then just the page's top margin, as tall as its side inset.
 class FrostPageHeader extends StatefulWidget {
   const FrostPageHeader({
     this.leading = const [],
@@ -229,7 +234,46 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
     final fontSize = headline.fontSize!;
     final extraLine = (scaler.scale(fontSize) - fontSize * 1.3) * headline.height!;
     final scales = extraLine > 0;
-    final title = widget.title;
+    // The sidebar already names a destination's root page; its header keeps
+    // the title for screen readers only. With nothing else it is only the
+    // page's top margin, as tall as the side inset.
+    final namedBySidebar = widget.title != null && shell != null && FrostAutoScaffold.usesHorizontalLayoutOf(context) && FrostDestinationRoot.contains(context);
+    final title = namedBySidebar ? null : widget.title;
+    // Laid out at its own size but unpainted and inert, so it is read out
+    // without taking room or input.
+    final titleNode = namedBySidebar
+        ? Semantics(
+            header: true,
+            container: true,
+            child: SizedBox.shrink(
+              child: OverflowBox(
+                alignment: AlignmentDirectional.topStart,
+                maxWidth: double.infinity,
+                maxHeight: double.infinity,
+                child: IgnorePointer(
+                  child: ExcludeFocus(child: Opacity(opacity: 0, alwaysIncludeSemantics: true, child: widget.title)),
+                ),
+              ),
+            ),
+          )
+        : null;
+    final onlyTitle =
+        back == null &&
+        widget.leading.isEmpty &&
+        widget.leadingIcons.isEmpty &&
+        widget.controls.isEmpty &&
+        widget.middle == null &&
+        widget.collapsedMiddle == null &&
+        widget.actions.isEmpty;
+    if (titleNode != null && onlyTitle) {
+      return FrostNativeCaptionPadding(
+        child: SizedBox(
+          width: double.infinity,
+          height: FrostGap.of(context).page,
+          child: Align(alignment: AlignmentDirectional.topStart, child: titleNode),
+        ),
+      );
+    }
     final field = widget.middle == null
         ? null
         : KeyedSubtree(
@@ -313,7 +357,7 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
     }
     // Back first restores the row, whether it comes from the system or from a
     // shell-owned title-bar Back; the next Back leaves the page.
-    return FrostShellBackTarget(
+    final header = FrostShellBackTarget(
       enabled: _expanded && (shell?.ownsBackControl ?? false),
       onBack: _collapse,
       child: PopScope<void>(
@@ -334,6 +378,8 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
         ),
       ),
     );
+    if (titleNode == null) return header;
+    return Stack(fit: StackFit.passthrough, children: [titleNode, header]);
   }
 }
 
