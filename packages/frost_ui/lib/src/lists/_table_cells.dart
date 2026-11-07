@@ -13,12 +13,17 @@ class FrostTableCells extends MultiChildRenderObjectWidget {
     required this.horizontalInset,
     required this.direction,
     required super.children,
+    this.alignTop = false,
     super.key,
   });
   final List<double> widths;
   final List<bool> numeric;
   final double minimumHeight, verticalInset, horizontalInset;
   final TextDirection direction;
+
+  /// Cells start where they would in a row of [minimumHeight] instead of at the
+  /// middle, for rows whose cells wrap to different heights.
+  final bool alignTop;
   @override
   RenderObject createRenderObject(BuildContext context) => _Cells(this);
   @override
@@ -64,7 +69,8 @@ class _Cells extends RenderBox with ContainerRenderObjectMixin<RenderBox, _CellD
       final logicalX = start + _spec.horizontalInset + (_spec.numeric[index] ? remaining : 0);
       (child.parentData! as _CellData).offset = Offset(
         _spec.direction == TextDirection.ltr ? logicalX : size.width - logicalX - child.size.width,
-        (size.height - child.size.height) / 2,
+        // Top aligned, a cell sits where it would in a row of the minimum height.
+        _spec.alignTop ? math.max(_spec.verticalInset, (_spec.minimumHeight - child.size.height) / 2) : (size.height - child.size.height) / 2,
       );
       start += width;
       index++;

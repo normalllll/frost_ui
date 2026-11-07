@@ -46,7 +46,7 @@ const _tableMeasuredRows = 200;
 /// [text] is as wide as its header. The primary column takes the room that is
 /// left. When the room runs out the primary column narrows first, then the
 /// others, down to their headers. Cells show one line and end in an ellipsis
-/// where they do not fit.
+/// where they do not fit, except in a [FrostTable.shrinkWrap] table.
 class FrostTableColumn<T> {
   const FrostTableColumn({
     required this.label,
@@ -95,6 +95,7 @@ class FrostTable<T> extends StatefulWidget {
     this.onActivate,
     this.compactRow,
     this.shrinkWrap = false,
+    this.showHeader = true,
     super.key,
   }) : assert(columns.length > 0);
   final List<FrostTableColumn<T>> columns;
@@ -107,9 +108,19 @@ class FrostTable<T> extends StatefulWidget {
   final FrostTableCompactRow Function(BuildContext context, T row)? compactRow;
 
   /// Takes the height of the header and every row instead of scrolling them,
-  /// for a small table that runs with a page's text. It still scrolls sideways
-  /// when its columns are wider than the page.
+  /// for a small table that runs with a page's text. Its cells show all their
+  /// text: it wraps, rows grow to fit and cells start at the row's top. Every
+  /// column, the primary one included, asks for the width its text needs on
+  /// one line. When they do not all fit, a column that needs less than an even
+  /// share of the room keeps its width and the longer ones share the rest; the
+  /// primary column takes any room left over. It still scrolls sideways when
+  /// its columns are wider than the page.
   final bool shrinkWrap;
+
+  /// Whether the column headers show. Without them the first row starts at
+  /// the table's top and the columns cannot be sorted or resized; the
+  /// table still reads as a table with its rows and cells.
+  final bool showHeader;
   @override
   State<FrostTable<T>> createState() => _TableState<T>();
 }
@@ -218,25 +229,41 @@ class _TableState<T> extends State<FrostTable<T>> {
       final sort = column.sortKey == null ? 0.0 : FrostGap.inline + FrostControlSize.compact.iconSize;
       floors[i] = math.max(column.minWidth, painter.width + sort + FrostGap.related * 2);
       painter.dispose();
-      wants[i] = i == main ? floors[i] : math.max(floors[i], _contentWidth(context, column));
-      if (i != main) automatic.add(i);
+      // Wrapping cells: the primary column asks for its text like the others.
+      final wraps = widget.shrinkWrap;
+      wants[i] = i == main && !wraps ? floors[i] : math.max(floors[i], _contentWidth(context, column));
+      if (i != main || wraps) automatic.add(i);
     }
     final result = List<double>.of(wants);
     final mainIsAutomatic = _overrides[main] == null && widget.columns[main].width == null;
     final wanted = automatic.fold(0.0, (sum, i) => sum + wants[i]);
     final floor = automatic.fold(0.0, (sum, i) => sum + floors[i]);
-    var room = available - fixed - (mainIsAutomatic ? floors[main] : 0.0);
-    if (mainIsAutomatic) {
+    var room = available - fixed - (mainIsAutomatic && !widget.shrinkWrap ? floors[main] : 0.0);
+    if (mainIsAutomatic && !widget.shrinkWrap) {
       // The primary column takes what the others leave, and no less than its header.
       result[main] = math.max(floors[main], available - fixed - wanted);
       room = math.max(room, floor);
     }
-    if (wanted > room) {
+    if (wanted > room && widget.shrinkWrap) {
+      // Wrapping, a column that needs less than an even share of what is left
+      // keeps its text on one line; the longer ones share the rest.
+      final order = [...automatic]..sort((a, b) => wants[a].compareTo(wants[b]));
+      var left = math.max(room, floor), count = order.length;
+      for (final i in order) {
+        result[i] = math.max(floors[i], math.min(wants[i], left / count));
+        left -= result[i];
+        count--;
+      }
+    } else if (wanted > room) {
       // Out of room, the others give up what exceeds their headers, evenly.
       final share = wanted == floor ? 0.0 : ((room - floor) / (wanted - floor)).clamp(0.0, 1.0);
       for (final i in automatic) {
         result[i] = floors[i] + (wants[i] - floors[i]) * share;
       }
+    }
+    if (mainIsAutomatic && widget.shrinkWrap) {
+      // The primary column still takes the room the others leave.
+      result[main] += math.max(0.0, available - result.fold(0.0, (sum, width) => sum + width));
     }
     return result;
   }
@@ -465,7 +492,7 @@ class _TableState<T> extends State<FrostTable<T>> {
                   mainAxisSize: widget.shrinkWrap ? MainAxisSize.min : MainAxisSize.max,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _header(context, widths),
+                    if (widget.showHeader) _header(context, widths),
                     if (widget.shrinkWrap) body else Expanded(child: body),
                   ],
                 ),
@@ -603,6 +630,7 @@ class _TableState<T> extends State<FrostTable<T>> {
               verticalInset: geometry.verticalInset,
               horizontalInset: FrostGap.related,
               direction: Directionality.of(context),
+              alignTop: widget.shrinkWrap,
               children: [
                 for (final column in widget.columns)
                   Semantics(
@@ -613,10 +641,12 @@ class _TableState<T> extends State<FrostTable<T>> {
                     child: DefaultTextStyle(
                       style: FrostTypography.of(context).style(FrostTextRole.body, tabular: column.numeric).copyWith(color: tokens.textPrimary),
                       textAlign: column.numeric ? TextAlign.end : TextAlign.start,
-                      // A word never breaks inside a cell: one line, then an ellipsis.
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.ellipsis,
+                      // A table in the page's text shows all of a cell's text.
+                      // Otherwise a word never breaks inside a cell: one line,
+                      // then an ellipsis.
+                      maxLines: widget.shrinkWrap ? null : 1,
+                      softWrap: widget.shrinkWrap,
+                      overflow: widget.shrinkWrap ? TextOverflow.clip : TextOverflow.ellipsis,
                       child: column.cell(context, item),
                     ),
                   ),

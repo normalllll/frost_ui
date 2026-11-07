@@ -703,4 +703,53 @@ void main() {
       }
     });
   }
+  for (final header in [true, false]) {
+    testWidgets('a table in page text shows every cell in full (header: $header)', (tester) async {
+      const rows = [
+        ['Theme', 'Quiet harbour towns at dusk, drawn from the water with the lamps of the shore coming on one by one'],
+        ['Period', '2026-11-01 to 2026-11-30'],
+      ];
+      await tester.pumpWidget(
+        view(
+          Align(
+            alignment: Alignment.topCenter,
+            child: FrostTable<List<String>>(
+              shrinkWrap: true,
+              showHeader: header,
+              columns: [
+                for (var i = 0; i < 2; i++)
+                  FrostTableColumn(
+                    label: header ? 'Column $i' : '',
+                    primary: i == 0,
+                    text: (row) => row[i],
+                    cell: (_, row) => FrostText(row[i], content: true),
+                  ),
+              ],
+              rows: rows,
+            ),
+          ),
+          width: 720,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final table = tester.getRect(find.byType(FrostTable<List<String>>));
+      expect(table.width, lessThanOrEqualTo(720));
+      for (final text in rows.expand((row) => row)) {
+        final paragraph = find.descendant(of: find.text(text), matching: find.byType(RichText)).first;
+        final render = tester.renderObject<RenderParagraph>(paragraph);
+        expect(render.text.toPlainText(), text);
+        expect(render.didExceedMaxLines, isFalse, reason: text);
+        expect(render.maxLines, isNull);
+        expect(tester.getRect(paragraph).right, lessThanOrEqualTo(table.right));
+      }
+      expect(tester.getSize(find.text(rows[0][1])).height, greaterThan(tester.getSize(find.text('Period')).height * 1.5), reason: 'the long cell wraps');
+      // Short cells of a tall row start on its first line.
+      expect(tester.getTopLeft(find.text('Theme')).dy, moreOrLessEquals(tester.getTopLeft(find.text(rows[0][1])).dy, epsilon: 2));
+      final firstCells = tester.getRect(find.byType(FrostTableCells).first);
+      expect(firstCells.top, table.top);
+      expect(find.text('Column 0'), header ? findsOneWidget : findsNothing);
+      if (!header) expect(tester.getTopLeft(find.text('Theme')).dy, lessThan(table.top + 24));
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

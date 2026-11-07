@@ -227,6 +227,7 @@ class	FrostTaskAction	lists/task_row.dart	-	baseline-20261102
 class	FrostTaskRow	lists/task_row.dart	-	baseline-20261102
 class	FrostText	primitives/text.dart	-	baseline-20261102
 class	FrostTextField	controls/text_field.dart	-	baseline-20261102
+class	FrostTextRun	display/expandable_text.dart	-	reviewed:20261108:value type for .linked runs; no existing carrier
 class	FrostTheme	foundation/theme.dart	-	baseline-20261102
 class	FrostThemeTokens	foundation/tokens.dart	-	baseline-20261102
 class	FrostThread	social/thread.dart	-	baseline-20261102
@@ -332,6 +333,7 @@ ctor	FrostErrorDetails.quiet	feedback/error_content.dart	details,initiallyExpand
 ctor	FrostErrorPresenter.new	foundation/scope.dart	action,details,icon,message,title	baseline-20261102
 ctor	FrostExpandableText.new	display/expandable_text.dart	expanded,key,maxLines,onExpandedChanged,role,text	baseline-20261102
 ctor	FrostExpandableText.rich	display/expandable_text.dart	expanded,key,maxLines,onExpandedChanged,onHashtag,onLink,onMention,role,text	reviewed:20261108:truncation needs frost layout; rich ctor mirrors FrostRichText
+ctor	FrostExpandableText.linked	display/expandable_text.dart	expanded,key,maxLines,onExpandedChanged,onLink,role,runs	reviewed:20261108:literal text, only app links; .rich cannot escape Markdown
 ctor	FrostFieldScope.new	controls/field_appearance.dart	appearance,child,key	baseline-20261102
 ctor	FrostFilterBar.new	display/filter_bar.dart	chips,key,onClearAll	baseline-20261102
 ctor	FrostFilterChip.new	display/filter_chip.dart	key,label,onClear,onPressed,value	baseline-20261102
@@ -510,7 +512,7 @@ ctor	FrostTabBar.new	controls/tab_bar.dart	controller,key,onTap,scrollable,showD
 ctor	FrostTabHost.new	navigation/tabs.dart	builder,controller,key,onNewTab,onReopen	baseline-20261102
 ctor	FrostTabLabel.new	navigation/tabs.dart	leading,title	baseline-20261102
 ctor	FrostTabStrip.new	navigation/tabs.dart	closeTooltip,controller,key,label,maxTabWidth,minTabWidth,newTabIcon,newTabTooltip,onNewTab	baseline-20261102
-ctor	FrostTable.new	lists/table.dart	columns,compactRow,key,onActivate,onSort,rows,selection,shrinkWrap,sortAscending,sortColumn	reviewed:20261108:unbounded in-flow table not composable; shrinkWrap flag
+ctor	FrostTable.new	lists/table.dart	columns,compactRow,key,onActivate,onSort,rows,selection,showHeader,shrinkWrap,sortAscending,sortColumn	reviewed:20261108:headerless in-flow table; no composable alternative keeps semantics
 ctor	FrostTableColumn.new	lists/table.dart	cell,label,minWidth,numeric,primary,sortKey,text,width	baseline-20261102
 ctor	FrostTableCompactRow.new	lists/table.dart	leading,subtitle,trailing	baseline-20261102
 ctor	FrostTabsController.new	navigation/tabs.dart	initial,onRemoved	baseline-20261102
@@ -523,6 +525,7 @@ ctor	FrostText.new	primitives/text.dart	content,data,key,maxLines,numeric,overfl
 ctor	FrostText.rich	primitives/text.dart	content,key,maxLines,numeric,overflow,role,selectable,semanticsLabel,span,tabular,textAlign,tone,weight	reviewed:20261106:pass: w500/w600 at body size are only reachable through TextStyle; a closed two-value enum adds no type step
 ctor	FrostTextField.new	controls/text_field.dart	appearance,autofocus,clearable,controller,enabled,error,focusNode,help,key,keyboardType,label,leading,maxLines,minLines,monospace,obscureText,onChanged,onEditingComplete,onSubmitted,onTap,onTapOutside,placeholder,readOnly,scrollController,size,textInputAction,trailing	baseline-20261102
 ctor	FrostTextField.secure	controls/text_field.dart	appearance,autofocus,controller,enabled,error,focusNode,help,key,label,leading,onChanged,onEditingComplete,onSubmitted,onTap,onTapOutside,placeholder,readOnly,scrollController,size,textInputAction,trailing	baseline-20261102
+ctor	FrostTextRun.new	display/expandable_text.dart	link,text	reviewed:20261108:minimal text and optional link pair
 ctor	FrostThemeTokens.new	foundation/tokens.dart	accent,brightness,canvas,categorical,cautionInk,cautionTint,disabledText,edgeHairline,edgeHighlight,fill,fillStrong,fillSubtle,hoverSurface,infoInk,infoTint,line,mediaInnerStroke,negativeInk,negativeTint,onMediaInk,onMediaScrim,positiveInk,positiveTint,pressedSurface,separator,shadow,shadowAmbient,shadowContact,surface,surfaceInset,surfaceMuted,surfaceRaised,surfaceTint,textPrimary,textQuaternary,textSecondary,textSecondaryGlass,textTertiary,textTertiaryGlass,threadLine,tone	baseline-20261102
 ctor	FrostThread.new	social/thread.dart	collapsedReplyCount,item,key,onShowReplies,replies,style	baseline-20261102
 ctor	FrostThreadAction.new	social/thread.dart	count,icon,label,onPressed,selected	baseline-20261102
