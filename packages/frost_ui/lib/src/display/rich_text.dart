@@ -4,8 +4,8 @@ import '../feedback/_skeleton_geometry.dart';
 import '../foundation/radius.dart';
 import '../foundation/tokens.dart';
 import '../foundation/typography.dart';
-import '../primitives/_text_selection_chrome.dart';
 import '../primitives/click_surface.dart';
+import '../primitives/selection_area.dart';
 import '_rich_text_parser.dart';
 
 // Inline code padding is independent of text scaling.
@@ -81,13 +81,7 @@ class FrostRichTextState extends State<FrostRichText> {
   }
 
   @override
-  Widget build(BuildContext context) => widget.selectable
-      ? SelectionArea(
-          selectionControls: frostTextSelectionControls,
-          contextMenuBuilder: (context, state) => frostSelectionMenu(context, state.contextMenuAnchors, state.contextMenuButtonItems),
-          child: Builder(builder: _content),
-        )
-      : _content(context);
+  Widget build(BuildContext context) => widget.selectable ? FrostSelectionArea(child: Builder(builder: _content)) : _content(context);
 }
 
 class _RichAction extends StatefulWidget {

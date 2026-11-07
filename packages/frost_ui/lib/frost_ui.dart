@@ -154,6 +154,7 @@ export 'src/primitives/keyline.dart' show FrostKeyline, FrostBleed, FrostBleedSn
 export 'src/primitives/media_frame.dart';
 export 'src/primitives/path_text.dart' show FrostPathText;
 export 'src/primitives/presence.dart';
+export 'src/primitives/selection_area.dart' show FrostSelectionArea, FrostSelectionAreaState;
 export 'src/primitives/status_glyph.dart' show FrostStatusGlyph, FrostStatusGlyphKind;
 export 'src/primitives/surface.dart';
 export 'src/primitives/text.dart' hide frostTextStyle;

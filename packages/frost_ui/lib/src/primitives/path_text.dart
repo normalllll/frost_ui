@@ -7,7 +7,7 @@ import '../feedback/_skeleton_geometry.dart';
 import '../foundation/tokens.dart';
 import '../foundation/typography.dart';
 import '_path_selection.dart';
-import '_text_selection_chrome.dart';
+import 'selection_area.dart';
 import 'text.dart';
 
 /// A full path wrapped after separators, preserving its original copy/semantics.
@@ -51,13 +51,7 @@ class _PathTextState extends State<FrostPathText> {
         ),
       ),
     );
-    return widget.selectable
-        ? SelectionArea(
-            selectionControls: frostTextSelectionControls,
-            contextMenuBuilder: (context, state) => frostSelectionMenu(context, state.contextMenuAnchors, state.contextMenuButtonItems),
-            child: child,
-          )
-        : child;
+    return widget.selectable ? FrostSelectionArea(child: child) : child;
   }
 }
 
