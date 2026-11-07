@@ -256,6 +256,7 @@ void main() {
     (FrostAvatarSize.regular, 32.0, 18.0, FrostTextRole.footnote),
     (FrostAvatarSize.large, 40.0, 22.0, FrostTextRole.callout),
     (FrostAvatarSize.xlarge, 56.0, 28.0, FrostTextRole.headline),
+    (FrostAvatarSize.xxlarge, 72.0, 36.0, FrostTextRole.title2),
   ]) {
     for (final scale in [1.0, 2.0]) {
       testWidgets('avatar real circle, dimensions, placeholder, graphemes $size $scale', (tester) async {

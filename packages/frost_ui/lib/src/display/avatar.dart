@@ -19,7 +19,7 @@ export '_avatar_size.dart' show FrostAvatarSize;
 
 const _maximumInitials = 2;
 
-const _smallIcon = 16.0, _regularIcon = 18.0, _largeIcon = 22.0, _xlargeIcon = 28.0;
+const _smallIcon = 16.0, _regularIcon = 18.0, _largeIcon = 22.0, _xlargeIcon = 28.0, _xxlargeIcon = 36.0;
 
 /// A circular media frame with a readable placeholder.
 /// [image] uses FrostMediaFrame's loading, fade and error fallback. [child]
@@ -69,6 +69,7 @@ class FrostAvatar extends StatelessWidget {
       FrostAvatarSize.regular => (_regularIcon, FrostTextRole.footnote),
       FrostAvatarSize.large => (_largeIcon, FrostTextRole.callout),
       FrostAvatarSize.xlarge => (_xlargeIcon, FrostTextRole.headline),
+      FrostAvatarSize.xxlarge => (_xxlargeIcon, FrostTextRole.title2),
     };
     final text = _text, seed = _seed;
     final seeded = seed == null ? null : frostAvatarSeedFill(seed, tokens.categorical);

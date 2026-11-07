@@ -51,7 +51,7 @@ void main() {
     expect(tester.getSize(find.byWidgetPredicate((w) => w is FrostMediaFrame).first), const Size(300, 137));
     for (final size in FrostAvatarSize.values) {
       await display(tester, FrostAvatar.skeleton(size: size));
-      expect(tester.getSize(find.byWidgetPredicate((w) => w is FrostAvatar).first), Size.square([24, 32, 40, 56][size.index].toDouble()));
+      expect(tester.getSize(find.byWidgetPredicate((w) => w is FrostAvatar).first), Size.square([24, 32, 40, 56, 72][size.index].toDouble()));
       expect(find.byType(ClipOval), findsOneWidget);
     }
   });

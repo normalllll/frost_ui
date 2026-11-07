@@ -4,7 +4,9 @@ import 'package:flutter/widgets.dart';
 // Text fits the square inscribed in the avatar circle, including overflow counts.
 const frostAvatarInscribedScale = 1 / math.sqrt2;
 
-enum FrostAvatarSize { small, regular, large, xlarge }
+/// 24, 32, 40, 56 and 72 logical pixels. [xxlarge] is the identity size of a
+/// profile or creator header.
+enum FrostAvatarSize { small, regular, large, xlarge, xxlarge }
 
 // One geometry source for standalone avatars and uniform avatar groups.
 double frostAvatarDimension(FrostAvatarSize size) => switch (size) {
@@ -12,6 +14,7 @@ double frostAvatarDimension(FrostAvatarSize size) => switch (size) {
   FrostAvatarSize.regular => 32,
   FrostAvatarSize.large => 40,
   FrostAvatarSize.xlarge => 56,
+  FrostAvatarSize.xxlarge => 72,
 };
 
 class FrostAvatarSizeScope extends InheritedWidget {
