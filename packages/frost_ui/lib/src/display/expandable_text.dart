@@ -12,6 +12,7 @@ import '../foundation/typography.dart';
 import '../motion/spring.dart';
 import '../primitives/_measured_layout_builder.dart';
 import '../primitives/click_surface.dart';
+import '_rich_text_parser.dart';
 
 // A fixed fade keeps long translations from consuming more body text.
 const frostExpandableTextFadeWidth = 24.0;
@@ -20,8 +21,31 @@ const frostExpandableTextFadeWidth = 24.0;
 /// value needs onExpandedChanged to enable the inline action.
 class FrostExpandableText extends StatefulWidget {
   const FrostExpandableText({required this.text, this.maxLines = 3, this.role = FrostTextRole.body, this.expanded, this.onExpandedChanged, super.key})
-    : assert(maxLines > 0);
+    : assert(maxLines > 0),
+      _rich = false,
+      onLink = null,
+      onMention = null,
+      onHashtag = null;
+
+  /// [text] in [FrostRichText]'s Markdown subset. Links, mentions and hashtags
+  /// go to the callbacks, take keyboard focus and announce as links; the text
+  /// collapses and expands as plain text does.
+  const FrostExpandableText.rich({
+    required this.text,
+    this.onLink,
+    this.onMention,
+    this.onHashtag,
+    this.maxLines = 3,
+    this.role = FrostTextRole.body,
+    this.expanded,
+    this.onExpandedChanged,
+    super.key,
+  }) : assert(maxLines > 0),
+       _rich = true;
   final String text;
+  final bool _rich;
+  final ValueChanged<Uri>? onLink;
+  final ValueChanged<String>? onMention, onHashtag;
   final int maxLines;
   final FrostTextRole role;
   final bool? expanded;
@@ -30,13 +54,31 @@ class FrostExpandableText extends StatefulWidget {
   State<FrostExpandableText> createState() => _ExpandableTextState();
 }
 
+/// A target's place in the joined node text, in UTF-16 offsets.
+typedef _Target = ({int start, int end, String text, VoidCallback? onTap});
+
 class _ExpandableTextState extends State<FrostExpandableText> {
   bool _expanded = false;
+  late List<FrostRichNode> _nodes;
+  late String _plain;
   bool get expanded => widget.expanded ?? _expanded;
+
+  void _parse() {
+    _nodes = widget._rich ? FrostRichDocument(widget.text).nodes : [FrostRichNode(widget.text)];
+    _plain = widget._rich ? _nodes.map((node) => node.text).join() : widget.text;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _parse();
+  }
+
   @override
   void didUpdateWidget(FrostExpandableText oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.expanded != null && widget.expanded == null) _expanded = oldWidget.expanded!;
+    if (oldWidget.text != widget.text || oldWidget._rich != widget._rich) _parse();
   }
 
   void _toggle() {
@@ -45,15 +87,71 @@ class _ExpandableTextState extends State<FrostExpandableText> {
     widget.onExpandedChanged?.call(next);
   }
 
+  VoidCallback? _callback(FrostRichNode node) => switch (node.target) {
+    FrostRichTarget.link => widget.onLink == null ? null : () => widget.onLink!(Uri.parse(node.value!)),
+    FrostRichTarget.mention => widget.onMention == null ? null : () => widget.onMention!(node.value!),
+    FrostRichTarget.hashtag => widget.onHashtag == null ? null : () => widget.onHashtag!(node.value!),
+    null => null,
+  };
+
+  List<_Target> get _targets {
+    final targets = <_Target>[];
+    var offset = 0;
+    for (final node in _nodes) {
+      if (node.target != null) targets.add((start: offset, end: offset + node.text.length, text: node.text, onTap: _callback(node)));
+      offset += node.text.length;
+    }
+    return targets;
+  }
+
+  /// The first [length] UTF-16 units of the node text, styled as
+  /// [FrostRichText] styles them; plain text is one unstyled run.
+  List<InlineSpan> _spans(BuildContext context, TextStyle base, int length) {
+    if (!widget._rich) return [TextSpan(text: _plain.substring(0, length))];
+    final typography = FrostTypography.of(context), tokens = FrostThemeTokens.of(context);
+    final spans = <InlineSpan>[];
+    var offset = 0;
+    for (final node in _nodes) {
+      if (offset >= length) break;
+      final text = node.text.substring(0, math.min(node.text.length, length - offset));
+      offset += node.text.length;
+      var style = node.code ? typography.style(widget.role, monospace: true).copyWith(color: base.color, backgroundColor: tokens.fillSubtle) : base;
+      if (node.bold) style = style.copyWith(fontWeight: typography.style(FrostTextRole.headline).fontWeight);
+      if (node.italic) style = style.copyWith(fontStyle: FontStyle.italic);
+      if (node.target != null) style = style.copyWith(color: tokens.accentInk);
+      spans.add(TextSpan(text: text, style: style));
+    }
+    return spans;
+  }
+
+  /// Focusable, announced link areas over the painted target text. A target
+  /// that wraps gets one area per line; only the first takes focus.
+  List<Widget> _targetAreas(TextPainter painter, int length) {
+    Widget surface(VoidCallback onTap) =>
+        FrostClickSurface(onTap: onTap, shape: FrostClickShape.rounded(FrostRadius.borderRadius(FrostRadius.xs)), child: const SizedBox.expand());
+    return [
+      for (final target in _targets)
+        if (target.onTap case final onTap? when target.start < length)
+          for (final (index, box) in painter.getBoxesForSelection(TextSelection(baseOffset: target.start, extentOffset: math.min(target.end, length))).indexed)
+            Positioned.fromRect(
+              rect: box.toRect(),
+              child: index == 0
+                  ? Semantics(link: true, label: target.text, onTap: onTap, excludeSemantics: true, child: surface(onTap))
+                  : ExcludeSemantics(child: ExcludeFocus(child: surface(onTap))),
+            ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = FrostThemeTokens.of(context);
     final style = FrostTypography.of(context).style(widget.role).copyWith(color: tokens.textPrimary);
     final scaler = MediaQuery.textScalerOf(context), direction = Directionality.of(context);
     final label = expanded ? FrostScope.labelsOf(context).collapseText : FrostScope.labelsOf(context).expandText;
+    final full = _spans(context, style, _plain.length);
     double heightAt(double width) {
       final plain = TextPainter(
-        text: TextSpan(text: widget.text, style: style),
+        text: TextSpan(style: style, children: full),
         textDirection: direction,
         textScaler: scaler,
         maxLines: widget.maxLines,
@@ -71,12 +169,12 @@ class _ExpandableTextState extends State<FrostExpandableText> {
           textDirection: direction,
           textScaler: scaler,
         )..layout(maxWidth: width);
-        final full =
+        final whole =
             TextPainter(
                 text: TextSpan(
                   style: style,
                   children: [
-                    TextSpan(text: widget.text),
+                    ...full,
                     const WidgetSpan(alignment: PlaceholderAlignment.bottom, child: SizedBox()),
                   ],
                 ),
@@ -90,19 +188,19 @@ class _ExpandableTextState extends State<FrostExpandableText> {
                 ),
               ])
               ..layout(maxWidth: width);
-        height = full.height;
+        height = whole.height;
         action.dispose();
-        full.dispose();
+        whole.dispose();
       }
       return height;
     }
 
     return FrostMeasuredLayoutBuilder(
-      naturalSize: Size(frostTextLineSize(context, widget.text, style).width, heightAt(double.infinity)),
+      naturalSize: Size(frostTextLineSize(context, _plain, style).width, heightAt(double.infinity)),
       heightForWidth: heightAt,
       builder: (context, constraints) {
         final plain = TextPainter(
-          text: TextSpan(text: widget.text, style: style),
+          text: TextSpan(style: style, children: full),
           textDirection: direction,
           textScaler: scaler,
           maxLines: widget.maxLines,
@@ -112,7 +210,34 @@ class _ExpandableTextState extends State<FrostExpandableText> {
         final width = constraints.hasBoundedWidth ? constraints.maxWidth : plain.maxIntrinsicWidth;
         final plainHeight = plain.height;
         plain.dispose();
-        if (!overflows) return _frame(width, plainHeight, FrostSkeletonText(child: Text(widget.text, style: style)));
+        final rtl = direction == TextDirection.rtl;
+        if (!overflows) {
+          if (!widget._rich) return _frame(width, plainHeight, FrostSkeletonText(child: Text(widget.text, style: style)));
+          final painter = TextPainter(
+            text: TextSpan(style: style, children: full),
+            textDirection: direction,
+            textScaler: scaler,
+          )..layout(maxWidth: width);
+          return _frame(
+            width,
+            plainHeight,
+            Stack(
+              children: [
+                Positioned.fill(
+                  child: Semantics(
+                    label: _plain,
+                    child: FrostSkeletonText(
+                      painter: painter,
+                      textLength: _plain.length,
+                      child: _PaintedText(painter: painter, fade: null, rtl: rtl, mask: tokens.canvas),
+                    ),
+                  ),
+                ),
+                ..._targetAreas(painter, _plain.length),
+              ],
+            ),
+          );
+        }
         final actionStyle = style.copyWith(color: tokens.accentInk);
         final actionPainter = TextPainter(
           text: TextSpan(text: label, style: actionStyle),
@@ -125,12 +250,12 @@ class _ExpandableTextState extends State<FrostExpandableText> {
           size: Size(math.min(width, actionSize.width + FrostGap.inline), actionSize.height),
           alignment: PlaceholderAlignment.bottom,
         );
-        TextPainter measure(String text, {int? maxLines}) =>
+        TextPainter measure(int length, {int? maxLines}) =>
             TextPainter(
                 text: TextSpan(
                   style: style,
                   children: [
-                    TextSpan(text: text),
+                    ..._spans(context, style, length),
                     const WidgetSpan(alignment: PlaceholderAlignment.bottom, child: SizedBox()),
                   ],
                 ),
@@ -140,13 +265,13 @@ class _ExpandableTextState extends State<FrostExpandableText> {
               )
               ..setPlaceholderDimensions([placeholder])
               ..layout(maxWidth: width);
-        var body = widget.text;
+        var body = _plain;
         if (!expanded) {
-          final graphemes = widget.text.characters.toList();
+          final graphemes = _plain.characters.toList();
           var lower = 0, upper = graphemes.length;
           while (lower < upper) {
             final middle = (lower + upper + 1) ~/ 2;
-            final probe = measure(graphemes.take(middle).join().trimRight(), maxLines: widget.maxLines);
+            final probe = measure(graphemes.take(middle).join().trimRight().length, maxLines: widget.maxLines);
             final fits = !probe.didExceedMaxLines;
             probe.dispose();
             if (fits) {
@@ -157,7 +282,7 @@ class _ExpandableTextState extends State<FrostExpandableText> {
           }
           body = graphemes.take(lower).join().trimRight();
         }
-        var painter = measure(body);
+        var painter = measure(body.length);
         // A shorter interface body font can leave the reserved action alone on
         // the last line. Pull the final grapheme back until it joins body ink,
         // retaining the inline fade and avoiding an otherwise empty text line.
@@ -166,10 +291,9 @@ class _ExpandableTextState extends State<FrostExpandableText> {
           if (direction == TextDirection.ltr ? slot.left > 0 : slot.right < width) break;
           painter.dispose();
           body = body.characters.skipLast(1).toString().trimRight();
-          painter = measure(body);
+          painter = measure(body.length);
         }
         final box = painter.inlinePlaceholderBoxes!.single.toRect();
-        final rtl = direction == TextDirection.rtl;
         final actionRect = Rect.fromLTWH(rtl ? box.left : box.right - actionSize.width, box.top, actionSize.width, actionSize.height);
         final fade = expanded
             ? null
@@ -196,6 +320,7 @@ class _ExpandableTextState extends State<FrostExpandableText> {
                   ),
                 ),
               ),
+              ..._targetAreas(painter, body.length),
               Positioned.fromRect(
                 rect: actionRect,
                 child: Semantics(

@@ -56,6 +56,37 @@ void main() {
     expect(tester.getSize(find.byType(FrostExpandableText)).height, closeTo(collapsed, .01));
     expect(tester.takeException(), isNull);
   });
+  testWidgets('rich expandable text truncates to maxLines with a link that taps, focuses and announces', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final opened = <Uri>[];
+    FrostExpandableTextPainter painter() => tester
+        .widgetList<CustomPaint>(find.descendant(of: find.byType(FrostExpandableText), matching: find.byType(CustomPaint)))
+        .map((widget) => widget.painter)
+        .whereType<FrostExpandableTextPainter>()
+        .single;
+    await tester.pumpWidget(view(FrostExpandableText.rich(text: 'See [here](https://example.com) $longText', maxLines: 3, onLink: opened.add)));
+    expect(find.text('L.expandText'), findsOneWidget);
+    expect(painter().text.computeLineMetrics().length, 3);
+    final link = find.bySemanticsLabel('here');
+    expect(tester.getSemantics(link).getSemanticsData().flagsCollection.isLink, isTrue);
+    await tester.tap(link);
+    await tester.pump();
+    expect(opened, [Uri.parse('https://example.com')]);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(tester.getRect(link).contains(tester.getCenter(find.byElementPredicate((e) => e == FocusManager.instance.primaryFocus!.context))), isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(opened, hasLength(2));
+    await tester.tap(find.text('L.expandText'));
+    await tester.pumpAndSettle();
+    expect(painter().text.plainText, startsWith('See here $longText'));
+    expect(painter().fade, isNull);
+    await tester.tap(link);
+    expect(opened, hasLength(3));
+    semantics.dispose();
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('short text has no action; controlled action requires callback', (tester) async {
     await tester.pumpWidget(view(const FrostExpandableText(text: 'Short')));
     expect(find.text('Short'), findsOneWidget);
