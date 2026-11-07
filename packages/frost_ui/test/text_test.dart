@@ -87,6 +87,85 @@ void main() {
     semantics.dispose();
     expect(tester.takeException(), isNull);
   });
+  testWidgets('linked expandable text shows every character as written and only the marked link acts', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final opened = <Uri>[];
+    const prose = '(*´▽`*) **不是粗体** `不是代码` @someone #tag [x](https://example.test) ';
+    final artwork = Uri.parse('https://www.pixiv.net/artworks/1');
+    Widget linked({String tail = '', int maxLines = 3}) => view(
+      FrostExpandableText.linked(
+        runs: [
+          const FrostTextRun(prose),
+          FrostTextRun('作品', link: artwork),
+          FrostTextRun(tail),
+        ],
+        onLink: opened.add,
+        maxLines: maxLines,
+      ),
+      width: 600,
+    );
+    FrostExpandableTextPainter painter() => tester
+        .widgetList<CustomPaint>(find.descendant(of: find.byType(FrostExpandableText), matching: find.byType(CustomPaint)))
+        .map((widget) => widget.painter)
+        .whereType<FrostExpandableTextPainter>()
+        .single;
+    await tester.pumpWidget(linked());
+    final tokens = FrostThemeTokens.of(tester.element(find.byType(FrostExpandableText)));
+    expect(painter().text.plainText, '$prose作品');
+    final spans = <TextSpan>[];
+    painter().text.text!.visitChildren((span) {
+      if (span is TextSpan && span.text != null) spans.add(span);
+      return true;
+    });
+    for (final span in spans.where((span) => span.text != '作品')) {
+      expect(span.style!.color, tokens.textPrimary, reason: span.text);
+      expect(span.style!.fontStyle, isNot(FontStyle.italic));
+      expect(span.style!.backgroundColor, isNull);
+    }
+    expect(spans.singleWhere((span) => span.text == '作品').style!.color, tokens.accentInk);
+    expect(find.byWidgetPredicate((widget) => widget is Semantics && widget.properties.link == true), findsOneWidget);
+    expect(find.descendant(of: find.byType(FrostExpandableText), matching: find.byType(FrostClickSurface)), findsOneWidget);
+    final link = find.bySemanticsLabel('作品');
+    expect(tester.getSemantics(link).getSemanticsData().flagsCollection.isLink, isTrue);
+    await tester.tap(link);
+    await tester.pump();
+    expect(opened, [artwork]);
+
+    await tester.pumpWidget(linked(tail: ' $longText $longText'));
+    await tester.pump();
+    expect(find.text('L.expandText'), findsOneWidget);
+    expect(painter().text.computeLineMetrics().length, 3);
+    expect(painter().text.plainText, startsWith('$prose作品'));
+    semantics.dispose();
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('a mention or hashtag without its callback reads as the text around it', (tester) async {
+    const text = 'Hi @someone #tag [Link](https://example.test)';
+    await tester.pumpWidget(view(FrostRichText(text: text, onLink: (_) {}), width: 600));
+    final tokens = FrostThemeTokens.of(tester.element(find.byType(FrostRichText)));
+    final paragraph = tester.widget<RichText>(find.descendant(of: find.byType(FrostRichText), matching: find.byType(RichText)).first);
+    final spans = (paragraph.text as TextSpan).children!.whereType<TextSpan>().toList();
+    expect(spans.firstWhere((span) => span.text == '@someone').style!.color, tokens.textPrimary);
+    expect(spans.firstWhere((span) => span.text == '#tag').style!.color, tokens.textPrimary);
+    expect(find.text('Link'), findsOneWidget);
+    expect(find.descendant(of: find.byType(FrostRichText), matching: find.byType(FrostClickSurface)), findsOneWidget);
+
+    await tester.pumpWidget(view(FrostExpandableText.rich(text: text, onLink: (_) {}), width: 600));
+    final painter = tester
+        .widgetList<CustomPaint>(find.descendant(of: find.byType(FrostExpandableText), matching: find.byType(CustomPaint)))
+        .map((widget) => widget.painter)
+        .whereType<FrostExpandableTextPainter>()
+        .single;
+    final painted = <TextSpan>[];
+    painter.text.text!.visitChildren((span) {
+      if (span is TextSpan && span.text != null) painted.add(span);
+      return true;
+    });
+    expect(painted.firstWhere((span) => span.text == '@someone').style!.color, tokens.textPrimary);
+    expect(painted.firstWhere((span) => span.text == 'Link').style!.color, tokens.accentInk);
+    expect(find.descendant(of: find.byType(FrostExpandableText), matching: find.byType(FrostClickSurface)), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('short text has no action; controlled action requires callback', (tester) async {
     await tester.pumpWidget(view(const FrostExpandableText(text: 'Short')));
     expect(find.text('Short'), findsOneWidget);

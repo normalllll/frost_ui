@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../feedback/_skeleton_geometry.dart';
@@ -23,13 +24,15 @@ class FrostExpandableText extends StatefulWidget {
   const FrostExpandableText({required this.text, this.maxLines = 3, this.role = FrostTextRole.body, this.expanded, this.onExpandedChanged, super.key})
     : assert(maxLines > 0),
       _rich = false,
+      _runs = null,
       onLink = null,
       onMention = null,
       onHashtag = null;
 
   /// [text] in [FrostRichText]'s Markdown subset. Links, mentions and hashtags
-  /// go to the callbacks, take keyboard focus and announce as links; the text
-  /// collapses and expands as plain text does.
+  /// go to the callbacks, take keyboard focus and announce as links; one without
+  /// its callback reads as the text around it. The text collapses and expands
+  /// as plain text does.
   const FrostExpandableText.rich({
     required this.text,
     this.onLink,
@@ -41,9 +44,31 @@ class FrostExpandableText extends StatefulWidget {
     this.onExpandedChanged,
     super.key,
   }) : assert(maxLines > 0),
-       _rich = true;
+       _rich = true,
+       _runs = null;
+
+  /// Text shown exactly as written, with links the App marked. Every
+  /// character of [runs] is drawn as it is: no Markdown, mentions or hashtags.
+  /// Only a run with a [FrostTextRun.link] goes to [onLink], takes keyboard
+  /// focus and announces as a link. [text] is the runs joined. Collapsing and
+  /// expanding work as for plain text.
+  FrostExpandableText.linked({
+    required List<FrostTextRun> runs,
+    required ValueChanged<Uri> this.onLink,
+    this.maxLines = 3,
+    this.role = FrostTextRole.body,
+    this.expanded,
+    this.onExpandedChanged,
+    super.key,
+  }) : assert(maxLines > 0),
+       text = runs.map((run) => run.text).join(),
+       _runs = List.unmodifiable(runs),
+       _rich = true,
+       onMention = null,
+       onHashtag = null;
   final String text;
   final bool _rich;
+  final List<FrostTextRun>? _runs;
   final ValueChanged<Uri>? onLink;
   final ValueChanged<String>? onMention, onHashtag;
   final int maxLines;
@@ -52,6 +77,21 @@ class FrostExpandableText extends StatefulWidget {
   final ValueChanged<bool>? onExpandedChanged;
   @override
   State<FrostExpandableText> createState() => _ExpandableTextState();
+}
+
+/// A run of [FrostExpandableText.linked] text, shown exactly as written. A run
+/// with a [link] is a link the App marked.
+@immutable
+class FrostTextRun {
+  const FrostTextRun(this.text, {this.link});
+  final String text;
+  final Uri? link;
+
+  @override
+  bool operator ==(Object other) => other is FrostTextRun && other.text == text && other.link == link;
+
+  @override
+  int get hashCode => Object.hash(text, link);
 }
 
 /// A target's place in the joined node text, in UTF-16 offsets.
@@ -64,7 +104,10 @@ class _ExpandableTextState extends State<FrostExpandableText> {
   bool get expanded => widget.expanded ?? _expanded;
 
   void _parse() {
-    _nodes = widget._rich ? FrostRichDocument(widget.text).nodes : [FrostRichNode(widget.text)];
+    _nodes = switch (widget._runs) {
+      final runs? => [for (final run in runs) FrostRichNode(run.text, target: run.link == null ? null : FrostRichTarget.link, value: run.link?.toString())],
+      null => widget._rich ? FrostRichDocument(widget.text).nodes : [FrostRichNode(widget.text)],
+    };
     _plain = widget._rich ? _nodes.map((node) => node.text).join() : widget.text;
   }
 
@@ -78,7 +121,7 @@ class _ExpandableTextState extends State<FrostExpandableText> {
   void didUpdateWidget(FrostExpandableText oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.expanded != null && widget.expanded == null) _expanded = oldWidget.expanded!;
-    if (oldWidget.text != widget.text || oldWidget._rich != widget._rich) _parse();
+    if (oldWidget.text != widget.text || oldWidget._rich != widget._rich || !listEquals(oldWidget._runs, widget._runs)) _parse();
   }
 
   void _toggle() {
@@ -118,7 +161,8 @@ class _ExpandableTextState extends State<FrostExpandableText> {
       var style = node.code ? typography.style(widget.role, monospace: true).copyWith(color: base.color, backgroundColor: tokens.fillSubtle) : base;
       if (node.bold) style = style.copyWith(fontWeight: typography.style(FrostTextRole.headline).fontWeight);
       if (node.italic) style = style.copyWith(fontStyle: FontStyle.italic);
-      if (node.target != null) style = style.copyWith(color: tokens.accentInk);
+      // A target nothing handles reads as the text around it.
+      if (_callback(node) != null) style = style.copyWith(color: tokens.accentInk);
       spans.add(TextSpan(text: text, style: style));
     }
     return spans;

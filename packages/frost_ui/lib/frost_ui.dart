@@ -42,7 +42,7 @@ export 'src/display/copyable.dart' show FrostCopyable;
 export 'src/display/count_badge.dart';
 export 'src/display/data_dot.dart' show FrostDataDot;
 export 'src/display/disclosure.dart' hide FrostQuietDisclosure;
-export 'src/display/expandable_text.dart' show FrostExpandableText;
+export 'src/display/expandable_text.dart' show FrostExpandableText, FrostTextRun;
 export 'src/display/filter_bar.dart' show FrostFilterBar;
 export 'src/display/filter_chip.dart';
 export 'src/display/labeled_content.dart';

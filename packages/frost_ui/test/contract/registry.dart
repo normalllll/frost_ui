@@ -117,6 +117,7 @@ const _data = [
   'FrostTableColumn',
   'FrostTableCompactRow',
   'FrostTaskAction',
+  'FrostTextRun',
   'FrostThreadAction',
   'FrostThreadItem',
   'FrostTokenRule',

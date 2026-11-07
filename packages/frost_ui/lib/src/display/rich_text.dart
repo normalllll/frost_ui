@@ -14,6 +14,8 @@ const _codeVerticalInset = 2.0;
 
 /// Selectable text with a small Markdown subset. Links and social targets are
 /// delegated to the application; this widget never launches a URL or a route.
+/// A target without its callback reads as the text around it. For text that
+/// must show exactly as written, see `FrostExpandableText.linked`.
 class FrostRichText extends StatefulWidget {
   const FrostRichText({required this.text, this.onLink, this.onMention, this.onHashtag, this.role = FrostTextRole.body, this.selectable = true, super.key});
   final String text;
@@ -69,7 +71,8 @@ class FrostRichTextState extends State<FrostRichText> {
       FrostRichTarget.hashtag => widget.onHashtag == null ? null : () => widget.onHashtag!(node.value!),
       null => null,
     };
-    if (node.target == null) return TextSpan(text: node.text, style: style);
+    // A target nothing handles reads as the text around it.
+    if (callback == null) return TextSpan(text: node.text, style: style);
     return WidgetSpan(
       alignment: PlaceholderAlignment.middle,
       child: _RichAction(
