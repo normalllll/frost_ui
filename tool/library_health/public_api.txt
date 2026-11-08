@@ -199,6 +199,7 @@ class	FrostSliverDataWaterfallGrid	frost_data:data_slivers.dart	-	reviewed:20261
 class	FrostSliverExpand	layout/sliver_expand.dart	-	baseline-20261102
 class	FrostSliverGrid	layout/grid.dart	-	baseline-20261102
 class	FrostSliverList	lists/sliver_list.dart	-	baseline-20261102
+class	FrostSliverSectionsHeader	layout/pinned_sections_sliver.dart	-	reviewed:20261108:lead scrolls away, tabs stick; joins private chrome glass
 class	FrostSliverWaterfallGrid	layout/waterfall_grid.dart	-	baseline-20261102
 class	FrostSplitView	navigation/split_view.dart	-	baseline-20261102
 class	FrostSpringBuilder	motion/spring.dart	-	baseline-20261102
@@ -333,7 +334,7 @@ ctor	FrostErrorDetails.quiet	feedback/error_content.dart	details,initiallyExpand
 ctor	FrostErrorPresenter.new	foundation/scope.dart	action,details,icon,message,title	baseline-20261102
 ctor	FrostExpandableText.new	display/expandable_text.dart	expanded,key,maxLines,onExpandedChanged,role,text	baseline-20261102
 ctor	FrostExpandableText.rich	display/expandable_text.dart	expanded,key,maxLines,onExpandedChanged,onHashtag,onLink,onMention,role,text	reviewed:20261108:truncation needs frost layout; rich ctor mirrors FrostRichText
-ctor	FrostExpandableText.linked	display/expandable_text.dart	expanded,key,maxLines,onExpandedChanged,onLink,role,runs	reviewed:20261108:literal text, only app links; .rich cannot escape Markdown
+ctor	FrostExpandableText.linked	display/expandable_text.dart	expanded,fontSize,key,lineHeight,maxLines,onExpandedChanged,onLink,onLinkInBackground,onLinkInNewTab,role,runs	reviewed:20261108:link hit areas and truncation are internal; new-tab, size, height
 ctor	FrostFieldScope.new	controls/field_appearance.dart	appearance,child,key	baseline-20261102
 ctor	FrostFilterBar.new	display/filter_bar.dart	chips,key,onClearAll	baseline-20261102
 ctor	FrostFilterChip.new	display/filter_chip.dart	key,label,onClear,onPressed,value	baseline-20261102
@@ -380,7 +381,7 @@ ctor	FrostLinkCard.new	social/link_card.dart	description,image,key,onPressed,sty
 ctor	FrostLinkCard.skeleton	social/link_card.dart	description,host,image,key,style,title	baseline-20261102
 ctor	FrostList.new	lists/list.dart	dividers,itemBuilder,items,key,onSelected,reserveIconColumn,selected	baseline-20261102
 ctor	FrostListRow.check	lists/list_row.dart	checked,contentTitle,key,leading,onPressed,selected,subtitle,title	baseline-20261102
-ctor	FrostListRow.new	lists/list_row.dart	accessory,contentTitle,contextMenu,destructive,enabled,key,leading,onPressed,selected,subtitle,title,trailing,value	baseline-20261102
+ctor	FrostListRow.new	lists/list_row.dart	accessory,contentTitle,contextMenu,destructive,enabled,key,leading,onOpenInBackground,onOpenInNewTab,onPressed,selected,subtitle,title,trailing,value	reviewed:20261108:parity with FrostMediaRow; click surface is internal
 ctor	FrostListRow.skeleton	lists/list_row.dart	icon,subtitle,title,value	baseline-20261102
 ctor	FrostListRow.toggle	lists/list_row.dart	contentTitle,key,leading,onChanged,selected,subtitle,title,value	baseline-20261102
 ctor	FrostLoadStateSwitcher.new	frost_data:load_state_switcher.dart	animateSize,child,key,phase	reviewed:20261103:moved to frost_data unchanged
@@ -421,7 +422,7 @@ ctor	FrostNumberField.new	controls/number_field.dart	decimals,error,help,key,lab
 ctor	FrostPageHeader.new	navigation/page_header.dart	actions,collapsedMiddle,controls,key,leading,leadingIcons,middle,onBack,searchController,title	reviewed:20261103:needed by the input capability, portrait and slot requests
 ctor	FrostPageIndicator.new	navigation/page_indicator.dart	count,current,key,onMedia,onSelected	baseline-20261102
 ctor	FrostPageTitle.new	navigation/window_title.dart	id,imageUrl,kind,title	baseline-20261102
-ctor	FrostPager.new	navigation/pager.dart	controller,indicatorPlacement,initialPage,itemBuilder,itemCount,key,onPageChanged,showsIndicator	baseline-20261102
+ctor	FrostPager.new	navigation/pager.dart	autofocus,controller,indicatorPlacement,initialPage,itemBuilder,itemCount,key,onPageChanged,showsIndicator	reviewed:20261108:pager focus node is private; autofocus is the minimal hook
 ctor	FrostPalettes.new	foundation/tokens.dart	accentPresets,categorical,darkCool,darkDefaultAccent,darkNeutral,darkWarm,lightCool,lightDefaultAccent,lightNeutral,lightWarm	baseline-20261102
 ctor	FrostPathField.new	controls/path_field.dart	error,help,key,label,onChoose,onReveal,path,placeholder	baseline-20261102
 ctor	FrostPathText.new	primitives/path_text.dart	key,path,role,selectable,tone	baseline-20261102
@@ -492,6 +493,7 @@ ctor	FrostSliverExpand.new	layout/sliver_expand.dart	expanded,key,sliver	baselin
 ctor	FrostSliverGrid.new	layout/grid.dart	aspectRatio,itemBuilder,itemCount,key,minItemWidth	baseline-20261102
 ctor	FrostSliverList.columns	lists/sliver_list.dart	dividers,itemBuilder,itemCount,itemKey,key,maxColumns,minColumnWidth	baseline-20261102
 ctor	FrostSliverList.new	lists/sliver_list.dart	dividers,itemBuilder,itemCount,itemKey,key	baseline-20261102
+ctor	FrostSliverSectionsHeader.new	layout/pinned_sections_sliver.dart	key,lead,tabs	reviewed:20261108:lead scrolls away, tabs stick; joins private chrome glass
 ctor	FrostSliverWaterfallGrid.new	layout/waterfall_grid.dart	columns,controller,crossAxisSpacing,itemBuilder,items,key,mainAxisSpacing,maxColumns,padding,preferredTileWidth	baseline-20261102
 ctor	FrostSplitView.new	navigation/split_view.dart	header,initialPrimaryWidth,key,onCloseSecondary,onPrimaryWidthChanged,primary,resizable,secondary	baseline-20261102
 ctor	FrostSpringBuilder.new	motion/spring.dart	builder,child,key,spring,value	baseline-20261102
@@ -527,7 +529,7 @@ ctor	FrostTextField.new	controls/text_field.dart	appearance,autofocus,clearable,
 ctor	FrostTextField.secure	controls/text_field.dart	appearance,autofocus,controller,enabled,error,focusNode,help,key,label,leading,onChanged,onEditingComplete,onSubmitted,onTap,onTapOutside,placeholder,readOnly,scrollController,size,textInputAction,trailing	baseline-20261102
 ctor	FrostTextRun.new	display/expandable_text.dart	link,text	reviewed:20261108:minimal text and optional link pair
 ctor	FrostThemeTokens.new	foundation/tokens.dart	accent,brightness,canvas,categorical,cautionInk,cautionTint,disabledText,edgeHairline,edgeHighlight,fill,fillStrong,fillSubtle,hoverSurface,infoInk,infoTint,line,mediaInnerStroke,negativeInk,negativeTint,onMediaInk,onMediaScrim,positiveInk,positiveTint,pressedSurface,separator,shadow,shadowAmbient,shadowContact,surface,surfaceInset,surfaceMuted,surfaceRaised,surfaceTint,textPrimary,textQuaternary,textSecondary,textSecondaryGlass,textTertiary,textTertiaryGlass,threadLine,tone	baseline-20261102
-ctor	FrostThread.new	social/thread.dart	collapsedReplyCount,item,key,onShowReplies,replies,style	baseline-20261102
+ctor	FrostThread.new	social/thread.dart	collapsedRepliesLabel,collapsedReplyCount,item,key,onShowReplies,replies,style	reviewed:20261108:reply row is internal; label replaces counted text, shows at 0
 ctor	FrostThreadAction.new	social/thread.dart	count,icon,label,onPressed,selected	baseline-20261102
 ctor	FrostThreadItem.new	social/thread.dart	actions,author,avatar,badge,badgeTone,body,contextMenu,key,like,meta,onPressed,reply,time	baseline-20261102
 ctor	FrostThumbnail.new	media/thumbnail.dart	image,key,onPressed,selected,semanticLabel,size	baseline-20261102

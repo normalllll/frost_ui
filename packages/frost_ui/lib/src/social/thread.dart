@@ -222,6 +222,7 @@ class FrostThread extends StatefulWidget {
     required this.item,
     this.replies = const [],
     this.collapsedReplyCount = 0,
+    this.collapsedRepliesLabel,
     this.onShowReplies,
     this.style = FrostThreadStyle.block,
     super.key,
@@ -229,6 +230,11 @@ class FrostThread extends StatefulWidget {
   final FrostThreadItem item;
   final List<FrostThread> replies;
   final int collapsedReplyCount;
+
+  /// The whole text of the row that shows collapsed replies, in place of the
+  /// counted label. Use it when the number of replies is unknown; the row then
+  /// shows even with a [collapsedReplyCount] of 0.
+  final String? collapsedRepliesLabel;
   final VoidCallback? onShowReplies;
   final FrostThreadStyle style;
   @override
@@ -269,11 +275,13 @@ class _ThreadState extends State<FrostThread> {
     ),
   );
 
+  bool get _showsReplyRow => widget.collapsedReplyCount > 0 || widget.collapsedRepliesLabel != null;
+
   Widget _showReplies(BuildContext context) => Align(
     alignment: AlignmentDirectional.centerStart,
     child: FrostButtonControl(
       presentation: FrostButtonPresentation.link,
-      label: FrostScope.labelsOf(context).showReplies(widget.collapsedReplyCount),
+      label: widget.collapsedRepliesLabel ?? FrostScope.labelsOf(context).showReplies(widget.collapsedReplyCount),
       variant: FrostButtonVariant.plain,
       size: FrostControlSize.compact,
       // In a reply block the link is small and sits on the block's text edge.
@@ -312,14 +320,14 @@ class _ThreadState extends State<FrostThread> {
   }
 
   Widget _block(BuildContext context, int depth) {
-    final hasReplies = widget.replies.isNotEmpty || widget.collapsedReplyCount > 0;
+    final hasReplies = widget.replies.isNotEmpty || _showsReplyRow;
     final indent = depth < _maximumIndent ? (depth == 0 ? _avatarExtent : _compactAvatarExtent) + FrostGap.related : 0.0;
     final replies = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
         for (final (index, reply) in widget.replies.indexed) _replyEntry(index, reply, depth, gap: index == 0 ? 0 : FrostGap.related),
-        if (widget.collapsedReplyCount > 0)
+        if (_showsReplyRow)
           Padding(
             padding: EdgeInsets.only(top: widget.replies.isEmpty ? 0 : FrostGap.inline),
             child: _showReplies(context),
@@ -357,7 +365,7 @@ class _ThreadState extends State<FrostThread> {
     children: [
       widget.item,
       for (final (index, reply) in widget.replies.indexed) _replyEntry(index, reply, depth, gap: FrostGap.related),
-      if (widget.collapsedReplyCount > 0)
+      if (_showsReplyRow)
         Padding(
           padding: const EdgeInsets.only(top: FrostGap.related),
           child: _showReplies(context),

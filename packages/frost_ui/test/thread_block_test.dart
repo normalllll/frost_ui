@@ -149,4 +149,18 @@ void main() {
     final end = root.connections.last.getBounds().bottom + root.localToGlobal(Offset.zero).dy;
     expect(end, tester.getCenter(find.byKey(const ValueKey('last'))).dy);
   });
+  for (final style in FrostThreadStyle.values) {
+    testWidgets('a thread with an unknown reply count words its row without a number ($style)', (tester) async {
+      final semantics = tester.ensureSemantics();
+      var shown = 0;
+      await _pump(tester, FrostThread(item: _item('Ann'), collapsedRepliesLabel: 'Show more replies', onShowReplies: () => shown++, style: style));
+      expect(find.textContaining('L.showReplies'), findsNothing);
+      expect(find.bySemanticsLabel('Show more replies'), findsOneWidget);
+      await tester.tap(find.text('Show more replies'));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(shown, 1);
+      semantics.dispose();
+      expect(tester.takeException(), isNull);
+    });
+  }
 }
