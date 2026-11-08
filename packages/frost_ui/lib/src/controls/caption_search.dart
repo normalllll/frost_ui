@@ -15,8 +15,12 @@ import 'buttons.dart';
 import 'field_appearance.dart';
 import 'search_input.dart';
 
-/// Editable caption search. The shell reserves 360 logical pixels at rest and
-/// expands toward the leading edge to 520, over the tabs when needed. On a
+/// Where a title-row search sits. [end] is beside the window buttons, narrower
+/// at rest; the search still expands toward the leading edge.
+enum FrostCaptionSearchPlacement { center, end }
+
+/// Editable caption search. The shell reserves 360 logical pixels at rest, or
+/// 240 with [FrostCaptionSearchPlacement.end], and expands toward the leading edge to 520, over the tabs when needed. On a
 /// narrow caption it rests as an icon and expands across available caption room.
 /// The App owns the query, history, results and tab navigation.
 class FrostCaptionSearch extends StatefulWidget {

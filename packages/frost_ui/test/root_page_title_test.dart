@@ -176,7 +176,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(tester.getTopLeft(find.text('Illust')).dx, moreOrLessEquals(tester.getTopLeft(find.text('Rankings Home page')).dx, epsilon: .5));
-      if (!actions) expect(tester.getTopLeft(find.text('Illust')).dy - tester.getTopLeft(find.byType(FrostPinnedChrome)).dy, greaterThan(_inset));
+      if (!actions) expect(tester.getTopLeft(find.byType(FrostTabBar)).dy, tester.getTopLeft(find.byType(FrostPinnedChrome)).dy);
       expect(tester.takeException(), isNull);
     });
   }

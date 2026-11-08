@@ -469,7 +469,7 @@ ctor	FrostSettingsSections.new	layout/settings_sections.dart	compact,detail,head
 ctor	FrostSettingsSelectTile.new	layout/settings_select_tile.dart	enabled,icon,items,key,onChanged,subtitle,subtitleStatus,title,value	baseline-20261102
 ctor	FrostSettingsSelectTile.values	layout/settings_select_tile.dart	enabled,icon,key,label,onChanged,subtitle,subtitleStatus,title,value,values	baseline-20261102
 ctor	FrostShelf.new	layout/shelf.dart	action,height,inset,itemBuilder,itemCount,itemExtent,key,spacing,title	baseline-20261102
-ctor	FrostShell.new	navigation/shell/shell.dart	atDestinationRoot,backToFirst,brand,canGoBack,child,destinations,initiallyExpanded,key,navigationPlacement,onBack,onDestinationSelected,onExpandedChanged,routeDepth,secondary,selectedIndex,showsMobileNavigation,sidebarAlignment,tabs,taskEntry,titleBarContent,titleBarSearch	reviewed:20261103:needed by the input capability, portrait and slot requests
+ctor	FrostShell.new	navigation/shell/shell.dart	atDestinationRoot,backToFirst,brand,canGoBack,child,destinations,initiallyExpanded,key,navigationPlacement,onBack,onDestinationSelected,onExpandedChanged,routeDepth,secondary,selectedIndex,showsMobileNavigation,sidebarAlignment,tabs,taskEntry,titleBarContent,titleBarSearch,titleBarSearchPlacement	reviewed:20261109:shell owns caption geometry; app cannot compose end placement
 ctor	FrostShellBackToFirst.new	navigation/shell_navigation_scope.dart	icon,label,onPressed	baseline-20261102
 ctor	FrostShellBrand.new	navigation/shell/shell.dart	expanded,icon,label	baseline-20261102
 ctor	FrostShellDestination.new	navigation/shell/destination.dart	child,key	baseline-20261102
@@ -568,6 +568,7 @@ enum	FrostButtonChevron	controls/_button_types.dart	-	baseline-20261102
 enum	FrostButtonEdgeAlignment	controls/_button_types.dart	-	baseline-20261102
 enum	FrostButtonRole	controls/_button_types.dart	-	baseline-20261102
 enum	FrostButtonShape	controls/_button_types.dart	-	baseline-20261102
+enum	FrostCaptionSearchPlacement	controls/caption_search.dart	-	reviewed:20261109:shell owns caption geometry; app cannot compose end placement
 enum	FrostClickFeedback	primitives/click_surface.dart	-	baseline-20261102
 enum	FrostCodeWrap	display/code_block.dart	-	baseline-20261102
 enum	FrostColumnAlignment	layout/column_placement.dart	-	baseline-20261102
@@ -702,6 +703,8 @@ member	FrostCaptionMetrics.glyphSize	navigation/window_caption.dart	-	baseline-2
 member	FrostCaptionMetrics.linuxButtonSize	navigation/window_caption.dart	-	baseline-20261102
 member	FrostCaptionMetrics.linuxButtonWidth	navigation/window_caption.dart	-	baseline-20261102
 member	FrostCaptionMetrics.linuxGlyphSize	navigation/window_caption.dart	-	baseline-20261102
+member	FrostCaptionSearchPlacement.center	controls/caption_search.dart	-	reviewed:20261109:shell owns caption geometry; app cannot compose end placement
+member	FrostCaptionSearchPlacement.end	controls/caption_search.dart	-	reviewed:20261109:shell owns caption geometry; app cannot compose end placement
 member	FrostChromeActiveBody.isActive	layout/chrome_active_body.dart	-	reviewed:20261105:pass: a kept section that is not marked counts toward the header glass; this is the one part of a sectioned page an app cannot compose
 member	FrostClickFeedback.media	primitives/click_surface.dart	-	baseline-20261102
 member	FrostClickFeedback.quiet	primitives/click_surface.dart	-	baseline-20261102

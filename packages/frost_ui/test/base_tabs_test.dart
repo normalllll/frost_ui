@@ -188,7 +188,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Retained detail'), findsOneWidget);
     expect(state.currentState!.selections, 0);
-    expect(tester.widget<FrostNavItem>(nav).selected, isTrue);
+    // The retained detail is a pushed page: the sidebar stays without a highlight.
+    expect(tester.widget<FrostNavItem>(nav).selected, isFalse);
     await tester.tap(nav);
     await tester.pumpAndSettle();
     expect(find.text('Open detail'), findsOneWidget);

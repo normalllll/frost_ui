@@ -195,6 +195,7 @@ class FrostShell extends StatefulWidget {
     this.brand,
     this.titleBarContent,
     this.titleBarSearch,
+    this.titleBarSearchPlacement = FrostCaptionSearchPlacement.center,
     this.tabs,
     this.navigationPlacement,
     this.sidebarAlignment = FrostSidebarAlignment.automatic,
@@ -224,7 +225,8 @@ class FrostShell extends StatefulWidget {
   /// Whether the current page is the selected destination's own root page,
   /// with nothing pushed above it. Selecting that destination again then
   /// signals [FrostShellNavigationScope.primaryReselection] (scroll to top,
-  /// refresh) instead of navigating.
+  /// refresh) instead of navigating. The sidebar highlights a destination only
+  /// on its root page; the bottom bar keeps [selectedIndex] on every page.
   final bool atDestinationRoot;
 
   /// Called after the shell has removed, with no exit motion, every page and
@@ -268,6 +270,9 @@ class FrostShell extends StatefulWidget {
   /// a fixed resting width that folds to an icon, and room to expand. The title
   /// row has one content slot: passing this and [titleBarContent] throws.
   final Widget? titleBarSearch;
+
+  /// Where [titleBarSearch] sits in the title row.
+  final FrostCaptionSearchPlacement titleBarSearchPlacement;
 
   /// The pages. Retain the destinations in an [IndexedStack] or
   /// [FrostLazyIndexedStack] and select one by changing its index: the shell
@@ -437,7 +442,7 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
     final contentInFront = tabs?.baseTab != null && !tabs!.isBaseTabActive;
     return FrostShellSecondary(
       destinations: secondary.destinations,
-      selectedIndex: contentInFront ? null : secondary.selectedIndex,
+      selectedIndex: contentInFront || !widget.atDestinationRoot ? null : secondary.selectedIndex,
       onSelected: (index) {
         if (contentInFront) {
           tabs.activate(0);
@@ -709,7 +714,9 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
                                             destinations: widget.destinations,
                                             selectedIndex: widget.tabs?.controller.baseTab != null && !widget.tabs!.controller.isBaseTabActive
                                                 ? null
-                                                : _currentPrimary,
+                                                : widget.atDestinationRoot
+                                                ? _currentPrimary
+                                                : null,
                                             secondary: _sidebarSecondary(),
                                             expandedWidth: expandedWidth,
                                             ellipsizesLabels: ellipsizesLabels,
@@ -777,6 +784,7 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
                                           tabs: useHorizontalLayout ? widget.tabs : null,
                                           brandIcon: widget.brand?.icon,
                                           expandsSearch: widget.titleBarSearch != null,
+                                          searchAtEnd: widget.titleBarSearchPlacement == FrostCaptionSearchPlacement.end,
                                           brandLabel: _brandLabel(context),
                                           iconAxis: (rtl ? frame.right : frame.left) + _railWidth / 2,
                                           nativeCaption: hasCaption,

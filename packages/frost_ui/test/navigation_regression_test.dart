@@ -45,6 +45,7 @@ Widget _shell({
   bool canGoBack = false,
   VoidCallback? onBack,
   bool expanded = false,
+  bool atRoot = true,
   FrostWindowActions? window,
   TargetPlatform platform = TargetPlatform.windows,
 }) => _withTouchTargets(
@@ -55,7 +56,7 @@ Widget _shell({
       selectedIndex: selected,
       secondary: secondary,
       tabs: tabs,
-      atDestinationRoot: true,
+      atDestinationRoot: atRoot,
       onDestinationSelected: onSelected ?? (_) {},
       canGoBack: canGoBack,
       onBack: onBack ?? () {},
@@ -158,6 +159,54 @@ void main() {
         matching: find.byWidgetPredicate((widget) => widget is Semantics && widget.properties.selected == true),
       );
       expect(highlighted, findsNothing);
+    });
+
+    for (final expanded in [true, false]) {
+      testWidgets('a pushed page leaves the sidebar without a highlight (expanded: $expanded)', (tester) async {
+        Widget app({required bool atRoot, int? secondary}) => _shell(
+          expanded: expanded,
+          selected: 0,
+          atRoot: atRoot,
+          secondary: FrostShellSecondary(destinations: [_destination('Settings'), _destination('About')], selectedIndex: secondary, onSelected: (_) {}),
+        );
+        Iterable<String> selected() => tester.widgetList<FrostNavItem>(find.byType(FrostNavItem)).where((item) => item.selected).map((item) => item.label);
+        _window(tester, 1400, 800);
+        await tester.pumpWidget(app(atRoot: false, secondary: 1));
+        await tester.pumpAndSettle();
+        expect(selected(), isEmpty);
+        await tester.pumpWidget(app(atRoot: false));
+        await tester.pumpAndSettle();
+        expect(selected(), isEmpty);
+        await tester.pumpWidget(app(atRoot: true));
+        await tester.pumpAndSettle();
+        expect(selected(), contains('Home'));
+        await tester.pumpWidget(app(atRoot: true, secondary: 1));
+        await tester.pumpAndSettle();
+        expect(selected().where((label) => label != 'L.more'), ['About']);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('a pushed page keeps the bottom bar highlight, and the sidebar still reaches the root', (tester) async {
+      final picked = <int>[];
+      Widget app() => _shell(selected: 0, atRoot: false, onSelected: picked.add);
+      _window(tester, 390, 800);
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      final highlighted = find.descendant(
+        of: find.byType(FrostShell),
+        matching: find.byWidgetPredicate((widget) => widget is Semantics && widget.properties.selected == true),
+      );
+      expect(highlighted, findsOneWidget);
+      expect(find.descendant(of: highlighted, matching: find.text('Home')), findsOneWidget);
+
+      _window(tester, 1400, 800);
+      await tester.pumpWidget(_shell(expanded: true, selected: 0, atRoot: false, onSelected: picked.add));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Home'));
+      await tester.pumpAndSettle();
+      expect(picked, [0]);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('a selected secondary destination takes the sidebar highlight; the bottom bar keeps the opener', (tester) async {

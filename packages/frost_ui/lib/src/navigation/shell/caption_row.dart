@@ -15,10 +15,11 @@ class _CaptionRow extends StatelessWidget {
     this.brandIcon,
     this.brandLabel,
     this.expandsSearch = false,
+    this.searchAtEnd = false,
     this.tabs,
   });
   final double iconAxis;
-  final bool nativeCaption, showsBack, expandsSearch;
+  final bool nativeCaption, showsBack, expandsSearch, searchAtEnd;
   final Widget? brand, titleContent, brandIcon;
   final String? brandLabel;
   final FrostShellTabs<Object>? tabs;
@@ -71,6 +72,7 @@ class _CaptionRow extends StatelessWidget {
                   brandLabel: brandLabel,
                   titleContent: titleContent,
                   nativeCaption: nativeCaption,
+                  searchAtEnd: searchAtEnd,
                   // Match the leading clearance of Back in either caption mode.
                   endInset: endButtons
                       ? FrostGap.related
@@ -340,6 +342,7 @@ class _TabbedCaptionContent extends StatefulWidget {
     required this.brandIcon,
     required this.titleContent,
     required this.nativeCaption,
+    required this.searchAtEnd,
     required this.endInset,
     required this.searchCenter,
     this.brandLabel,
@@ -347,7 +350,7 @@ class _TabbedCaptionContent extends StatefulWidget {
   final FrostShellTabs<Object>? tabs;
   final Widget? brand, brandIcon, titleContent;
   final String? brandLabel;
-  final bool nativeCaption;
+  final bool nativeCaption, searchAtEnd;
   final double endInset, searchCenter;
   @override
   State<_TabbedCaptionContent> createState() => _TabbedCaptionContentState();
@@ -386,9 +389,10 @@ class _TabbedCaptionContentState extends State<_TabbedCaptionContent> {
             : (brand == null ? 0.0 : 160.0 * scale);
         final tabActionWidth = tabs?.canCreateTab == true ? math.max(40.0, FrostDensity.of(context).targetHeight) : 0.0;
         var tabWidth = !hasTabs ? 0.0 : contentCount * frostShellTabMinWidth * scale + baseWidth + tabActionWidth;
-        var searchWidth = titleContent == null ? 0.0 : frostCaptionSearchWidth;
+        var searchWidth = titleContent == null ? 0.0 : (widget.searchAtEnd ? frostCaptionSearchEndWidth : frostCaptionSearchWidth);
         var fullTabs = hasTabs, fullBrand = !hasTabs;
         double anchorEnd() {
+          if (widget.searchAtEnd) return endInset;
           // The row flows with the text, so its end is the left edge in RTL; the
           // centre is always measured from the left.
           final toEnd = Directionality.of(context) == TextDirection.ltr ? constraints.maxWidth - widget.searchCenter : widget.searchCenter;
@@ -489,7 +493,7 @@ class _TabbedCaptionContentState extends State<_TabbedCaptionContent> {
                   ),
                 Expanded(child: drag(const SizedBox.expand())),
                 if (titleContent != null) SizedBox(width: searchWidth),
-                SizedBox(width: searchEnd),
+                drag(SizedBox(width: searchEnd, height: constraints.maxHeight)),
               ],
             ),
             if (titleContent != null)

@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 // Caption geometry is owned by the shell so an expanded field participates in
 // hit testing outside its resting slot, rather than merely painting overflow.
 const frostCaptionSearchWidth = 360.0;
+const frostCaptionSearchEndWidth = 240.0;
 const frostCaptionSearchExpandedWidth = 520.0;
 
 class FrostCaptionSearchScope extends InheritedWidget {

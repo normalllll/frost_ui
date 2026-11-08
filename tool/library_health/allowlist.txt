@@ -56,7 +56,7 @@ framework	media/media_chrome.dart	_FrostMediaChromeState.initState	HardwareKeybo
 framework	overlays/context_menu.dart	_FrostContextMenuRegionState._pointerDown	hitTestInView	1	baseline-20261102
 framework	overlays/menu_anchor.dart	_AppMenuAnchorState._contentPopScope	visitChildElements	1	reviewed:20261103:popover PopScope walk has no cleaner mechanism
 framework	primitives/_text_selection_chrome.dart	_TextSelectionInputState.initState	HardwareKeyboard.addHandler	1	baseline-20261102
-framework	primitives/click_surface.dart	_AppClickSurfaceState._updateHover	hitTestInView	1	baseline-20261102
+framework	primitives/click_surface.dart	_AppClickSurfaceState._overNestedControl	hitTestInView	1	reviewed:20261109:one hit test shared by hover and press; count stays 1
 framework	primitives/keyline.dart	_RenderBleed.hitTest	hitTest	1	reviewed:20261103:existing use, listed when the rule grew
 framework	primitives/keyline.dart	frostHasBleedBoundary	visitAncestorElements	1	baseline-20261102
 layers	foundation/app.dart	-	controls/toast.dart	1	baseline-20261102

@@ -64,7 +64,9 @@ class FrostPageHeaderSearchController extends ChangeNotifier {
 ///
 /// In the sidebar layout the root page of a shell destination leaves [title]
 /// to the sidebar and keeps it for screen readers only. A header with nothing
-/// else to show is then just the page's top margin, as tall as its side inset.
+/// else to show is then just the page's top margin, as tall as its side inset,
+/// or nothing above a tab row of a [FrostHeaderSections]. A title that is a control, such as a [FrostTitleMenu], belongs in [leading],
+/// which stays.
 class FrostPageHeader extends StatefulWidget {
   const FrostPageHeader({
     this.leading = const [],
@@ -155,6 +157,20 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
   var _expanded = false;
   var _rest = Rect.zero;
 
+  /// Whether the title last took the secondary page's role.
+  bool? _secondary;
+
+  /// Whether this page, or a page holding its navigator, is being removed.
+  bool _leaving(BuildContext context) {
+    var route = ModalRoute.of(context);
+    while (route != null) {
+      if (!route.isActive) return true;
+      final owner = route.navigator;
+      route = owner == null ? null : ModalRoute.of(owner.context);
+    }
+    return false;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -228,7 +244,9 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
     final scaler = MediaQuery.textScalerOf(context);
     final back = FrostPageHeader.leadingFor(context, onBack: widget.onBack);
     final shell = FrostShellNavigationScope.maybeOf(context);
-    final secondary = back != null || (shell?.canGoBack ?? false);
+    // A page leaving its navigator keeps the title it had: the shell can already
+    // report the page below, and the page is still on screen until it has gone.
+    final secondary = _secondary = _leaving(context) ? _secondary ?? false : back != null || (shell?.canGoBack ?? false);
     final titleRole = secondary ? FrostTextRole.headline : FrostTextRole.title1;
     final headline = FrostTypography.of(context).style(titleRole);
     final fontSize = headline.fontSize!;
@@ -269,7 +287,8 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
       return FrostNativeCaptionPadding(
         child: SizedBox(
           width: double.infinity,
-          height: FrostGap.of(context).page,
+          // Section tabs in a row below start at the top with their own space.
+          height: _rowSpan != null ? 0 : FrostGap.of(context).page,
           child: Align(alignment: AlignmentDirectional.topStart, child: titleNode),
         ),
       );
