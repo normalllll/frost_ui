@@ -25,6 +25,10 @@ class FrostExpandableText extends StatefulWidget {
     : assert(maxLines > 0),
       _rich = false,
       _runs = null,
+      onLinkInNewTab = null,
+      onLinkInBackground = null,
+      fontSize = null,
+      lineHeight = null,
       onLink = null,
       onMention = null,
       onHashtag = null;
@@ -45,7 +49,11 @@ class FrostExpandableText extends StatefulWidget {
     super.key,
   }) : assert(maxLines > 0),
        _rich = true,
-       _runs = null;
+       _runs = null,
+       onLinkInNewTab = null,
+       onLinkInBackground = null,
+       fontSize = null,
+       lineHeight = null;
 
   /// Text shown exactly as written, with links the App marked. Every
   /// character of [runs] is drawn as it is: no Markdown, mentions or hashtags.
@@ -55,6 +63,10 @@ class FrostExpandableText extends StatefulWidget {
   FrostExpandableText.linked({
     required List<FrostTextRun> runs,
     required ValueChanged<Uri> this.onLink,
+    this.onLinkInNewTab,
+    this.onLinkInBackground,
+    this.fontSize,
+    this.lineHeight,
     this.maxLines = 3,
     this.role = FrostTextRole.body,
     this.expanded,
@@ -71,6 +83,17 @@ class FrostExpandableText extends StatefulWidget {
   final List<FrostTextRun>? _runs;
   final ValueChanged<Uri>? onLink;
   final ValueChanged<String>? onMention, onHashtag;
+
+  /// Ctrl/Cmd-click and middle-click on a link of a [FrostExpandableText.linked]
+  /// text, as on a [FrostClickSurface]: open it in a new tab, or in the background.
+  final ValueChanged<Uri>? onLinkInNewTab, onLinkInBackground;
+
+  /// Overrides the size of [role] for a [FrostExpandableText.linked] text, for a
+  /// size the reader chose. Text scaling still applies.
+  final double? fontSize;
+
+  /// Overrides the line height of [role], as a multiple of the font size.
+  final double? lineHeight;
   final int maxLines;
   final FrostTextRole role;
   final bool? expanded;
@@ -95,7 +118,7 @@ class FrostTextRun {
 }
 
 /// A target's place in the joined node text, in UTF-16 offsets.
-typedef _Target = ({int start, int end, String text, VoidCallback? onTap});
+typedef _Target = ({int start, int end, String text, VoidCallback? onTap, VoidCallback? onNewTab, VoidCallback? onBackground});
 
 class _ExpandableTextState extends State<FrostExpandableText> {
   bool _expanded = false;
@@ -141,7 +164,18 @@ class _ExpandableTextState extends State<FrostExpandableText> {
     final targets = <_Target>[];
     var offset = 0;
     for (final node in _nodes) {
-      if (node.target != null) targets.add((start: offset, end: offset + node.text.length, text: node.text, onTap: _callback(node)));
+      if (node.target != null) {
+        final link = node.target == FrostRichTarget.link ? Uri.parse(node.value!) : null;
+        final newTab = widget.onLinkInNewTab, background = widget.onLinkInBackground;
+        targets.add((
+          start: offset,
+          end: offset + node.text.length,
+          text: node.text,
+          onTap: _callback(node),
+          onNewTab: link == null || newTab == null ? null : () => newTab(link),
+          onBackground: link == null || background == null ? null : () => background(link),
+        ));
+      }
       offset += node.text.length;
     }
     return targets;
@@ -171,8 +205,13 @@ class _ExpandableTextState extends State<FrostExpandableText> {
   /// Focusable, announced link areas over the painted target text. A target
   /// that wraps gets one area per line; only the first takes focus.
   List<Widget> _targetAreas(TextPainter painter, int length) {
-    Widget surface(VoidCallback onTap) =>
-        FrostClickSurface(onTap: onTap, shape: FrostClickShape.rounded(FrostRadius.borderRadius(FrostRadius.xs)), child: const SizedBox.expand());
+    Widget surface(_Target target, VoidCallback onTap) => FrostClickSurface(
+      onTap: onTap,
+      onOpenInNewTab: target.onNewTab,
+      onOpenInBackground: target.onBackground,
+      shape: FrostClickShape.rounded(FrostRadius.borderRadius(FrostRadius.xs)),
+      child: const SizedBox.expand(),
+    );
     return [
       for (final target in _targets)
         if (target.onTap case final onTap? when target.start < length)
@@ -180,8 +219,8 @@ class _ExpandableTextState extends State<FrostExpandableText> {
             Positioned.fromRect(
               rect: box.toRect(),
               child: index == 0
-                  ? Semantics(link: true, label: target.text, onTap: onTap, excludeSemantics: true, child: surface(onTap))
-                  : ExcludeSemantics(child: ExcludeFocus(child: surface(onTap))),
+                  ? Semantics(link: true, label: target.text, onTap: onTap, excludeSemantics: true, child: surface(target, onTap))
+                  : ExcludeSemantics(child: ExcludeFocus(child: surface(target, onTap))),
             ),
     ];
   }
@@ -189,7 +228,7 @@ class _ExpandableTextState extends State<FrostExpandableText> {
   @override
   Widget build(BuildContext context) {
     final tokens = FrostThemeTokens.of(context);
-    final style = FrostTypography.of(context).style(widget.role).copyWith(color: tokens.textPrimary);
+    final style = FrostTypography.of(context).style(widget.role).copyWith(color: tokens.textPrimary, fontSize: widget.fontSize, height: widget.lineHeight);
     final scaler = MediaQuery.textScalerOf(context), direction = Directionality.of(context);
     final label = expanded ? FrostScope.labelsOf(context).collapseText : FrostScope.labelsOf(context).expandText;
     final full = _spans(context, style, _plain.length);

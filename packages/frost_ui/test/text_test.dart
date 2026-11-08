@@ -166,6 +166,45 @@ void main() {
     expect(find.descendant(of: find.byType(FrostExpandableText), matching: find.byType(FrostClickSurface)), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('a linked text takes a chosen size and line height for truncation, the action and link areas', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final opened = <Uri>[];
+    final uri = Uri.parse('https://example.test/a');
+    await tester.pumpWidget(
+      view(
+        FrostExpandableText.linked(
+          runs: [
+            FrostTextRun('here', link: uri),
+            const FrostTextRun(' $longText $longText'),
+          ],
+          onLink: opened.add,
+          maxLines: 4,
+          fontSize: 17,
+          lineHeight: 1.7,
+        ),
+        width: 300,
+      ),
+    );
+    final painter = tester
+        .widgetList<CustomPaint>(find.descendant(of: find.byType(FrostExpandableText), matching: find.byType(CustomPaint)))
+        .map((widget) => widget.painter)
+        .whereType<FrostExpandableTextPainter>()
+        .single;
+    final lines = painter.text.computeLineMetrics();
+    expect(lines, hasLength(4));
+    expect(lines.first.height, moreOrLessEquals(17 * 1.7, epsilon: 1));
+    final top = tester.getTopLeft(find.byType(FrostExpandableText)).dy;
+    final action = tester.getRect(find.text('L.expandText'));
+    expect(action.top - top, moreOrLessEquals(lines.last.baseline - lines.last.ascent, epsilon: lines.last.height * .5));
+    final link = tester.getRect(find.bySemanticsLabel('here'));
+    expect(link.height, greaterThanOrEqualTo(17));
+    expect(link.top - top, lessThan(lines.first.height));
+    await tester.tap(find.bySemanticsLabel('here'));
+    await tester.pump();
+    expect(opened, [uri]);
+    semantics.dispose();
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('short text has no action; controlled action requires callback', (tester) async {
     await tester.pumpWidget(view(const FrostExpandableText(text: 'Short')));
     expect(find.text('Short'), findsOneWidget);

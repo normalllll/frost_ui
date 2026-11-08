@@ -86,14 +86,18 @@ sealed class FrostRowSubtitle {
 }
 
 final class _TextSubtitle extends FrostRowSubtitle {
-  const _TextSubtitle(super.text, {this.tone = FrostTextTone.secondary, this.content = false, this.maxLines}) : assert(maxLines == null || maxLines > 0), super._();
+  const _TextSubtitle(super.text, {this.tone = FrostTextTone.secondary, this.content = false, this.maxLines})
+    : assert(maxLines == null || maxLines > 0),
+      super._();
   final FrostTextTone tone;
   final bool content;
   final int? maxLines;
 }
 
 final class _StatusSubtitle extends FrostRowSubtitle {
-  const _StatusSubtitle(super.text, this.status, {this.tone = FrostTextTone.secondary, this.content = false, this.maxLines}) : assert(maxLines == null || maxLines > 0), super._();
+  const _StatusSubtitle(super.text, this.status, {this.tone = FrostTextTone.secondary, this.content = false, this.maxLines})
+    : assert(maxLines == null || maxLines > 0),
+      super._();
   final FrostTextTone tone;
   final FrostStatusTone status;
   final bool content;
@@ -137,6 +141,8 @@ class FrostListRow extends StatefulWidget {
     Widget? trailing,
     FrostRowAccessory accessory = FrostRowAccessory.none,
     VoidCallback? onPressed,
+    VoidCallback? onOpenInNewTab,
+    VoidCallback? onOpenInBackground,
     this.selected = false,
     bool destructive = false,
     bool enabled = true,
@@ -147,6 +153,8 @@ class FrostListRow extends StatefulWidget {
        _trailing = trailing,
        _accessory = accessory,
        _onPressed = onPressed,
+       _onOpenInNewTab = onOpenInNewTab,
+       _onOpenInBackground = onOpenInBackground,
        _destructive = destructive,
        _enabled = enabled,
        _contextMenu = contextMenu,
@@ -172,6 +180,8 @@ class FrostListRow extends StatefulWidget {
        _destructive = false,
        _enabled = onChanged != null,
        _contextMenu = const [],
+       _onOpenInNewTab = null,
+       _onOpenInBackground = null,
        _toggle = value,
        _onChanged = onChanged,
        _checked = null;
@@ -194,6 +204,8 @@ class FrostListRow extends StatefulWidget {
        _destructive = false,
        _enabled = onPressed != null,
        _contextMenu = const [],
+       _onOpenInNewTab = null,
+       _onOpenInBackground = null,
        _toggle = null,
        _onChanged = null,
        _checked = checked;
@@ -218,6 +230,7 @@ class FrostListRow extends StatefulWidget {
   final VoidCallback? _onPressed;
   final bool _destructive, _enabled;
   final List<FrostMenuEntry> _contextMenu;
+  final VoidCallback? _onOpenInNewTab, _onOpenInBackground;
   final bool? _toggle, _checked;
   final ValueChanged<bool>? _onChanged;
   @override
@@ -428,6 +441,9 @@ class _FrostListRowState extends State<FrostListRow> {
         child: FrostClickSurface(
           focusNode: FrostRowFocus.of(context) ?? _focus,
           onTap: interactive ? _activate : null,
+          // While selecting, a modified click extends the selection instead.
+          onOpenInNewTab: interactive && multiple == null ? widget._onOpenInNewTab : null,
+          onOpenInBackground: interactive && multiple == null ? widget._onOpenInBackground : null,
           onLongPress: enabled ? multiple?.longPress : null,
           shape: FrostClickShape.rounded(corners),
           child: FrostMotionSize(
@@ -616,7 +632,8 @@ class _FrostListRowState extends State<FrostListRow> {
 }
 
 class _RowText extends StatelessWidget {
-  const _RowText(this.text, {required this.role, required this.color, bool singleLine = false, int? maxLines, this.content = false}) : maxLines = singleLine ? 1 : maxLines;
+  const _RowText(this.text, {required this.role, required this.color, bool singleLine = false, int? maxLines, this.content = false})
+    : maxLines = singleLine ? 1 : maxLines;
   final bool content;
   final int? maxLines;
   final String text;
