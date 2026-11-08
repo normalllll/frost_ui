@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart' show clampDouble;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -11,8 +14,10 @@ import '../primitives/surface.dart';
 import '_chrome_scroll_away.dart';
 import '_header_search_body.dart';
 import 'chrome_active_body.dart';
+import 'content_viewport.dart';
 
 part 'pinned_chrome_glass.dart';
+part 'pinned_sections_sliver.dart';
 
 /// A bar pinned over the top of a scrolling body. The body scrolls beneath
 /// the bar, and the bar's glass material appears once content is actually
@@ -183,9 +188,12 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
     _drag = position.drag(details, () => _drag = null);
   }
 
+  final _continued = _BarContinued();
+
   @override
   void dispose() {
     _drag?.cancel();
+    _continued.dispose();
     _away.dispose();
     _hidden.dispose();
     _search.dispose();
@@ -290,6 +298,7 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
                     viewPadding: media.viewPadding.copyWith(top: extent),
                   ),
                   child: _PinnedBodyScope(
+                    continued: _continued,
                     child: NotificationListener<ScrollMetricsNotification>(
                       onNotification: _handleMetrics,
                       child: NotificationListener<ScrollNotification>(
@@ -330,17 +339,19 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
                 ),
               },
               child: AnimatedBuilder(
-                animation: _awayMotion,
+                animation: Listenable.merge([_awayMotion, _continued]),
                 builder: (context, chrome) => _ChromeHitArea(
                   exposed: _away.offset,
                   child: FrostPinnedChromeGlass._(
                     // The header sits on the suggestions page, not over scrolled content.
-                    opacity: _search.showing ? 0 : _coverage,
+                    opacity: _search.showing || _continued.value ? 0 : _coverage,
                     // The value already follows the scroll position frame by frame.
                     animate: false,
                     // The glass ends where the visible rows end once the top
                     // row has slid away; content shows below it.
                     hiddenExtent: _away.offset,
+                    // A sections row stuck right below continues this bar.
+                    corners: _continued.value ? FrostPinnedChromeCorners.top : FrostPinnedChromeCorners.all,
                     child: chrome,
                   ),
                 ),
@@ -382,7 +393,9 @@ class _RenderChromeHitArea extends RenderProxyBox {
 // The body keeps the public MediaQuery/spacer contract, but its top padding
 // must never be consumed as another system safe area by a nested pinned bar.
 class _PinnedBodyScope extends InheritedWidget {
-  const _PinnedBodyScope({required super.child});
+  const _PinnedBodyScope({required this.continued, required super.child});
+  final _BarContinued continued;
+  static _BarContinued? continuedOf(BuildContext context) => context.getInheritedWidgetOfExactType<_PinnedBodyScope>()?.continued;
   static bool isInside(BuildContext context) => context.dependOnInheritedWidgetOfExactType<_PinnedBodyScope>() != null;
   @override
   bool updateShouldNotify(_PinnedBodyScope oldWidget) => false;

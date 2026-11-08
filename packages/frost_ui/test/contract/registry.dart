@@ -189,6 +189,7 @@ const _layoutHelper = [
   'FrostMediaHeroSource',
   'FrostRowLeadingExtent',
   'FrostShellDestination',
+  'FrostSliverSectionsHeader',
   'FrostToolbarTitle',
 ];
 
