@@ -95,6 +95,7 @@ class FrostPager extends StatefulWidget {
     this.onPageChanged,
     this.showsIndicator = true,
     this.indicatorPlacement = FrostPageIndicatorPlacement.below,
+    this.autofocus = false,
     super.key,
   }) : assert(itemCount >= 0),
        assert(initialPage >= 0);
@@ -105,6 +106,10 @@ class FrostPager extends StatefulWidget {
   final ValueChanged<int>? onPageChanged;
   final bool showsIndicator;
   final FrostPageIndicatorPlacement indicatorPlacement;
+
+  /// Takes focus when it appears, so the arrow keys page without a click first.
+  /// For a page the pager fills, such as a full-screen viewer.
+  final bool autofocus;
   @override
   State<FrostPager> createState() => _FrostPagerState();
 }
@@ -356,6 +361,7 @@ class _FrostPagerState extends State<FrostPager> with SingleTickerProviderStateM
       onKeyEvent: _key,
       child: FocusableActionDetector(
         focusNode: _focus,
+        autofocus: widget.autofocus,
         enabled: widget.itemCount > 0,
         onShowFocusHighlight: (value) => setState(() => _showsFocus = value),
         child: ListenableBuilder(

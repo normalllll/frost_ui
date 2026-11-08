@@ -460,4 +460,19 @@ void main() {
     expect(controller.page, 1);
     expect(transform.value.storage[12], isNot(before));
   });
+  testWidgets('an autofocus pager pages with the arrow keys without a click first', (tester) async {
+    final controller = FrostPagerController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      app(FrostPager(itemCount: 3, showsIndicator: false, autofocus: true, controller: controller, itemBuilder: (_, i) => Text('page $i')), reduced: true),
+    );
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(controller.page, 1);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(controller.page, 0);
+    expect(tester.takeException(), isNull);
+  });
 }
