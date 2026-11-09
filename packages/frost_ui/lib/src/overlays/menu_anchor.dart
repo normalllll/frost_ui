@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../controls/_form_submit.dart';
 import '../foundation/metrics.dart';
+import '../layout/_caption_search_scope.dart';
 import '../motion/_material_reveal.dart';
 import '_anchored_panel_layout.dart';
 import '_menu_panel.dart';
@@ -78,6 +79,7 @@ class _AppMenuAnchorState extends State<FrostMenuHost> with SingleTickerProvider
   LocalHistoryEntry? _history;
   ModalRoute<Object?>? _popRoute;
   Completer<void>? _closed;
+  FrostCaptionFieldMenu? _fieldMenu;
 
   final _popEntry = _MenuPopEntry();
   ModalRoute<Object?>? _willPopRoute;
@@ -163,6 +165,7 @@ class _AppMenuAnchorState extends State<FrostMenuHost> with SingleTickerProvider
   @override
   void dispose() {
     _closing = true;
+    _fieldMenu?.open = false;
     if (_closed?.isCompleted == false) _closed!.complete();
     _history?.remove();
     _history = null;
@@ -216,6 +219,7 @@ class _AppMenuAnchorState extends State<FrostMenuHost> with SingleTickerProvider
       onOpenRequested: (position, showOverlay) {
         _closed = Completer<void>();
         _closing = false;
+        _fieldMenu = FrostCaptionFieldScope.read(context)?.menu?..open = true;
         final route = widget.route ?? ModalRoute.of(context);
         if (_history == null && route != null) {
           // RawMenuAnchor is an Overlay, not a route. Local history lets system
@@ -248,12 +252,13 @@ class _AppMenuAnchorState extends State<FrostMenuHost> with SingleTickerProvider
       onCloseRequested: (hideOverlay) {
         final ownsFocus = _focusNode.hasFocus || _menuFocus.hasFocus;
         _closing = true;
+        _fieldMenu?.open = false;
         final history = _history;
         _history = null;
         history?.remove();
         _releaseBack();
         if (ownsFocus) {
-          final target = widget.returnFocus ?? _focusNode;
+          final target = widget.returnFocus ?? FrostCaptionFieldScope.read(context)?.editor ?? _focusNode;
           if (target.context != null && target.canRequestFocus) target.requestFocus();
         }
         if (!_tickersEnabled) {

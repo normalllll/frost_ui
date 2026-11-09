@@ -265,6 +265,8 @@ class _SearchField extends StatelessWidget {
       listenable: listenable,
       builder: (context, _) {
         final leading = input.leadingIcon ? FrostIconSet.of(context).search : null;
+        // A control beside a caption field holds the field's focused look.
+        final focused = input.focusNode.hasFocus || (FrostCaptionFieldScope.read(context)?.region.hasFocus ?? false);
         final trailing = FrostControlScope(
           size: FrostControlSize.compact,
           child: FrostFieldTrailing(
@@ -275,7 +277,7 @@ class _SearchField extends StatelessWidget {
               for (final action in input.actions) FrostFieldIconSlot(child: action),
               // Like the caption field's rest state, an empty unfocused field
               // has nothing to submit; its width goes to the placeholder.
-              if (input.focusNode.hasFocus || (input.controller.text.isNotEmpty && !FrostCaptionFieldScope.of(context)))
+              if (focused || (input.controller.text.isNotEmpty && !FrostCaptionFieldScope.of(context)))
                 FrostFieldIconSlot(
                   child: FrostButton.icon(
                     icon: frostForwardIcon(context),
@@ -284,7 +286,7 @@ class _SearchField extends StatelessWidget {
                     onPressed: input.controller.text.trim().isEmpty ? null : () => input._submit(input.controller.text),
                   ),
                 ),
-              if (input.hint case final hint? when !input.focusNode.hasFocus)
+              if (input.hint case final hint? when !focused)
                 FrostFieldHintSlot(
                   child: Container(
                     margin: const EdgeInsetsDirectional.only(end: 4),
@@ -388,7 +390,10 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
 
   /// The dropdown sits in the page rather than in a floating panel.
   bool get _inline => _placement != _Placement.overlay;
-  bool get _visible => _active && _input.focusNode.hasFocus && !_suppressed && _input.content != null;
+  bool get _visible => _active && (_input.focusNode.hasFocus || (_region?.hasFocus ?? false)) && !_suppressed && _input.content != null;
+
+  /// Focus across a caption field and the controls beside it.
+  FocusNode? _region;
 
   @override
   void initState() {
@@ -400,6 +405,28 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
     // Always attach a portal. Visibility is derived during layout so supplied
     // content gets correct geometry on the very first frame.
     _overlay.show();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final region = FrostCaptionFieldScope.read(context)?.region;
+    if (identical(region, _region)) return;
+    _region?.removeListener(_regionChanged);
+    _region = region?..addListener(_regionChanged);
+  }
+
+  void _regionChanged() {
+    if (mounted) setState(() {});
+  }
+
+  // A tap on the menu of a control beside the field is not a tap away from it.
+  // A tap elsewhere with focus on such a control leaves the search altogether.
+  void _tappedOutside() {
+    if (FrostCaptionFieldScope.read(context)?.menu.open ?? false) return;
+    final onControl = !_input.focusNode.hasFocus && (_region?.hasFocus ?? false);
+    _dismiss();
+    if (onControl) _input.onDismiss?.call();
   }
 
   @override
@@ -526,6 +553,7 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
   @override
   void dispose() {
     if (_body?.showing ?? false) _body!.showing = false;
+    _region?.removeListener(_regionChanged);
     _input.controller.removeListener(_queryChanged);
     _input.focusNode.removeListener(_focusChanged);
     _highlightRevision.dispose();
@@ -594,7 +622,7 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
         child: TextFieldTapRegion(
           child: TapRegion(
             groupId: this,
-            onTapOutside: (_) => _dismiss(),
+            onTapOutside: (_) => _tappedOutside(),
             child: _suggestionPresence(
               context,
               ExcludeFocus(

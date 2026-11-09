@@ -32,6 +32,7 @@ class FrostCaptionSearch extends StatefulWidget {
     this.onSubmittedInNewTab,
     this.content,
     this.hint,
+    this.actions = const [],
     super.key,
   });
   final TextEditingController controller;
@@ -46,25 +47,24 @@ class FrostCaptionSearch extends StatefulWidget {
 
   /// As [FrostSearchInput.hint]; none by default.
   final String? hint;
+
+  /// Compact controls at the end of the expanded field, before submit, such as
+  /// a menu button choosing what to search. They take no room at rest. While
+  /// one of them or its menu has focus the search stays expanded and its
+  /// dropdown stays up; closing a menu returns focus to the field.
+  final List<Widget> actions;
   @override
   State<FrostCaptionSearch> createState() => _FrostCaptionSearchState();
 }
 
 class _FrostCaptionSearchState extends State<FrostCaptionSearch> {
   FrostCaptionSearchScope? _layout;
+  final _region = FocusNode(debugLabel: 'Caption search', canRequestFocus: false, skipTraversal: true);
+  final _menu = FrostCaptionFieldMenu();
   @override
   void initState() {
     super.initState();
-    widget.focusNode.addListener(_focusChanged);
-  }
-
-  @override
-  void didUpdateWidget(FrostCaptionSearch oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.focusNode != widget.focusNode) {
-      oldWidget.focusNode.removeListener(_focusChanged);
-      widget.focusNode.addListener(_focusChanged);
-    }
+    _region.addListener(_focusChanged);
   }
 
   @override
@@ -73,7 +73,15 @@ class _FrostCaptionSearchState extends State<FrostCaptionSearch> {
     _layout = FrostCaptionSearchScope.maybeOf(context);
   }
 
-  void _focusChanged() => _layout?.onExpanded(widget.focusNode.hasFocus);
+  void _focusChanged() {
+    if (_layout case final layout?) {
+      layout.onExpanded(_region.hasFocus);
+    } else if (mounted) {
+      // Outside the caption, focus alone decides when the actions show.
+      setState(() {});
+    }
+  }
+
   void _open() {
     _layout?.onExpanded(true);
     // The icon and editor share one stable component. Wait until the expanded
@@ -98,7 +106,7 @@ class _FrostCaptionSearchState extends State<FrostCaptionSearch> {
 
   @override
   void dispose() {
-    widget.focusNode.removeListener(_focusChanged);
+    _region.dispose();
     super.dispose();
   }
 
@@ -119,6 +127,7 @@ class _FrostCaptionSearchState extends State<FrostCaptionSearch> {
         size: FrostControlSize.small,
         leadingIcon: true,
         hint: widget.hint,
+        actions: (_layout?.expanded ?? _region.hasFocus) ? widget.actions : const [],
         // A resting icon has no dropdown; it returns with the field.
         content: constraints.maxWidth >= 120 ? widget.content : null,
       );
@@ -159,7 +168,10 @@ class _FrostCaptionSearchState extends State<FrostCaptionSearch> {
                   minHeight: 0,
                   child: Transform.translate(
                     offset: Offset(0, shift),
-                    child: FrostCaptionFieldScope(child: field),
+                    child: Focus(
+                      focusNode: _region,
+                      child: FrostCaptionFieldScope(region: _region, editor: widget.focusNode, menu: _menu, child: field),
+                    ),
                   ),
                 ),
               ),
