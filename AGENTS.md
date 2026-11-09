@@ -28,4 +28,4 @@
 - Do not run `flutter test` / `dart test` without named test files; the PreToolUse hook in `.claude/settings.json` blocks them, and apps use the same hook script by its absolute path. The tool prints only failures and a summary, so a broad selection (a `--dependents` run usually is one) just runs; it needs no question to the owner.
 - The library health gate runs inside `affected_tests.dart`; its spec is `tool/library_health/README.md`. If it reports growth, stop and report it instead of working around it.
 - A full run happens only when the owner asks for one, usually before a release: `dart tool/affected_tests.dart --all --run`.
-- Screenshots: show a frost_ui change with the reference example's screens that the change touches (currently bili_dango_preview), in the states it touches. App screens are not recaptured for a frost_ui change.
+- Screenshots: a frost_ui change needs none, and a full run takes no matrix of images across themes and text sizes. Whether text overflows is checked by tests in code.
