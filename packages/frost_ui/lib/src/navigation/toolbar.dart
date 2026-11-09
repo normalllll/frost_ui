@@ -229,6 +229,7 @@ class _FrostToolbarState extends State<FrostToolbar> with TickerProviderStateMix
                         edgeInset: keyline == null || keyline.insideContainer || FrostOnMediaChromeScope.inkOf(context) != null ? null : inset,
                         startRoom: extraStart,
                         endRoom: extraEnd,
+                        plateRoom: (direction == TextDirection.ltr ? outsets.right : outsets.left) - extraEnd,
                         minimumHeight: hit,
                         direction: Directionality.of(context),
                         items: trailing,

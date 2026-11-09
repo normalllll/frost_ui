@@ -45,11 +45,17 @@ sealed class FrostToolbarItem {
     required String label,
     FrostToolbarPriority priority = FrostToolbarPriority.normal,
   }) => _SortMenu<T>(fields, value, ascending, onChanged, label, priority);
+
+  /// Pass [plated] when [builder] returns a text button with a filled plate. It
+  /// sits at the end of the [minWidth] slot, and at the end of the row its plate
+  /// lines up with the content edge, like a field below it. Without [plated] the
+  /// slot reaches past that edge by the inset of an unfilled text button.
   factory FrostToolbarItem.custom({
     required WidgetBuilder builder,
     required double minWidth,
     required FrostMenuEntry overflowEntry,
     FrostToolbarPriority priority,
+    bool plated,
   }) = _Custom;
   bool get _canCompact;
 
@@ -166,12 +172,18 @@ class _Menu extends FrostToolbarItem {
 }
 
 class _Custom extends FrostToolbarItem {
-  const _Custom({required this.builder, required this.minWidth, required this.overflowEntry, FrostToolbarPriority priority = FrostToolbarPriority.normal})
-    : assert(minWidth >= 0 && minWidth < double.infinity),
-      super(priority);
+  const _Custom({
+    required this.builder,
+    required this.minWidth,
+    required this.overflowEntry,
+    FrostToolbarPriority priority = FrostToolbarPriority.normal,
+    this.plated = false,
+  }) : assert(minWidth >= 0 && minWidth < double.infinity),
+       super(priority);
   final WidgetBuilder builder;
   final double minWidth;
   final FrostMenuEntry overflowEntry;
+  final bool plated;
   @override
   bool get _canCompact => false;
   @override
@@ -179,7 +191,13 @@ class _Custom extends FrostToolbarItem {
   @override
   Widget _build(BuildContext context, bool compact) => SizedBox(
     width: minWidth,
-    child: Builder(builder: builder),
+    child: plated
+        ? Align(
+            alignment: AlignmentDirectional.centerEnd,
+            heightFactor: 1,
+            child: Builder(builder: builder),
+          )
+        : Builder(builder: builder),
   );
   @override
   FrostMenuEntry _overflow(BuildContext context) => overflowEntry;
