@@ -313,8 +313,8 @@ ctor	FrostControlScope.new	foundation/control_scope.dart	child,enabled,key,size,
 ctor	FrostCopyable.new	display/copyable.dart	display,key,monospace,text	baseline-20261102
 ctor	FrostCountBadge.new	display/count_badge.dart	count,key,max,tone	baseline-20261102
 ctor	FrostDataDot.new	display/data_dot.dart	index,key	baseline-20261102
-ctor	FrostDatePicker.new	controls/date_picker.dart	clearable,error,firstDate,help,key,label,lastDate,onChanged,placeholder,size,value	baseline-20261102
-ctor	FrostDateRangePicker.new	controls/date_range_picker.dart	error,firstDate,help,key,label,lastDate,onChanged,placeholder,size,value	baseline-20261102
+ctor	FrostDatePicker.new	controls/date_picker.dart	clearable,error,firstDate,help,key,label,lastDate,onChanged,placeholder,showsYear,size,value	reviewed:20261109:pass: an app cannot rewrite the date text inside the field and could only work around it with help; a boolean parameter named as on the range picker is the smallest consistent interface
+ctor	FrostDateRangePicker.new	controls/date_range_picker.dart	error,firstDate,help,key,label,lastDate,onChanged,placeholder,showsYear,size,value	reviewed:20261109:pass: the field text is generated inside the control, and the parameter has the same name and meaning as on the single date picker
 ctor	FrostDetailPage.media	navigation/detail_page.dart	arguments,child,key,name,opaque,restorationId	baseline-20261102
 ctor	FrostDetailPage.secondaryDestination	navigation/detail_page.dart	arguments,child,key,name,restorationId	reviewed:20261108:shell cannot tell secondary roots apart; marker ctor needed
 ctor	FrostDetailPage.new	navigation/detail_page.dart	arguments,child,key,name,opaque,restorationId	baseline-20261102

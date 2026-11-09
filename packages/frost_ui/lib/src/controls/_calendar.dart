@@ -16,7 +16,9 @@ import '../motion/layout_crossfade.dart';
 import '../motion/spring.dart';
 import '../primitives/_click_feedback.dart';
 import '../primitives/_directional_icon.dart';
+import '../primitives/icon.dart';
 import '../primitives/text.dart';
+import '_calendar_years.dart';
 import '_input_surface.dart';
 import 'buttons.dart';
 
@@ -28,6 +30,13 @@ const frostCalendarWeekdayGap = 4.0;
 const frostCalendarNumberSpace = 4.0;
 // The shared Popover has 16 pixels of inset on each side.
 const frostCalendarPopoverInset = 32.0;
+const _titleInset = 6.0;
+const _titleIconGap = 2.0;
+
+/// A date field's text. Medium dates name no year, so [showsYear] uses the
+/// short form, which every locale writes with one.
+String frostFormatFieldDate(MaterialLocalizations localizations, DateTime date, {required bool showsYear}) =>
+    showsYear ? localizations.formatShortDate(date) : localizations.formatMediumDate(date);
 
 DateTime frostDateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
 DateTime frostFirstDate(DateTime? date) => date == null ? DateTime(1) : frostDateOnly(date);
@@ -80,6 +89,12 @@ class _CalendarState extends State<FrostCalendar> {
   DateTime? _hovered;
   final _nodes = <DateTime, FocusNode>{};
   bool _changedMonth = false;
+
+  // Which shown month's title opened the year list; null shows the days.
+  int? _yearsFor;
+
+  // A jump across years replaces the month slide instead of running it.
+  int _jumps = 0;
   @override
   void initState() {
     super.initState();
@@ -113,6 +128,40 @@ class _CalendarState extends State<FrostCalendar> {
       _month = month;
       _hovered = null;
       _changedMonth = true;
+    });
+  }
+
+  void _toggleYears(int index) => setState(() => _yearsFor = _yearsFor == index ? null : index);
+
+  void _closeYears() {
+    setState(() => _yearsFor = null);
+    final day = _focused;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _requestFocus(day);
+    });
+  }
+
+  void _pickYear(int year) {
+    final index = _yearsFor!;
+    final title = DateTime(_month.year, _month.month + index);
+    final month = frostDateMonth(frostClampDate(DateTime(year, title.month - index), frostDateMonth(widget.firstDate), frostDateMonth(widget.lastDate)));
+    final day = frostClampDate(
+      DateTime(month.year, month.month, math.min(_focused.day, DateUtils.getDaysInMonth(month.year, month.month))),
+      widget.firstDate,
+      widget.lastDate,
+    );
+    setState(() {
+      if (month != _month) {
+        _month = month;
+        _hovered = null;
+        _changedMonth = true;
+        _jumps++;
+      }
+      _yearsFor = null;
+      _focused = day;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _requestFocus(day);
     });
   }
 
@@ -200,9 +249,10 @@ class _CalendarState extends State<FrostCalendar> {
     }
 
     final button = math.max(FrostDensity.of(context).targetHeight, FrostControlSize.compact.height(context));
+    final titleChrome = _titleInset * 2 + _titleIconGap + FrostControlSize.compact.iconSize;
     final header = months.indexed
         .map((entry) {
-          final occupied = count == 1 ? button * 2 : button;
+          final occupied = (count == 1 ? button * 2 : button) + titleChrome;
           return textHeight(localizations.formatMonthYear(entry.$2), FrostTextRole.headline, cell * 7 - occupied);
         })
         .fold(button, math.max);
@@ -224,6 +274,8 @@ class _CalendarState extends State<FrostCalendar> {
         final two = widget.dualMonth && available >= desired * 14 + frostCalendarMonthGap;
         final count = two ? 2 : 1;
         final cell = two || !available.isFinite ? desired : math.max(minimum, math.min(desired, available / 7));
+        // A narrowing window can take away the month whose title opened the list.
+        if (_yearsFor case final index? when index >= count) _yearsFor = count - 1;
         final width = cell * 7;
         final months = List.generate(count, (index) => DateTime(_month.year, _month.month + index));
         final localizations = MaterialLocalizations.of(context), labels = FrostScope.labelsOf(context);
@@ -250,17 +302,19 @@ class _CalendarState extends State<FrostCalendar> {
                               icon: frostStepChevron(context, previous: true),
                               label: labels.previous,
                               size: FrostControlSize.compact,
-                              onPressed: _month.isAfter(frostDateMonth(widget.firstDate)) ? () => _showMonth(DateTime(_month.year, _month.month - 1)) : null,
+                              onPressed: _yearsFor == null && _month.isAfter(frostDateMonth(widget.firstDate))
+                                  ? () => _showMonth(DateTime(_month.year, _month.month - 1))
+                                  : null,
                             ),
-                          Expanded(
-                            child: FrostText(localizations.formatMonthYear(months[index]), role: FrostTextRole.headline, textAlign: TextAlign.center),
-                          ),
+                          Expanded(child: Center(child: _title(months[index], index))),
                           if (index == count - 1)
                             FrostButton.icon(
                               icon: frostStepChevron(context, previous: false),
                               label: labels.next,
                               size: FrostControlSize.compact,
-                              onPressed: DateTime(_month.year, _month.month + count).isBefore(DateTime(widget.lastDate.year, widget.lastDate.month + 1))
+                              onPressed:
+                                  _yearsFor == null &&
+                                      DateTime(_month.year, _month.month + count).isBefore(DateTime(widget.lastDate.year, widget.lastDate.month + 1))
                                   ? () => _showMonth(DateTime(_month.year, _month.month + 1))
                                   : null,
                             ),
@@ -271,46 +325,115 @@ class _CalendarState extends State<FrostCalendar> {
                 ],
               ),
               const SizedBox(height: frostCalendarHeaderGap),
-              FrostTimedLayoutCrossfade(
-                layoutIdentity: _serial(_month),
-                duration: FrostMotion.standardDuration,
-                settleDuration: Duration.zero,
-                child: FrostSpringBuilder(
-                  value: _serial(_month).toDouble(),
-                  spring: FrostMotion.standard,
-                  builder: (context, position, child) {
-                    final reduced = MediaQuery.disableAnimationsOf(context);
-                    return Transform.translate(
-                      key: const ValueKey('calendar-month-slide'),
-                      offset: Offset(reduced ? 0 : (_serial(_month) - position) * width * (Directionality.of(context) == TextDirection.rtl ? -1 : 1), 0),
-                      child: child,
-                    );
-                  },
-                  child: TweenAnimationBuilder<double>(
-                    key: ValueKey(_serial(_month)),
-                    tween: Tween(begin: _changedMonth && MediaQuery.disableAnimationsOf(context) ? 0 : 1, end: 1),
-                    duration: FrostMotion.reducedFade,
-                    builder: (context, opacity, child) => Opacity(opacity: opacity, child: child),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (var index = 0; index < count; index++) ...[
-                          if (index > 0) const SizedBox(width: frostCalendarMonthGap),
-                          _grid(months[index], cell, rowCount, count),
-                        ],
-                      ],
+              Stack(
+                children: [
+                  ExcludeFocus(
+                    excluding: _yearsFor != null,
+                    child: Visibility(
+                      visible: _yearsFor == null,
+                      maintainState: true,
+                      maintainAnimation: true,
+                      maintainSize: true,
+                      child: FrostTimedLayoutCrossfade(
+                        layoutIdentity: _serial(_month),
+                        duration: FrostMotion.standardDuration,
+                        settleDuration: Duration.zero,
+                        child: FrostSpringBuilder(
+                          key: ValueKey(_jumps),
+                          value: _serial(_month).toDouble(),
+                          spring: FrostMotion.standard,
+                          builder: (context, position, child) {
+                            final reduced = MediaQuery.disableAnimationsOf(context);
+                            return Transform.translate(
+                              key: const ValueKey('calendar-month-slide'),
+                              offset: Offset(
+                                reduced ? 0 : (_serial(_month) - position) * width * (Directionality.of(context) == TextDirection.rtl ? -1 : 1),
+                                0,
+                              ),
+                              child: child,
+                            );
+                          },
+                          child: TweenAnimationBuilder<double>(
+                            key: ValueKey(_serial(_month)),
+                            tween: Tween(begin: _changedMonth && MediaQuery.disableAnimationsOf(context) ? 0 : 1, end: 1),
+                            duration: FrostMotion.reducedFade,
+                            builder: (context, opacity, child) => Opacity(opacity: opacity, child: child),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                for (var index = 0; index < count; index++) ...[
+                                  if (index > 0) const SizedBox(width: frostCalendarMonthGap),
+                                  _grid(months[index], cell, rowCount, count),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  if (_yearsFor case final index?)
+                    Positioned.fill(
+                      child: FrostCalendarYears(
+                        key: ValueKey(index),
+                        first: widget.firstDate.year,
+                        last: widget.lastDate.year,
+                        shown: months[index].year,
+                        currentYear: widget.today.year,
+                        columns: 3 * count,
+                        rowHeight: cell,
+                        onSelected: _pickYear,
+                        onDismissed: _closeYears,
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
         );
         if (contentWidth > available) content = SingleChildScrollView(scrollDirection: Axis.horizontal, child: content);
-        return content;
+        // A sheet can be wider than the months; they stay in its middle.
+        return Align(alignment: Alignment.topCenter, heightFactor: 1, child: content);
       },
     ),
   );
+
+  Widget _title(DateTime month, int index) {
+    final localizations = MaterialLocalizations.of(context), text = localizations.formatMonthYear(month), open = _yearsFor == index;
+    return Semantics(
+      container: true,
+      button: true,
+      expanded: open,
+      label: text,
+      hint: localizations.selectYearSemanticsLabel,
+      onTap: () => _toggleYears(index),
+      child: ExcludeSemantics(
+        child: FrostInputSurface(
+          onTap: () => _toggleYears(index),
+          builder: (context, states) => FrostClickFeedbackVisual(
+            states: states,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: FrostControlSize.compact.height(context)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: _titleInset),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: FrostText(text, role: FrostTextRole.headline, textAlign: TextAlign.center),
+                    ),
+                    const SizedBox(width: _titleIconGap),
+                    FrostIcon(open ? FrostIconSet.of(context).chevronUp : FrostIconSet.of(context).chevronDown, size: FrostControlSize.compact.iconSize),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _grid(DateTime month, double cell, int rows, int count) {
     final localizations = MaterialLocalizations.of(context);
     final offset = (month.weekday % 7 - localizations.firstDayOfWeekIndex + 7) % 7;

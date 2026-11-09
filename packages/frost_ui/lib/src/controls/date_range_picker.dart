@@ -30,6 +30,7 @@ class FrostDateRangePicker extends StatefulWidget {
     this.placeholder,
     this.help,
     this.error,
+    this.showsYear = false,
     this.size,
     super.key,
   }) : assert(!frostFirstDate(firstDate).isAfter(frostLastDate(lastDate)));
@@ -38,6 +39,10 @@ class FrostDateRangePicker extends StatefulWidget {
   final String label;
   final DateTime? firstDate, lastDate;
   final String? placeholder, help, error;
+
+  /// Shows both ends with their years and without their weekdays, for ranges
+  /// that can fall outside the current year.
+  final bool showsYear;
   final FrostControlSize? size;
   @override
   State<FrostDateRangePicker> createState() => _DateRangePickerState();
@@ -66,7 +71,7 @@ class _DateRangePickerState extends State<FrostDateRangePicker> {
               label: widget.label,
               value: value == null
                   ? widget.placeholder ?? ''
-                  : '${localizations.formatMediumDate(value.start)}$frostDateRangeSeparator${localizations.formatMediumDate(value.end)}',
+                  : '${frostFormatFieldDate(localizations, value.start, showsYear: widget.showsYear)}$frostDateRangeSeparator${frostFormatFieldDate(localizations, value.end, showsYear: widget.showsYear)}',
               onPressed: _enabled ? toggle : null,
               focus: focus,
               size: widget.size,

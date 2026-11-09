@@ -5,6 +5,7 @@ import '../foundation/control_scope.dart';
 import '../foundation/icon_data.dart';
 import '../foundation/sizes.dart';
 import '../foundation/typography.dart';
+import '../primitives/text.dart';
 import '_button_control.dart';
 import '_button_types.dart';
 import '_field_layout.dart';
@@ -50,6 +51,21 @@ class FrostFieldTrigger extends StatelessWidget {
         enabled: enabled,
         child: FrostFieldButton(
           label: value,
+          // The inset belongs to the text: a trailing control keeps the full field
+          // height for its target without making the field taller.
+          labelWidget: Padding(
+            padding: EdgeInsets.symmetric(vertical: geometry.verticalInset),
+            child: ExcludeSemantics(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: selectedSize.iconSize),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  heightFactor: 1,
+                  child: FrostText(value, role: FrostTextRole.body, maxLines: null, overflow: TextOverflow.visible),
+                ),
+              ),
+            ),
+          ),
           icon: leading,
           iconWidget: leadingWidget,
           focusNode: focus,
@@ -59,13 +75,14 @@ class FrostFieldTrigger extends StatelessWidget {
           chevron: chevron,
           geometry: FrostButtonGeometry(
             horizontalInset: frostFieldInset(selectedSize),
-            verticalInset: geometry.verticalInset,
+            verticalInset: 0,
             minimumWidth: 0,
             alignment: MainAxisAlignment.start,
             visualHeight: geometry.height,
           ),
           truncates: false,
           wrapsLabel: true,
+          exposesTrailing: trailing != null,
           trailing: trailing == null ? null : FrostControlDimming(disabled: !enabled, child: trailing!),
         ),
       ),

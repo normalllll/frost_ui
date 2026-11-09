@@ -200,6 +200,7 @@ class FrostFieldButton extends StatefulWidget {
     this.showsLabel = true,
     this.truncates = true,
     this.wrapsLabel = false,
+    this.exposesTrailing = false,
     super.key,
   });
   final String label;
@@ -217,6 +218,10 @@ class FrostFieldButton extends StatefulWidget {
   /// Search only: false collapses the field to its icon.
   final bool showsLabel;
   final bool truncates, wrapsLabel;
+
+  /// Keeps [trailing] in the semantics tree, under this field's own node. The
+  /// caller excludes the semantics of the rest of the content.
+  final bool exposesTrailing;
 
   @override
   State<FrostFieldButton> createState() => _FrostFieldButtonState();
@@ -270,12 +275,13 @@ class _FrostFieldButtonState extends State<FrostFieldButton> with FrostButtonInt
       ),
     );
     return Semantics(
+      container: widget.exposesTrailing,
       button: true,
       label: widget.semanticLabel ?? widget.label,
       liveRegion: false,
       enabled: interactive,
       onTap: interactive ? widget.onPressed : null,
-      excludeSemantics: true,
+      excludeSemantics: !widget.exposesTrailing || !interactive,
       child: widget.showsLabel ? control : FrostTooltip(message: widget.label, excludeFromSemantics: true, child: control),
     );
   }

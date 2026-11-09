@@ -25,6 +25,7 @@ class FrostDatePicker extends StatefulWidget {
     this.help,
     this.error,
     this.clearable = false,
+    this.showsYear = false,
     this.size,
     super.key,
   }) : assert(!frostFirstDate(firstDate).isAfter(frostLastDate(lastDate)));
@@ -34,6 +35,10 @@ class FrostDatePicker extends StatefulWidget {
   final DateTime? firstDate, lastDate;
   final String? placeholder, help, error;
   final bool clearable;
+
+  /// Shows the value with its year and without its weekday, for dates that can
+  /// fall outside the current year.
+  final bool showsYear;
   final FrostControlSize? size;
   @override
   State<FrostDatePicker> createState() => _DatePickerState();
@@ -59,7 +64,9 @@ class _DatePickerState extends State<FrostDatePicker> {
             _focus = focus;
             return FrostFieldTrigger(
               label: widget.label,
-              value: widget.value == null ? widget.placeholder ?? '' : MaterialLocalizations.of(context).formatMediumDate(widget.value!),
+              value: widget.value == null
+                  ? widget.placeholder ?? ''
+                  : frostFormatFieldDate(MaterialLocalizations.of(context), widget.value!, showsYear: widget.showsYear),
               onPressed: enabled ? toggle : null,
               focus: focus,
               size: widget.size,
