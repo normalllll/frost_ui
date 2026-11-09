@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show clampDouble;
 import 'package:flutter/gestures.dart';
@@ -188,12 +189,12 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
     _drag = position.drag(details, () => _drag = null);
   }
 
-  final _continued = _BarContinued();
+  final _band = _SectionsBand();
 
   @override
   void dispose() {
     _drag?.cancel();
-    _continued.dispose();
+    _band.dispose();
     _away.dispose();
     _hidden.dispose();
     _search.dispose();
@@ -298,7 +299,7 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
                     viewPadding: media.viewPadding.copyWith(top: extent),
                   ),
                   child: _PinnedBodyScope(
-                    continued: _continued,
+                    band: _band,
                     child: NotificationListener<ScrollMetricsNotification>(
                       onNotification: _handleMetrics,
                       child: NotificationListener<ScrollNotification>(
@@ -339,19 +340,18 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
                 ),
               },
               child: AnimatedBuilder(
-                animation: Listenable.merge([_awayMotion, _continued]),
+                animation: Listenable.merge([_awayMotion, _band]),
                 builder: (context, chrome) => _ChromeHitArea(
                   exposed: _away.offset,
                   child: FrostPinnedChromeGlass._(
-                    // The header sits on the suggestions page, not over scrolled content.
-                    opacity: _search.showing || _continued.value ? 0 : _coverage,
+                    // The header sits on the suggestions page, not over scrolled
+                    // content. A sections header draws one glass for both bars.
+                    opacity: _search.showing || _band.reveal != null ? 0 : _coverage,
                     // The value already follows the scroll position frame by frame.
                     animate: false,
                     // The glass ends where the visible rows end once the top
                     // row has slid away; content shows below it.
                     hiddenExtent: _away.offset,
-                    // A sections row stuck right below continues this bar.
-                    corners: _continued.value ? FrostPinnedChromeCorners.top : FrostPinnedChromeCorners.all,
                     child: chrome,
                   ),
                 ),
@@ -393,9 +393,9 @@ class _RenderChromeHitArea extends RenderProxyBox {
 // The body keeps the public MediaQuery/spacer contract, but its top padding
 // must never be consumed as another system safe area by a nested pinned bar.
 class _PinnedBodyScope extends InheritedWidget {
-  const _PinnedBodyScope({required this.continued, required super.child});
-  final _BarContinued continued;
-  static _BarContinued? continuedOf(BuildContext context) => context.getInheritedWidgetOfExactType<_PinnedBodyScope>()?.continued;
+  const _PinnedBodyScope({required this.band, required super.child});
+  final _SectionsBand band;
+  static _SectionsBand? bandOf(BuildContext context) => context.getInheritedWidgetOfExactType<_PinnedBodyScope>()?.band;
   static bool isInside(BuildContext context) => context.dependOnInheritedWidgetOfExactType<_PinnedBodyScope>() != null;
   @override
   bool updateShouldNotify(_PinnedBodyScope oldWidget) => false;

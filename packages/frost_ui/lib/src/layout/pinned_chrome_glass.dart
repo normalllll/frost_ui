@@ -14,27 +14,15 @@ enum FrostPinnedChromeCorners { all, top, bottom }
 /// keep an edge-to-edge bar under the status bar.
 class FrostPinnedChromeGlass extends StatelessWidget {
   const FrostPinnedChromeGlass({required this.opacity, this.child, this.animate = true, this.corners = FrostPinnedChromeCorners.all, super.key})
-    : _hiddenExtent = 0,
-      _reach = 0;
+    : _hiddenExtent = 0;
 
-  const FrostPinnedChromeGlass._({
-    required this.opacity,
-    required this._hiddenExtent,
-    this.child,
-    this.animate = true,
-    this.corners = FrostPinnedChromeCorners.all,
-    this._reach = 0,
-  });
+  const FrostPinnedChromeGlass._({required this.opacity, required this._hiddenExtent, this.child, this.animate = true, this.corners = FrostPinnedChromeCorners.all});
 
   final double opacity;
 
   /// How far a pinned bar's top row has slid away: the glass ends that much
   /// above the bar's bottom.
   final double _hiddenExtent;
-
-  /// How far the glass extends above the bar, over a bar this one continues, so
-  /// one blur runs across the joined band.
-  final double _reach;
   final Widget? child;
 
   /// Ease [opacity] changes; pass false when it already follows scrolling.
@@ -48,9 +36,7 @@ class FrostPinnedChromeGlass extends StatelessWidget {
     final inheritedRadius = FrostPageOutline.of(context);
     final band = FrostSurface(
       role: FrostSurfaceRole.chrome,
-      borderRadius: corners == FrostPinnedChromeCorners.bottom && _reach == 0
-          ? BorderRadius.zero
-          : BorderRadius.only(topLeft: inheritedRadius.topLeft, topRight: inheritedRadius.topRight),
+      borderRadius: corners == FrostPinnedChromeCorners.bottom ? BorderRadius.zero : BorderRadius.only(topLeft: inheritedRadius.topLeft, topRight: inheritedRadius.topRight),
       edge: FrostSurfaceEdge.none,
       elevated: false,
       child: SizedBox.expand(),
@@ -92,9 +78,8 @@ class FrostPinnedChromeGlass extends StatelessWidget {
     );
     return Stack(
       fit: StackFit.passthrough,
-      clipBehavior: _reach > 0 ? Clip.none : Clip.hardEdge,
       children: [
-        Positioned.fill(right: FrostPageOutline.channelOf(context), top: -_reach, bottom: _hiddenExtent, child: layer),
+        Positioned.fill(right: FrostPageOutline.channelOf(context), bottom: _hiddenExtent, child: layer),
         ?child,
       ],
     );

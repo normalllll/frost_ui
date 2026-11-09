@@ -9,8 +9,8 @@ import 'package:frost_ui/src/primitives/_page_outline.dart';
 import 'support.dart';
 
 class _Page extends StatefulWidget {
-  const _Page({this.stripes = false});
-  final bool stripes;
+  const _Page({this.stripes = false, this.solidLead = false});
+  final bool stripes, solidLead;
   @override
   State<_Page> createState() => _PageState();
 }
@@ -30,7 +30,7 @@ class _PageState extends State<_Page> with SingleTickerProviderStateMixin {
     body: NestedScrollView(
       headerSliverBuilder: (context, _) => [
         FrostSliverSectionsHeader(
-          lead: const SizedBox(key: ValueKey('lead'), height: 300),
+          lead: SizedBox(key: const ValueKey('lead'), height: 300, child: widget.solidLead ? const ColoredBox(color: Color(0xFFFF0040)) : null),
           tabs: FrostTabBar(
             controller: _tabs,
             scrollable: true,
@@ -89,22 +89,157 @@ void main() {
     final header = tester.getRect(find.byType(FrostPageHeader));
     expect(tester.getTopLeft(find.byKey(const ValueKey('lead'))).dy, header.bottom);
     expect(tester.getTopLeft(find.byType(FrostTabBar)).dy, header.bottom + 300);
-    expect(_glasses(tester).map((glass) => glass.corners), containsAll([FrostPinnedChromeCorners.all, FrostPinnedChromeCorners.bottom]));
 
     await _drag(tester, 500);
     final tabs = tester.getRect(find.byType(FrostTabBar));
-    expect(tabs.top, header.bottom);
+    expect(tabs.top, header.bottom - 12);
     expect(tester.getRect(find.byType(FrostPageHeader)), header);
-    final corners = _glasses(tester).map((glass) => glass.corners);
-    expect(corners, containsAll([FrostPinnedChromeCorners.top, FrostPinnedChromeCorners.bottom]));
-    expect(corners, isNot(contains(FrostPinnedChromeCorners.all)));
 
     final surfaces = tester.widgetList<FrostSurface>(find.descendant(of: _glass, matching: find.byType(FrostSurface))).toList();
     expect(surfaces.where((surface) => surface.borderRadius == BorderRadius.zero), isEmpty, reason: "one band reaching the top corners");
 
-    await tester.drag(find.text('a15'), const Offset(0, 900));
+    expect(tester.takeException(), isNull);
+  });
+
+  Future<void> outer(WidgetTester tester, double offset) async {
+    tester.state<NestedScrollViewState>(find.byType(NestedScrollView)).outerController.jumpTo(offset);
+    await tester.pump();
+    await tester.pump();
+  }
+
+  Future<void> page(WidgetTester tester, {double scale = 1}) async {
+    window(tester);
+    await tester.pumpWidget(
+      frostTestApp(
+        Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
+            child: const _Page(),
+          ),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
-    expect(_glasses(tester).map((glass) => glass.corners), contains(FrostPinnedChromeCorners.all));
+  }
+
+  // Under a 300 lead the tabs stick at 312: the lead, then the 12 they tuck.
+  testWidgets('no glass shows until the tabs near the header, then one glass fades in behind both', (tester) async {
+    await page(tester);
+    final (sections, chrome) = (0, 1);
+    for (final offset in [0.0, 60.0, 288.0]) {
+      await outer(tester, offset);
+      expect(_glasses(tester)[sections].opacity, 0, reason: 'at $offset');
+      expect(_glasses(tester)[chrome].opacity, 0, reason: 'at $offset');
+    }
+    await outer(tester, 300);
+    expect(_glasses(tester)[sections].opacity, closeTo(.5, .001));
+    expect(_glasses(tester)[chrome].opacity, 0);
+    expect(tester.getRect(_glass.first).top, 0);
+    expect(tester.getRect(_glass.first).bottom, tester.getRect(find.byType(FrostTabBar)).bottom);
+
+    await outer(tester, 312);
+    expect(_glasses(tester)[sections].opacity, 1);
+    expect(tester.getRect(_glass.first).top, 0);
+    expect(tester.getRect(_glass.first).bottom, tester.getRect(find.byType(FrostTabBar)).bottom);
+
+    await outer(tester, 200);
+    expect(_glasses(tester)[sections].opacity, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the lead fades under the header only once it has moved', (tester) async {
+    await page(tester);
+    expect(tester.layers.whereType<ShaderMaskLayer>(), isEmpty);
+    await outer(tester, 60);
+    expect(tester.layers.whereType<ShaderMaskLayer>(), hasLength(1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the lead is solid below the header and gone 32 above its bottom edge', (tester) async {
+    window(tester);
+    final key = GlobalKey();
+    await tester.pumpWidget(
+      frostTestApp(
+        brightness: Brightness.dark,
+        RepaintBoundary(key: key, child: const _Page(solidLead: true)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await outer(tester, 60);
+    final edge = tester.getRect(find.byType(FrostPageHeader)).bottom.round();
+    final render = key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    final image = (await tester.runAsync(() => render.toImage()))!;
+    final bytes = (await tester.runAsync(() => image.toByteData(format: ui.ImageByteFormat.rawRgba)))!;
+    int red(int y) => bytes.getUint8((y * image.width + 900) * 4);
+    final width = image.width;
+    expect(width, 1147);
+    image.dispose();
+    expect(red(edge + 4), 255);
+    expect(red(edge - 2), greaterThan(red(edge - 16)));
+    expect(red(edge - 16), greaterThan(red(edge - 30)));
+    expect((red(edge - 34) - red(edge - 46)).abs(), lessThanOrEqualTo(1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the stuck bar is shorter than its two rows and the body follows it', (tester) async {
+    await page(tester);
+    final header = tester.getRect(find.byType(FrostPageHeader));
+    final tabs = tester.getRect(find.byType(FrostTabBar));
+    expect(tabs.top, header.bottom + 300);
+
+    var last = tabs.top;
+    await outer(tester, 290);
+    last = tester.getTopLeft(find.byType(FrostTabBar)).dy;
+    for (var offset = 291.0; offset <= 320; offset++) {
+      await outer(tester, offset);
+      final top = tester.getTopLeft(find.byType(FrostTabBar)).dy;
+      expect((top - last).abs(), lessThanOrEqualTo(1 + 1e-6), reason: 'at $offset');
+      last = top;
+    }
+
+    await outer(tester, 312);
+    final stuck = tester.getRect(find.byType(FrostTabBar));
+    expect(stuck.bottom - header.top, header.height + tabs.height - 12);
+    expect(tester.getTopLeft(find.text('a0')).dy, stuck.bottom);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a stuck tab still takes taps', (tester) async {
+    await page(tester);
+    await outer(tester, 312);
+    await tester.tap(find.text('Likes'));
+    await tester.pumpAndSettle();
+    expect(find.text('b0'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('large text keeps both rows whole', (tester) async {
+    await page(tester, scale: 2);
+    final header = tester.getRect(find.byType(FrostPageHeader));
+    await outer(tester, 300);
+    expect(tester.getTopLeft(find.byType(FrostTabBar)).dy, header.bottom);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a plain pinned chrome keeps its 24 reveal', (tester) async {
+    window(tester);
+    final scroll = ScrollController();
+    addTearDown(scroll.dispose);
+    await tester.pumpWidget(
+      frostTestApp(
+        FrostPinnedChrome(
+          chrome: const FrostPageHeader(title: FrostText('Name')),
+          body: ListView.builder(controller: scroll, itemCount: 100, itemBuilder: (_, i) => SizedBox(height: 50, child: Text('$i'))),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    scroll.jumpTo(12);
+    await tester.pump();
+    expect(_glasses(tester).single.opacity, .5);
+    scroll.jumpTo(24);
+    await tester.pump();
+    expect(_glasses(tester).single.opacity, 1);
     expect(tester.takeException(), isNull);
   });
 
