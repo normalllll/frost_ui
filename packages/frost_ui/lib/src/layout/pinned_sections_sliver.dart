@@ -30,7 +30,8 @@ class FrostSliverSectionsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final band = _PinnedBodyScope.bandOf(context);
+    final chrome = _PinnedBodyScope.maybeOf(context);
+    final band = chrome?.band;
     // Larger titles need the whole header row.
     final roomy = MediaQuery.textScalerOf(context).scale(1) <= 1.3;
     return SliverOverlapAbsorber(
@@ -38,6 +39,7 @@ class FrostSliverSectionsHeader extends StatelessWidget {
       sliver: _SectionsHeaderSliver(
         mask: FrostThemeTokens.of(context).canvas,
         inset: MediaQuery.paddingOf(context).top,
+        rowRoom: chrome == null ? 0 : chrome.rowRoom,
         tuck: band != null && roomy ? _tuckDistance : 0,
         band: band,
         children: [
@@ -57,18 +59,19 @@ class FrostSliverSectionsHeader extends StatelessWidget {
 }
 
 class _SectionsHeaderSliver extends MultiChildRenderObjectWidget {
-  const _SectionsHeaderSliver({required this.mask, required this.inset, required this.tuck, required this.band, required super.children});
+  const _SectionsHeaderSliver({required this.mask, required this.inset, required this.rowRoom, required this.tuck, required this.band, required super.children});
   final Color mask;
-  final double inset, tuck;
+  final double inset, rowRoom, tuck;
   final _SectionsBand? band;
 
   @override
-  RenderObject createRenderObject(BuildContext context) => _RenderSectionsHeader(mask, inset, tuck, band);
+  RenderObject createRenderObject(BuildContext context) => _RenderSectionsHeader(mask, inset, rowRoom, tuck, band);
 
   @override
   void updateRenderObject(BuildContext context, _RenderSectionsHeader renderObject) => renderObject
     ..mask = mask
     ..inset = inset
+    ..rowRoom = rowRoom
     ..tuck = tuck
     ..band = band;
 }
@@ -80,7 +83,7 @@ class _SectionsHeaderData extends ContainerBoxParentData<RenderBox> {}
 /// part of the tabs that tucks under the chrome. Under a chrome the glass runs
 /// from the top of the view to the bottom of the tabs, wherever they are.
 class _RenderSectionsHeader extends RenderSliver with ContainerRenderObjectMixin<RenderBox, _SectionsHeaderData>, RenderSliverHelpers {
-  _RenderSectionsHeader(this._mask, this._inset, this._tuck, this._band);
+  _RenderSectionsHeader(this._mask, this._inset, this._rowRoom, this._tuck, this._band);
 
   /// The band above the chrome's bottom in which the lead fades away.
   static const _fadeDistance = 32.0;
@@ -96,6 +99,15 @@ class _RenderSectionsHeader extends RenderSliver with ContainerRenderObjectMixin
   set inset(double value) {
     if (_inset == value) return;
     _inset = value;
+    markNeedsLayout();
+  }
+
+  /// Room the tabs leave below the body's top for a header row that is not
+  /// there at rest, so they stick under it when it comes.
+  double _rowRoom;
+  set rowRoom(double value) {
+    if (_rowRoom == value) return;
+    _rowRoom = value;
     markNeedsLayout();
   }
 
@@ -165,8 +177,8 @@ class _RenderSectionsHeader extends RenderSliver with ContainerRenderObjectMixin
     final box = constraints.asBoxConstraints();
     _lead.layout(box, parentUsesSize: true);
     _tabs.layout(box, parentUsesSize: true);
-    final lead = _lead.size.height, tabs = _tabs.size.height, tuck = math.min(_tuck, _inset);
-    final travel = lead + tuck, pinned = _inset + tabs - tuck, whole = _inset + lead + tabs, offset = constraints.scrollOffset;
+    final lead = _lead.size.height, tabs = _tabs.size.height, bar = _inset + _rowRoom, stuck = math.min(bar - math.min(_tuck, bar), _inset + lead);
+    final travel = _inset + lead - stuck, pinned = stuck + tabs, whole = _inset + lead + tabs, offset = constraints.scrollOffset;
     _shrink = math.min(offset, travel);
     final reach = math.min(_FpPinnedChromeState._revealDistance, travel);
     final reveal = reach == 0 ? 1.0 : clampDouble((offset - (travel - reach)) / reach, 0, 1);

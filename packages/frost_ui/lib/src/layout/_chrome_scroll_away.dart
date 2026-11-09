@@ -23,6 +23,28 @@ class FrostChromeScrollAway extends ChangeNotifier {
   /// How far the part has currently moved up.
   double get offset => _extent * hidden.value;
 
+  /// Whether the chrome's height follows its content, so a page header with
+  /// nothing to show can leave out its row. Set by the pinned bar during build.
+  bool rowMayCollapse = false;
+
+  Object? _rowOwner;
+  double _leftOutRow = 0;
+
+  /// How much shorter the chrome is for having left out an empty row.
+  double get leftOutRow => _leftOutRow;
+
+  /// Written from the page header's build, before the chrome lays out.
+  void reportLeftOutRow(Object owner, double height) {
+    _rowOwner = owner;
+    _leftOutRow = height;
+  }
+
+  void clearLeftOutRow(Object owner) {
+    if (!identical(_rowOwner, owner)) return;
+    _rowOwner = null;
+    _leftOutRow = 0;
+  }
+
   /// Written from layout; listeners hear of it once the frame ends.
   void report({required double extent, required bool held}) {
     if (_extent == extent && _held == held) return;

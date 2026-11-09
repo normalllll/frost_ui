@@ -13,6 +13,7 @@ import '../foundation/spacing.dart';
 import '../foundation/tokens.dart';
 import '../foundation/typography.dart';
 import '../layout/_caption_search_scope.dart';
+import '../layout/_chrome_scroll_away.dart';
 import '../layout/_header_row_span.dart';
 import '../layout/_header_search_scope.dart';
 import '../layout/auto_scaffold.dart';
@@ -67,6 +68,11 @@ class FrostPageHeaderSearchController extends ChangeNotifier {
 /// else to show is then just the page's top margin, as tall as its side inset,
 /// or nothing above a tab row of a [FrostHeaderSections]. A title that is a control, such as a [FrostTitleMenu], belongs in [leading],
 /// which stays.
+///
+/// In the sidebar layout, as the chrome of a [FrostPinnedChrome], a header with
+/// nothing to show at all, such as one whose title waits for the page to scroll
+/// past its head, is only that top margin. The row returns with its content,
+/// over the scrolled body, which does not move.
 class FrostPageHeader extends StatefulWidget {
   const FrostPageHeader({
     this.leading = const [],
@@ -160,6 +166,9 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
   /// Whether the title last took the secondary page's role.
   bool? _secondary;
 
+  /// The pinned bar this header last told about its row.
+  FrostChromeScrollAway? _away;
+
   /// Whether this page, or a page holding its navigator, is being removed.
   bool _leaving(BuildContext context) {
     var route = ModalRoute.of(context);
@@ -202,6 +211,7 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
   void dispose() {
     if (widget.searchController?._header == this) widget.searchController!._header = null;
     if (_expanded) _rowSpan?.expanded = false;
+    _away?.clearLeftOutRow(this);
     _expansion.dispose();
     super.dispose();
   }
@@ -283,6 +293,16 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
         widget.middle == null &&
         widget.collapsedMiddle == null &&
         widget.actions.isEmpty;
+    // Nothing to show yet in a bar that can wait for it: only the top margin.
+    // The pinned bar keeps the body still when the row comes back.
+    final away = _away = FrostChromeScrollAwayScope.maybeOf(context);
+    final leavesRowOut =
+        widget.title == null && onlyTitle && _rowSpan == null && shell != null && (away?.rowMayCollapse ?? false) && FrostAutoScaffold.usesHorizontalLayoutOf(context);
+    final margin = FrostGap.of(context).page;
+    away?.reportLeftOutRow(this, leavesRowOut ? math.max(0, (scales ? height + extraLine : height) - margin) : 0);
+    if (leavesRowOut) {
+      return FrostNativeCaptionPadding(child: SizedBox(width: double.infinity, height: margin));
+    }
     if (titleNode != null && onlyTitle) {
       return FrostNativeCaptionPadding(
         child: SizedBox(

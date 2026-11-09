@@ -257,11 +257,36 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
         if (amount > coverage) coverage = amount;
       }
     }
-    if (coverage != _coverage) setState(() => _coverage = coverage);
+    // Back at the top nothing is under the bar to hold still.
+    final release = coverage == 0 && _heldExtent != null;
+    if (coverage != _coverage || release) {
+      setState(() {
+        _coverage = coverage;
+        if (release) _heldExtent = null;
+      });
+    }
+  }
+
+  /// The body's top while a page header's empty row comes and goes under a
+  /// scrolled body: it stays where it was instead of moving with the row.
+  double? _heldExtent, _lastExtent;
+  bool _rowWasLeftOut = false;
+
+  /// Runs during layout, after the chrome reported its row and was measured.
+  double _reservedFor(double extent) {
+    final leftOut = _away.leftOutRow > 0;
+    if (leftOut != _rowWasLeftOut) {
+      _rowWasLeftOut = leftOut;
+      if (_coverage > 0) _heldExtent ??= _lastExtent;
+    }
+    if (_heldExtent == extent) _heldExtent = null;
+    _lastExtent = extent;
+    return _heldExtent ?? extent;
   }
 
   @override
   Widget build(BuildContext context) {
+    _away.rowMayCollapse = widget.extent == null;
     final media = MediaQuery.of(context);
     // Body top padding describes chrome, not the system status bar. Only the
     // outer pinned bar consumes the system top; side insets remain local.
@@ -290,7 +315,7 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
             builder: (context, constraints) {
               // The delegate lays out chrome first and encodes its measured
               // height in minHeight, so this body builds correctly in this frame.
-              final extent = constraints.minHeight;
+              final measured = constraints.minHeight, extent = _reservedFor(measured);
               return SizedBox.expand(
                 child: MediaQuery(
                   key: _bodyKey,
@@ -300,6 +325,7 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
                   ),
                   child: _PinnedBodyScope(
                     band: _band,
+                    rowRoom: measured + _away.leftOutRow - extent,
                     child: NotificationListener<ScrollMetricsNotification>(
                       onNotification: _handleMetrics,
                       child: NotificationListener<ScrollNotification>(
@@ -393,12 +419,15 @@ class _RenderChromeHitArea extends RenderProxyBox {
 // The body keeps the public MediaQuery/spacer contract, but its top padding
 // must never be consumed as another system safe area by a nested pinned bar.
 class _PinnedBodyScope extends InheritedWidget {
-  const _PinnedBodyScope({required this.band, required super.child});
+  const _PinnedBodyScope({required this.band, required this.rowRoom, required super.child});
   final _SectionsBand band;
-  static _SectionsBand? bandOf(BuildContext context) => context.getInheritedWidgetOfExactType<_PinnedBodyScope>()?.band;
+
+  /// How much taller the bar is, or will be with its row, than the body's top.
+  final double rowRoom;
+  static _PinnedBodyScope? maybeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<_PinnedBodyScope>();
   static bool isInside(BuildContext context) => context.dependOnInheritedWidgetOfExactType<_PinnedBodyScope>() != null;
   @override
-  bool updateShouldNotify(_PinnedBodyScope oldWidget) => false;
+  bool updateShouldNotify(_PinnedBodyScope oldWidget) => rowRoom != oldWidget.rowRoom;
 }
 
 enum _PinnedSlot { body, chrome }
