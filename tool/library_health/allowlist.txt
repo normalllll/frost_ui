@@ -150,6 +150,8 @@ silent	primitives/_click_surface_visuals.dart	FrostClickSurfaceVisuals.fillsBoun
 silent	primitives/_click_surface_visuals.dart	FrostClickSurfaceVisuals.scalesOnPressOf	maybeOf-fallback	1	baseline-20261102
 silent	primitives/_media_shape.dart	FrostMediaCircle.of	maybeOf-fallback	1	baseline-20261102
 silent	primitives/_media_shape.dart	FrostMediaInnerStroke.of	maybeOf-fallback	1	baseline-20261102
+silent	primitives/_on_media_chrome_scope.dart	FrostChromeOverMedia.activeOf	maybeOf-fallback	1	reviewed:20261110:optional scope, absent means not over media
+silent	primitives/_on_media_chrome_scope.dart	FrostChromeOverMedia.declaredOf	maybeOf-fallback	1	reviewed:20261110:optional scope, absent means not over media
 silent	primitives/_page_outline.dart	FrostPageOutline.channelOf	maybeOf-fallback	1	baseline-20261102
 silent	primitives/_page_outline.dart	FrostPageOutline.of	maybeOf-fallback	1	baseline-20261102
 silent	primitives/_presence_entry.dart	FrostPresenceEntry.of	maybeOf-fallback	1	baseline-20261102

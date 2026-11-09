@@ -22,7 +22,6 @@ import '../overlays/context_menu.dart';
 import '../overlays/menu_entry.dart';
 import '../overlays/tooltip.dart';
 import '../primitives/_eager_layout_builder.dart';
-import '../primitives/_on_media_chrome_scope.dart';
 import '../primitives/glyph.dart';
 import '../primitives/keyline.dart';
 import '_toolbar_middle_scope.dart';
@@ -158,9 +157,7 @@ class _FrostToolbarState extends State<FrostToolbar> with TickerProviderStateMix
   Widget _iconTarget(Widget widget, double inset) {
     final hit = FrostDensity.of(context).targetHeight, width = frostToolbarIconWidth(context);
     final keyline = FrostKeyline.maybeOf(context);
-    final shift = keyline == null || keyline.insideContainer || FrostOnMediaChromeScope.inkOf(context) != null
-        ? 0.0
-        : inset - (width - FrostControlSize.compact.iconSize) / 2;
+    final shift = keyline == null || keyline.insideContainer || frostToolbarOverMedia(context) ? 0.0 : inset - (width - FrostControlSize.compact.iconSize) / 2;
     // Fixed target geometry aligns the icon by construction. The slot includes
     // its edge offset, so the following leading/middle gap remains unchanged.
     return SizedBox(
@@ -226,7 +223,7 @@ class _FrostToolbarState extends State<FrostToolbar> with TickerProviderStateMix
                         middleRoom: FrostToolbarMiddleRoomScope.maybeOf(context),
                         rowSpan: FrostHeaderRowSpanScope.maybeOf(context),
                         gap: FrostGap.related,
-                        edgeInset: keyline == null || keyline.insideContainer || FrostOnMediaChromeScope.inkOf(context) != null ? null : inset,
+                        edgeInset: keyline == null || keyline.insideContainer || frostToolbarOverMedia(context) ? null : inset,
                         startRoom: extraStart,
                         endRoom: extraEnd,
                         plateRoom: (direction == TextDirection.ltr ? outsets.right : outsets.left) - extraEnd,

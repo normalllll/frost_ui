@@ -26,6 +26,9 @@ FrostButtonGeometry frostToolbarButtonGeometry(BuildContext context) {
   );
 }
 
+/// Whether a toolbar lays its controls out for chrome over media.
+bool frostToolbarOverMedia(BuildContext context) => FrostOnMediaChromeScope.inkOf(context) != null || FrostChromeOverMedia.declaredOf(context);
+
 /// Layout width of a bare icon target in a toolbar row. A touch row is narrow
 /// and its icon targets sit side by side, so each keeps the 44 touch height but
 /// takes only its plate plus two pixels either side across (40 for the 36
@@ -35,7 +38,7 @@ FrostButtonGeometry frostToolbarButtonGeometry(BuildContext context) {
 /// visible room between them, so it keeps the full square target.
 double frostToolbarIconWidth(BuildContext context) {
   final density = FrostDensity.of(context);
-  if (FrostOnMediaChromeScope.inkOf(context) != null) return density.targetHeight;
+  if (frostToolbarOverMedia(context)) return density.targetHeight;
   return math.min(density.targetHeight, density.heightFor(FrostControlSize.compact) + 4);
 }
 

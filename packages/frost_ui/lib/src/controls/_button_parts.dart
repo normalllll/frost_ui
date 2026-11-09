@@ -413,7 +413,7 @@ class FrostButtonMedia {
   /// [bare] asks for bare media paint, [chrome] for the on-media icon style;
   /// [iconContent] lets an ambient on-media scope turn an icon into chrome.
   factory FrostButtonMedia.of(BuildContext context, {bool bare = false, bool chrome = false, bool iconContent = false}) {
-    final ink = FrostOnMediaChromeScope.inkOf(context);
+    final ink = FrostOnMediaChromeScope.inkOf(context) ?? (iconContent && FrostChromeOverMedia.activeOf(context) ? FrostThemeTokens.of(context).onMediaInk : null);
     final isBare = bare || ink != null && FrostMediaControlsScope.of(context);
     return FrostButtonMedia._(ink, isBare || chrome || ink != null && iconContent, isBare);
   }

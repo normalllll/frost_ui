@@ -432,7 +432,7 @@ ctor	FrostPicker.new	controls/picker.dart	error,key,label,onChanged,options,size
 ctor	FrostPicker.palette	controls/picker.dart	error,key,label,onChanged,options,size,trailingSwatch,value	baseline-20261102
 ctor	FrostPicker.segmented	controls/picker.dart	error,iconOnly,key,label,onChanged,options,size,value	baseline-20261102
 ctor	FrostPickerOption.new	controls/picker_option.dart	color,enabled,label,leading,subtitle,value	baseline-20261102
-ctor	FrostPinnedChrome.new	layout/pinned_chrome.dart	body,chrome,extent,key	baseline-20261102
+ctor	FrostPinnedChrome.new	layout/pinned_chrome.dart	body,chrome,extent,key,overMedia	reviewed:20261110:overMedia cannot be composed from public components and is the smallest slot; undeclared callers are unchanged
 ctor	FrostPinnedChromeGlass.new	layout/pinned_chrome_glass.dart	animate,child,corners,key,opacity	baseline-20261102
 ctor	FrostPopover.new	overlays/popover.dart	builder,contentBuilder,key,maxWidth,title	baseline-20261102
 ctor	FrostPresence.new	primitives/presence.dart	alignment,axis,child,effect,key,visible	baseline-20261102

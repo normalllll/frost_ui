@@ -20,6 +20,7 @@ import '../layout/auto_scaffold.dart';
 import '../layout/column_placement.dart';
 import '../layout/content_viewport.dart';
 import '../primitives/_directional_icon.dart';
+import '../primitives/_on_media_chrome_scope.dart';
 import '../primitives/_page_outline.dart';
 import '../primitives/keyline.dart';
 import '../primitives/text.dart';
@@ -317,7 +318,10 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
         ? null
         : KeyedSubtree(
             key: _field,
-            child: FrostHeaderSearchScope(expanded: _expanded, row: _row, onFocused: _focused, onDismissed: _collapse, child: widget.middle!),
+            // The field brings its own surface; its icons stay ordinary.
+            child: FrostChromeOverMedia.none(
+              child: FrostHeaderSearchScope(expanded: _expanded, row: _row, onFocused: _focused, onDismissed: _collapse, child: widget.middle!),
+            ),
           );
     Widget row = AnimatedBuilder(
       animation: _expansion,

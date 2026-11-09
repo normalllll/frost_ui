@@ -10,6 +10,7 @@ import 'package:flutter/scheduler.dart';
 import '../foundation/metrics.dart';
 import '../foundation/tokens.dart';
 import '../motion/_material_reveal.dart';
+import '../primitives/_on_media_chrome_scope.dart';
 import '../primitives/_page_outline.dart';
 import '../primitives/surface.dart';
 import '_chrome_scroll_away.dart';
@@ -46,11 +47,19 @@ part 'pinned_sections_sliver.dart';
 /// lists its suggestions over the body: the body stays laid out underneath,
 /// hidden, and comes back as it was when the suggestions close.
 class FrostPinnedChrome extends StatefulWidget {
-  const FrostPinnedChrome({required this.chrome, required this.body, this.extent, super.key});
+  const FrostPinnedChrome({required this.chrome, required this.body, this.extent, this.overMedia = false, super.key});
 
   /// Fixed height of the bar, including any top safe area it covers. When
   /// null the bar is measured during layout before the body is laid out.
   final double? extent;
+
+  /// The bar lies over media at rest, such as a banner running behind it.
+  ///
+  /// Until the glass has fully appeared, icon-only buttons in the chrome, Back
+  /// included, paint as on-media circles readable on any image; then they fade
+  /// to their ordinary look. Text in the chrome stays in its usual colour, so
+  /// a page keeps its title off the media until the glass is behind it.
+  final bool overMedia;
 
   final Widget chrome;
   final Widget body;
@@ -378,7 +387,11 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
                     // The glass ends where the visible rows end once the top
                     // row has slid away; content shows below it.
                     hiddenExtent: _away.offset,
-                    child: chrome,
+                    child: FrostChromeOverMedia(
+                      declared: widget.overMedia,
+                      active: widget.overMedia && !_search.showing && (_band.reveal ?? _coverage) < 1,
+                      child: chrome!,
+                    ),
                   ),
                 ),
                 child: chrome,

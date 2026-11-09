@@ -30,6 +30,26 @@ class FrostOnMediaChromeScope extends InheritedWidget {
   bool updateShouldNotify(FrostOnMediaChromeScope oldWidget) => _enabled != oldWidget._enabled || originalTheme != oldWidget.originalTheme;
 }
 
+/// Internal: a page's pinned chrome declared to lie over media.
+///
+/// While [active], icon-only buttons below paint the on-media circle; text is
+/// left alone, since nothing sits behind it to guarantee its contrast. Toolbars
+/// keep the media layout whenever [declared], so turning [active] on and off
+/// repaints the buttons without moving them.
+class FrostChromeOverMedia extends InheritedWidget {
+  const FrostChromeOverMedia({required this.declared, required this.active, required super.child, super.key});
+
+  /// Subtree of the chrome that keeps its ordinary paint and layout.
+  const FrostChromeOverMedia.none({required super.child, super.key}) : declared = false, active = false;
+  final bool declared, active;
+
+  static bool declaredOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<FrostChromeOverMedia>()?.declared ?? false;
+  static bool activeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<FrostChromeOverMedia>()?.active ?? false;
+
+  @override
+  bool updateShouldNotify(FrostChromeOverMedia oldWidget) => declared != oldWidget.declared || active != oldWidget.active;
+}
+
 // A separately surfaced menu/popover keeps the page palette even when an
 // OverlayPortal inherits the media trigger's complete ancestry.
 Widget frostWithoutOnMediaChrome(Widget child) => Builder(
@@ -37,10 +57,12 @@ Widget frostWithoutOnMediaChrome(Widget child) => Builder(
     final original = context.dependOnInheritedWidgetOfExactType<FrostOnMediaChromeScope>()?.originalTheme;
     final appearance = context.dependOnInheritedWidgetOfExactType<FrostFieldAppearanceData>()?.appearance;
     final restored = original == null ? child : Theme(data: original, child: child);
-    return FrostOnMediaChromeScope._without(
-      // Only media restoration needs an appearance barrier. Ordinary surfaces
-      // must preserve explicit scopes and allow search's own subtle default.
-      child: original != null || appearance == FrostFieldAppearance.onMedia ? FrostFieldAppearanceData(appearance: null, child: restored) : restored,
+    return FrostChromeOverMedia.none(
+      child: FrostOnMediaChromeScope._without(
+        // Only media restoration needs an appearance barrier. Ordinary surfaces
+        // must preserve explicit scopes and allow search's own subtle default.
+        child: original != null || appearance == FrostFieldAppearance.onMedia ? FrostFieldAppearanceData(appearance: null, child: restored) : restored,
+      ),
     );
   },
 );
