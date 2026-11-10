@@ -56,24 +56,20 @@ class _SidebarNavigation extends StatelessWidget {
                     child: Builder(
                       builder: (buttonContext) {
                         void open() => _showMore(buttonContext, secondaryDestinations, selectedSecondaryIndex, secondary!.onSelected, moreButtonFocus);
-                        return Focus(
-                          focusNode: moreButtonFocus,
-                          skipTraversal: true,
-                          onKeyEvent: (node, event) {
-                            if (event is! KeyDownEvent || (event.logicalKey != LogicalKeyboardKey.enter && event.logicalKey != LogicalKeyboardKey.space)) {
-                              return KeyEventResult.ignored;
-                            }
-                            open();
-                            return KeyEventResult.handled;
-                          },
-                          child: _MoreStatus(
-                            destinations: secondaryDestinations,
-                            child: FrostNavItem(
-                              label: labels.more,
-                              icon: icons.more,
-                              selected: selectedSecondaryIndex != null,
-                              progress: progress,
-                              onTap: open,
+                        return Actions(
+                          actions: {ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => open())},
+                          child: Focus(
+                            focusNode: moreButtonFocus,
+                            skipTraversal: true,
+                            child: _MoreStatus(
+                              destinations: secondaryDestinations,
+                              child: FrostNavItem(
+                                label: labels.more,
+                                icon: icons.more,
+                                selected: selectedSecondaryIndex != null,
+                                progress: progress,
+                                onTap: open,
+                              ),
                             ),
                           ),
                         );

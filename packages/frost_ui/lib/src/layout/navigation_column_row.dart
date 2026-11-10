@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../display/status_dot.dart';
@@ -258,27 +257,33 @@ class FrostNavigationColumnFocus extends StatefulWidget {
 class _NavigationColumnFocusState extends State<FrostNavigationColumnFocus> {
   final _rows = <FocusNode>{};
 
-  KeyEventResult _move(FocusNode _, KeyEvent event) {
-    if (event is! KeyDownEvent && event is! KeyRepeatEvent) return KeyEventResult.ignored;
-    final delta = switch (event.logicalKey) {
-      LogicalKeyboardKey.arrowDown => 1,
-      LogicalKeyboardKey.arrowUp => -1,
+  /// Up and Down (Flutter's directional focus keys) step through the rows and
+  /// stop at the column's ends; other directions keep Flutter's behaviour.
+  Object? _move(DirectionalFocusIntent intent) {
+    final delta = switch (intent.direction) {
+      TraversalDirection.down => 1,
+      TraversalDirection.up => -1,
       _ => 0,
     };
-    if (delta == 0) return KeyEventResult.ignored;
     final rows = _rows.where((node) => node.context != null && node.canRequestFocus).toList()..sort((a, b) => a.rect.top.compareTo(b.rect.top));
     final index = rows.indexWhere((node) => node.hasFocus);
-    if (index < 0) return KeyEventResult.ignored;
+    if (delta == 0 || index < 0) {
+      primaryFocus?.focusInDirection(intent.direction);
+      return null;
+    }
     final target = rows[(index + delta).clamp(0, rows.length - 1)];
     target.requestFocus();
     if (target.context case final targetContext?) Scrollable.ensureVisible(targetContext);
-    return KeyEventResult.handled;
+    return null;
   }
 
   @override
   Widget build(BuildContext context) => _ColumnRows(
     state: this,
-    child: Focus(canRequestFocus: false, skipTraversal: true, onKeyEvent: _move, child: widget.child),
+    child: Actions(
+      actions: {DirectionalFocusIntent: CallbackAction<DirectionalFocusIntent>(onInvoke: _move)},
+      child: widget.child,
+    ),
   );
 }
 

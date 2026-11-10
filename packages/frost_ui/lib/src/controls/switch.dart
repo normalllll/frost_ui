@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../foundation/_focus_modality.dart';
 import '../foundation/_touch_targets.dart';
@@ -134,7 +133,6 @@ class _FrostSwitchState extends State<FrostSwitch> with SingleTickerProviderStat
       mouseCursor: _enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
       onShowFocusHighlight: (value) => setState(() => _focusVisible = value),
       onShowHoverHighlight: (value) => setState(() => _hovered = value),
-      shortcuts: const {SingleActivator(LogicalKeyboardKey.space): ActivateIntent(), SingleActivator(LogicalKeyboardKey.enter): ActivateIntent()},
       actions: {
         ActivateIntent: CallbackAction<ActivateIntent>(
           onInvoke: (_) {

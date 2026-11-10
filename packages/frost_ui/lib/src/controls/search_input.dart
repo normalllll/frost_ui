@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../foundation/_key_bindings.dart';
 import '../foundation/control_scope.dart';
 import '../foundation/icon_data.dart';
 import '../foundation/scope.dart';
@@ -159,18 +160,17 @@ class FrostSearchInput extends StatelessWidget {
   Widget build(BuildContext context) => _suggesting ? _SuggestingSearchInput(input: this) : _PlainSearchInput(input: this);
 }
 
-// Keys both kinds leave to the editor: releases, keys while unfocused, and any
-// key during IME composition.
-bool _forEditor(FrostSearchInput input, KeyEvent event) {
-  if (event is! KeyDownEvent && event is! KeyRepeatEvent || !input.focusNode.hasFocus) return true;
+// Keys both kinds leave to the editor: keys while unfocused, and any key during
+// IME composition.
+bool _forEditor(FrostSearchInput input) {
+  if (!input.focusNode.hasFocus) return true;
   final composing = input.controller.value.composing;
   return composing.isValid && !composing.isCollapsed;
 }
 
 // Modified submission belongs to the App (for example opening a tab), never to
 // a highlighted suggestion's plain callback.
-bool _isModifiedEnter(KeyEvent event) =>
-    event.logicalKey == LogicalKeyboardKey.enter && (HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed);
+bool _isModifiedEnter() => HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
 
 // A page header may expand this field over a row too narrow for it. The
 // caption search keeps its own expansion even when moved into a header.
@@ -218,26 +218,27 @@ class _PlainSearchInputState extends State<_PlainSearchInput> {
     _reportFocus(context, _input.focusNode);
   }
 
-  KeyEventResult _key(FocusNode node, KeyEvent event) {
-    if (_forEditor(_input, event)) return KeyEventResult.ignored;
-    final header = FrostHeaderSearchScope.read(context);
-    if (event.logicalKey == LogicalKeyboardKey.escape && (_input.onDismiss != null || (header?.expanded ?? false))) {
+  /// Escape dismisses the field when it or its header can be dismissed; Enter
+  /// submits.
+  Map<ShortcutActivator, bool Function()> get _keys => {
+    const FrostKeyPress(LogicalKeyboardKey.escape): () {
+      if (_forEditor(_input)) return false;
+      final header = FrostHeaderSearchScope.read(context);
+      if (_input.onDismiss == null && !(header?.expanded ?? false)) return false;
       _input.onDismiss?.call();
       if (header?.expanded ?? false) header!.onDismissed();
-      return KeyEventResult.handled;
-    }
-    if (event.logicalKey == LogicalKeyboardKey.enter) {
+      return true;
+    },
+    const FrostKeyPress(LogicalKeyboardKey.enter): () {
+      if (_forEditor(_input)) return false;
       _input._submit(_input.controller.text);
-      return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
-  }
+      return true;
+    },
+  };
 
   @override
-  Widget build(BuildContext context) => Focus(
-    onKeyEvent: _key,
-    canRequestFocus: false,
-    skipTraversal: true,
+  Widget build(BuildContext context) => FrostKeyBindings(
+    bindings: _keys,
     child: FrostCaptionRegion(
       kind: FrostHitKind.client,
       child: TextFieldTapRegion(
@@ -507,41 +508,48 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
     _restart(keptOpen: true, scrollToTop: false);
   }
 
-  KeyEventResult _key(FocusNode node, KeyEvent event) {
-    if (_forEditor(_input, event)) return KeyEventResult.ignored;
-    final header = FrostHeaderSearchScope.read(context);
-    if (event.logicalKey == LogicalKeyboardKey.escape && (_visible || _input.onDismiss != null || (header?.expanded ?? false))) {
+  /// Escape closes the suggestions and dismisses the field; Enter activates
+  /// the highlighted suggestion or submits; the arrows open the suggestions
+  /// and move their highlight.
+  Map<ShortcutActivator, bool Function()> get _keys => {
+    const FrostKeyPress(LogicalKeyboardKey.escape): () {
+      if (_forEditor(_input)) return false;
+      final header = FrostHeaderSearchScope.read(context);
+      if (!_visible && _input.onDismiss == null && !(header?.expanded ?? false)) return false;
       _dismiss();
       _input.onDismiss?.call();
       if (header?.expanded ?? false) header!.onDismissed();
-      return KeyEventResult.handled;
-    }
-    if (_isModifiedEnter(event)) {
-      if (_keptOpen) _dismiss();
-      _input._submit(_input.controller.text);
-      return KeyEventResult.handled;
-    }
-    if (event.logicalKey == LogicalKeyboardKey.arrowDown && !_visible && _input.content != null) {
-      _restart();
-      return KeyEventResult.handled;
-    }
-    if (_visible && _arrows.contains(event.logicalKey) && !_modifiedSideways(event) && _options.move(event.logicalKey) == KeyEventResult.handled) {
-      return KeyEventResult.handled;
-    }
-    if (event.logicalKey == LogicalKeyboardKey.enter) {
-      _submit(_input.controller.text);
-      return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
-  }
-
-  static final _arrows = {LogicalKeyboardKey.arrowDown, LogicalKeyboardKey.arrowUp, LogicalKeyboardKey.arrowLeft, LogicalKeyboardKey.arrowRight};
+      return true;
+    },
+    const FrostKeyPress(LogicalKeyboardKey.enter): () {
+      if (_forEditor(_input)) return false;
+      if (_isModifiedEnter()) {
+        if (_keptOpen) _dismiss();
+        _input._submit(_input.controller.text);
+      } else {
+        _submit(_input.controller.text);
+      }
+      return true;
+    },
+    const FrostKeyPress(LogicalKeyboardKey.arrowDown): () {
+      if (_forEditor(_input)) return false;
+      if (!_visible && _input.content != null) {
+        _restart();
+        return true;
+      }
+      return _visible && _options.move(LogicalKeyboardKey.arrowDown);
+    },
+    const FrostKeyPress(LogicalKeyboardKey.arrowUp): () => !_forEditor(_input) && _visible && _options.move(LogicalKeyboardKey.arrowUp),
+    const FrostKeyPress(LogicalKeyboardKey.arrowLeft): () => _sideways(LogicalKeyboardKey.arrowLeft),
+    const FrostKeyPress(LogicalKeyboardKey.arrowRight): () => _sideways(LogicalKeyboardKey.arrowRight),
+  };
 
   // Left and Right with a modifier select text or move by word: the editor's.
-  static bool _modifiedSideways(KeyEvent event) {
-    if (event.logicalKey != LogicalKeyboardKey.arrowLeft && event.logicalKey != LogicalKeyboardKey.arrowRight) return false;
+  bool _sideways(LogicalKeyboardKey key) {
+    if (_forEditor(_input) || !_visible) return false;
     final keyboard = HardwareKeyboard.instance;
-    return keyboard.isShiftPressed || keyboard.isControlPressed || keyboard.isAltPressed || keyboard.isMetaPressed;
+    if (keyboard.isShiftPressed || keyboard.isControlPressed || keyboard.isAltPressed || keyboard.isMetaPressed) return false;
+    return _options.move(key);
   }
 
   void _submit(String value) {
@@ -756,10 +764,8 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
                     ),
                   ),
           );
-    return Focus(
-      onKeyEvent: _key,
-      canRequestFocus: false,
-      skipTraversal: true,
+    return FrostKeyBindings(
+      bindings: _keys,
       // Keep the portal attached across placement changes. Its controller's
       // showing state otherwise resets when a page switches back to anchoring.
       child: OverlayPortal.overlayChildLayoutBuilder(

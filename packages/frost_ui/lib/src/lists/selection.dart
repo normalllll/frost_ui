@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../foundation/_key_bindings.dart';
 import '../motion/_user_selection_draw.dart';
 import '../primitives/_measured_keyline.dart';
 import '../primitives/divider.dart';
@@ -129,16 +130,15 @@ class _SelectionScopeState<T> extends State<FrostSelectionScope<T>> {
     selection: widget.selection,
     items: widget.items,
     indices: _indices,
-    child: Focus(
-      skipTraversal: true,
-      onKeyEvent: (_, event) {
-        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape && widget.selection.active) {
-          widget.selection.exit();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: widget.child,
+    // Dismissing (Escape by default) leaves selection while it is active;
+    // otherwise the intent passes on.
+    child: ListenableBuilder(
+      listenable: widget.selection,
+      builder: (context, child) => Actions(
+        actions: {if (widget.selection.active) DismissIntent: CallbackAction<DismissIntent>(onInvoke: (_) => widget.selection.exit())},
+        child: child!,
+      ),
+      child: FrostDismissKey(child: Focus(skipTraversal: true, child: widget.child)),
     ),
   );
 }

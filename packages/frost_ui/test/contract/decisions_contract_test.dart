@@ -178,7 +178,7 @@ Future<String?> _shellEsc(WidgetTester tester) => guarded(tester, (errors) async
   await tester.sendKeyEvent(LogicalKeyboardKey.escape);
   await settle(tester);
   if (backs > 0 || find.text(pageMarker).evaluate().isEmpty) return 'Escape inside a text field left the page (onBack called $backs time(s))';
-  // The first press only drops the field's focus; focus is still inside the shell for the second.
+  // The shell binds no Escape; a second press from the field leaves the page too.
   await tester.sendKeyEvent(LogicalKeyboardKey.escape);
   await settle(tester);
   if (backs > 0 || find.text(pageMarker).evaluate().isEmpty) return 'a second Escape after leaving the text field left the page (onBack called $backs time(s))';

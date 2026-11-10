@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../foundation/_key_bindings.dart';
 import '../foundation/control_scope.dart';
 import '../foundation/density.dart';
 import '../foundation/metrics.dart';
@@ -165,20 +166,26 @@ class _ReorderListState<T> extends State<FrostReorderableList<T>> {
     });
   }
 
-  KeyEventResult _key(T item, KeyEvent event) {
-    if (!_enabled || (event is! KeyDownEvent && event is! KeyRepeatEvent) || _grab == null || _grab!.item != item) return KeyEventResult.ignored;
-    if (event.logicalKey == LogicalKeyboardKey.escape) {
-      _cancel();
-      return KeyEventResult.handled;
+  bool _grabbing(T item) => _enabled && _grab != null && _grab!.item == item;
+
+  /// While [item] is grabbed from the keyboard, Up and Down move it and
+  /// dismissing (Escape by default) cancels the move.
+  Widget _keys(T item, Widget child) {
+    bool move(int delta) {
+      if (!_grabbing(item)) return false;
+      _previewMove(_orderIndices[item]! + delta);
+      return true;
     }
-    final delta = switch (event.logicalKey) {
-      LogicalKeyboardKey.arrowUp => -1,
-      LogicalKeyboardKey.arrowDown => 1,
-      _ => 0,
-    };
-    if (delta == 0) return KeyEventResult.ignored;
-    _previewMove(_orderIndices[item]! + delta);
-    return KeyEventResult.handled;
+
+    return Actions(
+      actions: {if (_grabbing(item)) DismissIntent: CallbackAction<DismissIntent>(onInvoke: (_) => _cancel())},
+      child: FrostDismissKey(
+        child: FrostKeyBindings(
+          bindings: {const FrostKeyPress(LogicalKeyboardKey.arrowUp): () => move(-1), const FrostKeyPress(LogicalKeyboardKey.arrowDown): () => move(1)},
+          child: child,
+        ),
+      ),
+    );
   }
 
   void _start(T item, DragStartDetails details) {
@@ -312,10 +319,9 @@ class _ReorderListState<T> extends State<FrostReorderableList<T>> {
   Widget _handle(T item) {
     final cell = _cells[item]!;
     final labels = FrostScope.labelsOf(context);
-    return Focus(
-      canRequestFocus: false,
-      onKeyEvent: (_, event) => _key(item, event),
-      child: GestureDetector(
+    return _keys(
+      item,
+      GestureDetector(
         onVerticalDragStart: _enabled ? (details) => _start(item, details) : null,
         onVerticalDragUpdate: _enabled ? _update : null,
         onVerticalDragEnd: _enabled ? (_) => _finish() : null,

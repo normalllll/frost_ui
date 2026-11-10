@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../feedback/progress.dart';
+import '../foundation/_key_bindings.dart';
 import '../foundation/control_scope.dart';
 import '../foundation/density.dart';
 import '../foundation/metrics.dart';
@@ -90,26 +91,28 @@ class _SliderState extends State<FrostSlider> with SingleTickerProviderStateMixi
     widget.onChangeEnd?.call(value);
   }
 
-  KeyEventResult _key(FocusNode _, KeyEvent event) {
-    if (!_enabled || event is KeyUpEvent) return KeyEventResult.ignored;
-    if (_media != null && (event.logicalKey == LogicalKeyboardKey.arrowLeft || event.logicalKey == LogicalKeyboardKey.arrowRight)) {
-      return KeyEventResult.ignored;
+  /// Arrows, Page Up/Down, Home and End step the value. On media, Left and
+  /// Right stay with the player.
+  Map<ShortcutActivator, bool Function()> get _keys {
+    bool to(double Function() value) {
+      if (!_enabled) return false;
+      _adjust(value());
+      return true;
     }
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-    final value = switch (event.logicalKey) {
-      LogicalKeyboardKey.arrowLeft => _next(rtl ? 1 : -1),
-      LogicalKeyboardKey.arrowRight => _next(rtl ? -1 : 1),
-      LogicalKeyboardKey.arrowUp => _next(1),
-      LogicalKeyboardKey.arrowDown => _next(-1),
-      LogicalKeyboardKey.pageUp => _next(1, page: true),
-      LogicalKeyboardKey.pageDown => _next(-1, page: true),
-      LogicalKeyboardKey.home => widget.min,
-      LogicalKeyboardKey.end => widget.max,
-      _ => null,
+
+    bool rtl() => Directionality.of(context) == TextDirection.rtl;
+    return {
+      if (_media == null) ...{
+        const FrostKeyPress(LogicalKeyboardKey.arrowLeft): () => to(() => _next(rtl() ? 1 : -1)),
+        const FrostKeyPress(LogicalKeyboardKey.arrowRight): () => to(() => _next(rtl() ? -1 : 1)),
+      },
+      const FrostKeyPress(LogicalKeyboardKey.arrowUp): () => to(() => _next(1)),
+      const FrostKeyPress(LogicalKeyboardKey.arrowDown): () => to(() => _next(-1)),
+      const FrostKeyPress(LogicalKeyboardKey.pageUp): () => to(() => _next(1, page: true)),
+      const FrostKeyPress(LogicalKeyboardKey.pageDown): () => to(() => _next(-1, page: true)),
+      const FrostKeyPress(LogicalKeyboardKey.home): () => to(() => widget.min),
+      const FrostKeyPress(LogicalKeyboardKey.end): () => to(() => widget.max),
     };
-    if (value == null) return KeyEventResult.ignored;
-    _adjust(value);
-    return KeyEventResult.handled;
   }
 
   void _settle() => FrostMotion.springTo(context, _position, _unit(widget.value), FrostMotion.snappy);
@@ -216,9 +219,8 @@ class _SliderState extends State<FrostSlider> with SingleTickerProviderStateMixi
               trackHeight: target,
               minimumTrackWidth: frostSliderMinimumTrackWidth,
               children: [
-                Focus(
-                  canRequestFocus: false,
-                  onKeyEvent: _key,
+                FrostKeyBindings(
+                  bindings: _keys,
                   child: FrostMeasuredLayoutBuilder(
                     naturalSize: Size(frostSliderMinimumTrackWidth, target),
                     builder: (context, constraints) {

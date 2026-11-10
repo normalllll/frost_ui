@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../foundation/_key_bindings.dart';
 import '../foundation/metrics.dart';
 import '../foundation/scope.dart';
 import '../motion/spring.dart';
@@ -82,22 +83,26 @@ class _FrostThumbnailStripState extends State<FrostThumbnailStrip> {
     if (!pointer) _reveal(index);
   }
 
-  KeyEventResult _key(FocusNode node, KeyEvent event) {
-    if (widget.onSelected == null || widget.itemCount == 0 || (event is! KeyDownEvent && event is! KeyRepeatEvent)) return KeyEventResult.ignored;
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-    final last = widget.itemCount - 1;
-    final current = widget.selectedIndex;
-    final key = event.logicalKey;
-    final next = switch (key) {
-      LogicalKeyboardKey.home => 0,
-      LogicalKeyboardKey.end => last,
-      LogicalKeyboardKey.arrowRight => current == null ? (rtl ? last : 0) : (current + (rtl ? -1 : 1)).clamp(0, last),
-      LogicalKeyboardKey.arrowLeft => current == null ? (rtl ? 0 : last) : (current + (rtl ? 1 : -1)).clamp(0, last),
-      _ => null,
+  bool get _interactive => widget.onSelected != null && widget.itemCount > 0;
+
+  /// Left and Right step the selection, mirrored in RTL; Home and End select
+  /// the first and last. The strip is one focus stop and takes these keys
+  /// before an enclosing pager.
+  Map<ShortcutActivator, bool Function()> get _keys {
+    bool to(int Function(int? current, int last, bool rtl) next) {
+      if (!_interactive) return false;
+      _select(next(widget.selectedIndex, widget.itemCount - 1, Directionality.of(context) == TextDirection.rtl));
+      return true;
+    }
+
+    return {
+      const FrostKeyPress(LogicalKeyboardKey.arrowRight): () =>
+          to((current, last, rtl) => current == null ? (rtl ? last : 0) : (current + (rtl ? -1 : 1)).clamp(0, last)),
+      const FrostKeyPress(LogicalKeyboardKey.arrowLeft): () =>
+          to((current, last, rtl) => current == null ? (rtl ? 0 : last) : (current + (rtl ? 1 : -1)).clamp(0, last)),
+      const FrostKeyPress(LogicalKeyboardKey.home): () => to((_, _, _) => 0),
+      const FrostKeyPress(LogicalKeyboardKey.end): () => to((_, last, _) => last),
     };
-    if (next == null) return KeyEventResult.ignored;
-    _select(next);
-    return KeyEventResult.handled;
   }
 
   @override
@@ -110,29 +115,31 @@ class _FrostThumbnailStripState extends State<FrostThumbnailStrip> {
   @override
   Widget build(BuildContext context) {
     final extent = frostThumbnailExtent(widget.size);
-    return Focus(
-      focusNode: _focus,
-      canRequestFocus: widget.onSelected != null && widget.itemCount > 0,
-      onKeyEvent: _key,
-      child: SizedBox(
-        height: extent + _thumbnailStripInset * 2,
-        child: FrostScrollEdgeFade(
-          controller: _controller,
-          child: ExcludeFocus(
-            child: ListView.builder(
-              controller: _controller,
-              scrollDirection: Axis.horizontal,
-              itemExtentBuilder: (index, _) => extent + (index == widget.itemCount - 1 ? 0 : _thumbnailSpacing),
-              padding: const EdgeInsets.all(_thumbnailStripInset),
-              itemCount: widget.itemCount,
-              itemBuilder: (context, index) => Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: FrostThumbnail(
-                  size: widget.size,
-                  image: widget.itemBuilder(context, index),
-                  selected: index == widget.selectedIndex,
-                  semanticLabel: FrostScope.labelsOf(context).pageOf(index + 1, widget.itemCount),
-                  onPressed: widget.onSelected == null ? null : () => _select(index, pointer: true),
+    return FrostKeyBindings(
+      bindings: _keys,
+      child: Focus(
+        focusNode: _focus,
+        canRequestFocus: _interactive,
+        child: SizedBox(
+          height: extent + _thumbnailStripInset * 2,
+          child: FrostScrollEdgeFade(
+            controller: _controller,
+            child: ExcludeFocus(
+              child: ListView.builder(
+                controller: _controller,
+                scrollDirection: Axis.horizontal,
+                itemExtentBuilder: (index, _) => extent + (index == widget.itemCount - 1 ? 0 : _thumbnailSpacing),
+                padding: const EdgeInsets.all(_thumbnailStripInset),
+                itemCount: widget.itemCount,
+                itemBuilder: (context, index) => Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: FrostThumbnail(
+                    size: widget.size,
+                    image: widget.itemBuilder(context, index),
+                    selected: index == widget.selectedIndex,
+                    semanticLabel: FrostScope.labelsOf(context).pageOf(index + 1, widget.itemCount),
+                    onPressed: widget.onSelected == null ? null : () => _select(index, pointer: true),
+                  ),
                 ),
               ),
             ),

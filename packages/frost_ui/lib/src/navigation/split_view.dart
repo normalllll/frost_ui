@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../foundation/_focus_modality.dart';
+import '../foundation/_key_bindings.dart';
 import '../foundation/_layout_scope.dart';
 import '../foundation/_touch_targets.dart';
 import '../foundation/feedback.dart';
@@ -143,15 +144,15 @@ class _FrostSplitViewState extends State<FrostSplitView> with SingleTickerProvid
         resizable: widget.resizable,
         close: widget.onCloseSecondary == null ? null : _close,
         reselection: outer?.primaryReselection ?? _reselection,
-        child: Focus(
-          canRequestFocus: false,
-          skipTraversal: true,
-          onKeyEvent: (_, event) {
-            if (hasDetail && event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape && widget.onCloseSecondary != null) {
+        // Escape closes an open detail. It is bound here, above the compact
+        // navigator: a page route's own dismiss action would stop DismissIntent.
+        child: FrostKeyBindings(
+          bindings: {
+            const FrostKeyPress(LogicalKeyboardKey.escape, repeat: false): () {
+              if (!hasDetail || widget.onCloseSecondary == null) return false;
               _close();
-              return KeyEventResult.handled;
-            }
-            return KeyEventResult.ignored;
+              return true;
+            },
           },
           child: Stack(
             fit: StackFit.expand,
@@ -324,19 +325,12 @@ class _WideSplit extends StatelessWidget {
                       },
                       child: _ResizeFocus(
                         onResizeEnd: view.commitResize,
-                        onKeyEvent: (_, event) {
-                          if (event is! KeyDownEvent && event is! KeyRepeatEvent) return KeyEventResult.ignored;
-                          final key = event.logicalKey;
-                          final target = switch (key) {
-                            LogicalKeyboardKey.arrowLeft => stepped(rtl ? _keyboardWidthStep : -_keyboardWidthStep),
-                            LogicalKeyboardKey.arrowRight => stepped(rtl ? -_keyboardWidthStep : _keyboardWidthStep),
-                            LogicalKeyboardKey.home => _minimumPrimaryWidth,
-                            LogicalKeyboardKey.end => _maximumPrimaryWidth,
-                            _ => null,
-                          };
-                          if (target == null) return KeyEventResult.ignored;
-                          view.resize(target, animate: true);
-                          return KeyEventResult.handled;
+                        onResize: (target) => view.resize(target, animate: true),
+                        targets: {
+                          LogicalKeyboardKey.arrowLeft: () => stepped(rtl ? _keyboardWidthStep : -_keyboardWidthStep),
+                          LogicalKeyboardKey.arrowRight: () => stepped(rtl ? -_keyboardWidthStep : _keyboardWidthStep),
+                          LogicalKeyboardKey.home: () => _minimumPrimaryWidth,
+                          LogicalKeyboardKey.end: () => _maximumPrimaryWidth,
                         },
                         child: FrostTouchTarget(
                           enabled: true,
@@ -361,9 +355,12 @@ class _WideSplit extends StatelessWidget {
   }
 }
 
+/// The keyboard resize handle. Each key in [targets] resizes to its width while
+/// pressed or held; releasing the last held one commits the resize.
 class _ResizeFocus extends StatefulWidget {
-  const _ResizeFocus({required this.onKeyEvent, required this.onResizeEnd, required this.child});
-  final FocusOnKeyEventCallback onKeyEvent;
+  const _ResizeFocus({required this.targets, required this.onResize, required this.onResizeEnd, required this.child});
+  final Map<LogicalKeyboardKey, double Function()> targets;
+  final ValueChanged<double> onResize;
   final VoidCallback onResizeEnd;
   final Widget child;
   @override
@@ -374,40 +371,47 @@ class _ResizeFocusState extends State<_ResizeFocus> {
   bool _highlight = false;
   final _adjusting = <LogicalKeyboardKey>{};
 
-  KeyEventResult _key(FocusNode node, KeyEvent event) {
-    if (event is KeyUpEvent && _adjusting.remove(event.logicalKey)) {
-      if (_adjusting.isEmpty) widget.onResizeEnd();
-      return KeyEventResult.handled;
-    }
-    final result = widget.onKeyEvent(node, event);
-    if (result == KeyEventResult.handled) _adjusting.add(event.logicalKey);
-    return result;
+  // Shortcuts see presses only, so the release that commits stays a key handler.
+  KeyEventResult _release(FocusNode node, KeyEvent event) {
+    if (event is! KeyUpEvent || !_adjusting.remove(event.logicalKey)) return KeyEventResult.ignored;
+    if (_adjusting.isEmpty) widget.onResizeEnd();
+    return KeyEventResult.handled;
   }
 
   @override
   Widget build(BuildContext context) => Focus(
     canRequestFocus: false,
     skipTraversal: true,
-    onKeyEvent: _key,
-    child: FocusableActionDetector(
-      onFocusChange: (focused) {
-        if (!focused && _adjusting.isNotEmpty) {
-          _adjusting.clear();
-          widget.onResizeEnd();
-        }
+    onKeyEvent: _release,
+    child: FrostKeyBindings(
+      bindings: {
+        for (final MapEntry(:key, value: target) in widget.targets.entries)
+          FrostKeyPress(key): () {
+            widget.onResize(target());
+            _adjusting.add(key);
+            return true;
+          },
       },
-      onShowFocusHighlight: (value) => setState(() => _highlight = value),
-      child: ListenableBuilder(
-        listenable: FrostInputModality.instance,
-        builder: (context, child) => DecoratedBox(
-          decoration: BoxDecoration(
-            border: frostShowsFocus({if (_highlight) WidgetState.focused})
-                ? Border.all(color: FrostThemeTokens.of(context).focus, width: FrostMetrics.focusBorderWidth)
-                : null,
+      child: FocusableActionDetector(
+        onFocusChange: (focused) {
+          if (!focused && _adjusting.isNotEmpty) {
+            _adjusting.clear();
+            widget.onResizeEnd();
+          }
+        },
+        onShowFocusHighlight: (value) => setState(() => _highlight = value),
+        child: ListenableBuilder(
+          listenable: FrostInputModality.instance,
+          builder: (context, child) => DecoratedBox(
+            decoration: BoxDecoration(
+              border: frostShowsFocus({if (_highlight) WidgetState.focused})
+                  ? Border.all(color: FrostThemeTokens.of(context).focus, width: FrostMetrics.focusBorderWidth)
+                  : null,
+            ),
+            child: child,
           ),
-          child: child,
+          child: widget.child,
         ),
-        child: widget.child,
       ),
     ),
   );

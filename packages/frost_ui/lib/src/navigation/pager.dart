@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../controls/buttons.dart';
 import '../foundation/_focus_modality.dart';
+import '../foundation/_key_bindings.dart';
 import '../foundation/feedback.dart';
 import '../foundation/input_feedback.dart';
 import '../foundation/metrics.dart';
@@ -250,21 +251,24 @@ class _FrostPagerState extends State<FrostPager> with SingleTickerProviderStateM
     if (before != _zoomedMedia.containsValue(_page)) setState(() {});
   }
 
-  KeyEventResult _key(FocusNode node, KeyEvent event) {
-    if (widget.itemCount == 0 || (event is! KeyDownEvent && event is! KeyRepeatEvent)) return KeyEventResult.ignored;
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-    final next = switch (event.logicalKey) {
-      LogicalKeyboardKey.arrowLeft => _target + (rtl ? 1 : -1),
-      LogicalKeyboardKey.arrowRight => _target + (rtl ? -1 : 1),
-      LogicalKeyboardKey.pageUp => _target - 1,
-      LogicalKeyboardKey.pageDown => _target + 1,
-      LogicalKeyboardKey.home => 0,
-      LogicalKeyboardKey.end => widget.itemCount - 1,
-      _ => null,
+  /// Left and Right (mirrored in RTL) and Page Up/Down turn a page, Home and
+  /// End go to the first and last.
+  Map<ShortcutActivator, bool Function()> get _keys {
+    bool to(int Function() next) {
+      if (widget.itemCount == 0) return false;
+      unawaited(_move(next(), animate: true));
+      return true;
+    }
+
+    bool rtl() => Directionality.of(context) == TextDirection.rtl;
+    return {
+      const FrostKeyPress(LogicalKeyboardKey.arrowLeft): () => to(() => _target + (rtl() ? 1 : -1)),
+      const FrostKeyPress(LogicalKeyboardKey.arrowRight): () => to(() => _target + (rtl() ? -1 : 1)),
+      const FrostKeyPress(LogicalKeyboardKey.pageUp): () => to(() => _target - 1),
+      const FrostKeyPress(LogicalKeyboardKey.pageDown): () => to(() => _target + 1),
+      const FrostKeyPress(LogicalKeyboardKey.home): () => to(() => 0),
+      const FrostKeyPress(LogicalKeyboardKey.end): () => to(() => widget.itemCount - 1),
     };
-    if (next == null) return KeyEventResult.ignored;
-    unawaited(_move(next, animate: true));
-    return KeyEventResult.handled;
   }
 
   @override
@@ -355,10 +359,8 @@ class _FrostPagerState extends State<FrostPager> with SingleTickerProviderStateM
         ],
       ),
     );
-    return Focus(
-      canRequestFocus: false,
-      skipTraversal: true,
-      onKeyEvent: _key,
+    return FrostKeyBindings(
+      bindings: _keys,
       child: FocusableActionDetector(
         focusNode: _focus,
         autofocus: widget.autofocus,

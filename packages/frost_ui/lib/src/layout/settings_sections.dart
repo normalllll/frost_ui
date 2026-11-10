@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../foundation/icon_data.dart';
 import '../foundation/metrics.dart';
@@ -205,19 +204,23 @@ class _SettingsSectionsState extends State<FrostSettingsSections> with SingleTic
     ),
   );
 
-  KeyEventResult _moveFocus(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent && event is! KeyRepeatEvent) return KeyEventResult.ignored;
-    final delta = switch (event.logicalKey) {
-      LogicalKeyboardKey.arrowDown => 1,
-      LogicalKeyboardKey.arrowUp => -1,
+  /// Up and Down (Flutter's directional focus keys) step through the section
+  /// list and stop at its ends; other directions keep Flutter's behaviour.
+  Object? _moveFocus(DirectionalFocusIntent intent) {
+    final delta = switch (intent.direction) {
+      TraversalDirection.down => 1,
+      TraversalDirection.up => -1,
       _ => 0,
     };
     final index = _sectionFocus.indexWhere((node) => node.hasFocus);
-    if (delta == 0 || index < 0) return KeyEventResult.ignored;
+    if (delta == 0 || index < 0) {
+      primaryFocus?.focusInDirection(intent.direction);
+      return null;
+    }
     final target = (index + delta).clamp(0, _sectionFocus.length - 1);
     _sectionFocus[target].requestFocus();
     if (_sectionFocus[target].context case final targetContext?) Scrollable.ensureVisible(targetContext);
-    return KeyEventResult.handled;
+    return null;
   }
 
   // A settings page is width-limited and centred; its panes keep their geometry.
@@ -241,25 +244,27 @@ class _SettingsSectionsState extends State<FrostSettingsSections> with SingleTic
       width: constraints.maxWidth,
       navigation: !wide && compactNavigation != null
           ? compactNavigation(context)
-          : Focus(
-              onKeyEvent: _moveFocus,
-              child: ListView.builder(
-                primary: false,
-                padding: EdgeInsets.fromLTRB(
-                  wide ? FrostGap.related : gap.page,
-                  wide ? 0 : gap.section,
-                  (wide ? FrostGap.related : gap.page) + (wide ? 0 : FrostPageOutline.channelOf(context)),
-                  wide ? 0 : gap.section,
-                ),
-                itemCount: widget.labels.length,
-                itemBuilder: (context, index) => Padding(
-                  padding: const EdgeInsets.only(bottom: FrostGap.inline),
-                  child: FrostNavigationTile(
-                    label: widget.labels[index],
-                    selected: wide && selected == index,
-                    icon: widget.icons?[index],
-                    focusNode: _sectionFocus[index],
-                    onTap: () => wide ? _select(index) : (widget.compact?.onNavigate ?? widget.onSelected)(index),
+          : Actions(
+              actions: {DirectionalFocusIntent: CallbackAction<DirectionalFocusIntent>(onInvoke: _moveFocus)},
+              child: Focus(
+                child: ListView.builder(
+                  primary: false,
+                  padding: EdgeInsets.fromLTRB(
+                    wide ? FrostGap.related : gap.page,
+                    wide ? 0 : gap.section,
+                    (wide ? FrostGap.related : gap.page) + (wide ? 0 : FrostPageOutline.channelOf(context)),
+                    wide ? 0 : gap.section,
+                  ),
+                  itemCount: widget.labels.length,
+                  itemBuilder: (context, index) => Padding(
+                    padding: const EdgeInsets.only(bottom: FrostGap.inline),
+                    child: FrostNavigationTile(
+                      label: widget.labels[index],
+                      selected: wide && selected == index,
+                      icon: widget.icons?[index],
+                      focusNode: _sectionFocus[index],
+                      onTap: () => wide ? _select(index) : (widget.compact?.onNavigate ?? widget.onSelected)(index),
+                    ),
                   ),
                 ),
               ),

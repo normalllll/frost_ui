@@ -90,6 +90,32 @@ void main() {
     expect(selection.selected, {3}, reason: 'exit also discards the range anchor');
   });
 
+  testWidgets('Esc leaves selection before an Escape the app binds around the page', (tester) async {
+    final selection = FrostSelection<int>();
+    addTearDown(selection.dispose);
+    var appEscapes = 0;
+    await tester.pumpWidget(
+      frostTestApp(
+        Shortcuts(
+          shortcuts: const {SingleActivator(LogicalKeyboardKey.escape): _AppEscapeIntent()},
+          child: Actions(
+            actions: {_AppEscapeIntent: CallbackAction<_AppEscapeIntent>(onInvoke: (_) => appEscapes++)},
+            child: list(selection, pressed: () {}),
+          ),
+        ),
+      ),
+    );
+    await modifiedTap(tester, 'Item 2', LogicalKeyboardKey.shiftLeft);
+    expect(selection.active, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(selection.active, isFalse);
+    expect(appEscapes, 0);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(appEscapes, 1);
+  });
+
   testWidgets('grid automatically shows media selection and uses items order for Ctrl+Shift', (tester) async {
     final selection = FrostSelection<int>();
     addTearDown(selection.dispose);
@@ -430,4 +456,8 @@ void main() {
       expect(selection.selected, {0, 2, 3, 4});
     }
   });
+}
+
+class _AppEscapeIntent extends Intent {
+  const _AppEscapeIntent();
 }

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui' show SemanticsHitTestBehavior;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../foundation/_layout_scope.dart';
 import '../foundation/control_scope.dart';
@@ -99,25 +98,33 @@ Future<T?> pushFrostModal<T>({
                   enabled: true,
                   child: FocusTraversalGroup(
                     policy: ReadingOrderTraversalPolicy(),
-                    child: Focus(
-                      onKeyEvent: (node, event) {
-                        if (event is! KeyDownEvent || event.logicalKey != LogicalKeyboardKey.escape) return KeyEventResult.ignored;
-                        unawaited(frostDismissModal(node.context!));
-                        return KeyEventResult.handled;
-                      },
-                      child: Semantics(
-                        scopesRoute: true,
-                        explicitChildNodes: true,
-                        hitTestBehavior: SemanticsHitTestBehavior.opaque,
-                        child: FrostPanelActionScope(
-                          origin: originContext,
-                          close: () async {
-                            if (!route.isCurrent) return false;
-                            navigator.pop<T>();
-                            await route.completed;
-                            return true;
+                    // Dismissing (Escape by default) always stops at the modal,
+                    // even when the route refuses to close, so it never reaches
+                    // the page underneath.
+                    child: Actions(
+                      actions: {
+                        DismissIntent: CallbackAction<DismissIntent>(
+                          onInvoke: (_) {
+                            unawaited(frostDismissModal(context));
+                            return null;
                           },
-                          child: bottomSheet ? Builder(builder: builder) : SafeArea(child: Builder(builder: builder)),
+                        ),
+                      },
+                      child: Focus(
+                        child: Semantics(
+                          scopesRoute: true,
+                          explicitChildNodes: true,
+                          hitTestBehavior: SemanticsHitTestBehavior.opaque,
+                          child: FrostPanelActionScope(
+                            origin: originContext,
+                            close: () async {
+                              if (!route.isCurrent) return false;
+                              navigator.pop<T>();
+                              await route.completed;
+                              return true;
+                            },
+                            child: bottomSheet ? Builder(builder: builder) : SafeArea(child: Builder(builder: builder)),
+                          ),
                         ),
                       ),
                     ),

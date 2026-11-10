@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 
 import '../feedback/error_content.dart';
 import '../foundation/density.dart';
@@ -126,7 +125,7 @@ class FrostToast {
   static void warning(String message) => _show(FrostToastKind.warning, message, const Duration(seconds: 4));
 
   /// Dismisses every notice, the same way each card's close button does.
-  /// [FrostToastHost] calls this for an Esc that nothing else handled.
+  /// An app that wants Escape to clear notices binds it to this.
   static void dismissAll() => FrostToastHost._key.currentState?._dismissAll();
 
   static _AppToastHostState? get _host {
@@ -374,24 +373,12 @@ class _AppToastHostState extends State<FrostToastHost> {
     registry: _viewports,
     child: AnimatedBuilder(
       animation: _viewports,
-      // An Esc that nothing focused handled bubbles up to here, after dialogs,
-      // menus and search have had their turn.
-      builder: (context, _) => Focus(
-        canRequestFocus: false,
-        skipTraversal: true,
-        onKeyEvent: (node, event) {
-          if (event is! KeyDownEvent || event.logicalKey != LogicalKeyboardKey.escape) return KeyEventResult.ignored;
-          if (!_notices.any((notice) => !notice.leaving)) return KeyEventResult.ignored;
-          _dismissAll();
-          return KeyEventResult.handled;
-        },
-        child: Stack(
-          fit: StackFit.passthrough,
-          children: [
-            widget.child,
-            if (_notices.isNotEmpty) Positioned.fill(child: LayoutBuilder(builder: _layer)),
-          ],
-        ),
+      builder: (context, _) => Stack(
+        fit: StackFit.passthrough,
+        children: [
+          widget.child,
+          if (_notices.isNotEmpty) Positioned.fill(child: LayoutBuilder(builder: _layer)),
+        ],
       ),
     ),
   );

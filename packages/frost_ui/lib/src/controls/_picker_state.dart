@@ -110,17 +110,19 @@ mixin _PickerGroupFocus<T> on State<_PickerImpl<T>> {
     if (_options[index].value != widget.picker.value || _selected == null) widget.picker.onChanged!(_options[index].value);
   }
 
-  KeyEventResult _key(FocusNode _, KeyEvent event) {
-    if (!_enabled || event is KeyUpEvent || _options.isEmpty) return KeyEventResult.ignored;
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-    final direction = switch (event.logicalKey) {
-      LogicalKeyboardKey.arrowDown => 1,
-      LogicalKeyboardKey.arrowUp => -1,
-      LogicalKeyboardKey.arrowRight => rtl ? -1 : 1,
-      LogicalKeyboardKey.arrowLeft => rtl ? 1 : -1,
-      _ => 0,
+  /// The arrows move the selection to the next enabled option, wrapping.
+  Map<ShortcutActivator, bool Function()> get _keys {
+    bool rtl() => Directionality.of(context) == TextDirection.rtl;
+    return {
+      const FrostKeyPress(LogicalKeyboardKey.arrowDown): () => _step(1),
+      const FrostKeyPress(LogicalKeyboardKey.arrowUp): () => _step(-1),
+      const FrostKeyPress(LogicalKeyboardKey.arrowRight): () => _step(rtl() ? -1 : 1),
+      const FrostKeyPress(LogicalKeyboardKey.arrowLeft): () => _step(rtl() ? 1 : -1),
     };
-    if (direction == 0) return KeyEventResult.ignored;
+  }
+
+  bool _step(int direction) {
+    if (!_enabled || _options.isEmpty) return false;
     var index = List.generate(_itemCount, _node).indexWhere((node) => node.hasFocus);
     if (index < 0) index = _tabIndex ?? 0;
     for (var tried = 0; tried < _itemCount; tried++) {
@@ -130,7 +132,7 @@ mixin _PickerGroupFocus<T> on State<_PickerImpl<T>> {
         break;
       }
     }
-    return KeyEventResult.handled;
+    return true;
   }
 }
 
@@ -166,7 +168,7 @@ class _PickerGroupField<T> extends StatelessWidget {
       container: true,
       explicitChildNodes: true,
       label: picker.label,
-      child: Focus(canRequestFocus: false, skipTraversal: true, onKeyEvent: measurement ? null : owner._key, child: child),
+      child: measurement ? child : FrostKeyBindings(bindings: owner._keys, child: child),
     );
     // Group controls keep their intrinsic width, including in toolbar probes.
     return FrostFieldLayout(stretch: false, error: measurement ? null : picker.error, enabled: owner._enabled, supportingPresence: true, child: group);

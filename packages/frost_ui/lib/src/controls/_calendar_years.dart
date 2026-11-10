@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../feedback/_skeleton_geometry.dart';
+import '../foundation/_key_bindings.dart';
 import '../foundation/metrics.dart';
 import '../foundation/tokens.dart';
 import '../foundation/typography.dart';
@@ -96,16 +97,38 @@ class _CalendarYearsState extends State<FrostCalendarYears> {
     _refocus();
   }
 
-  KeyEventResult _key(KeyEvent event, int year) {
-    if (event is! KeyDownEvent && event is! KeyRepeatEvent) return KeyEventResult.ignored;
-    if (event.logicalKey == LogicalKeyboardKey.escape) {
-      widget.onDismissed();
-      return KeyEventResult.handled;
-    }
+  static const _yearKeys = [
+    LogicalKeyboardKey.arrowLeft,
+    LogicalKeyboardKey.arrowRight,
+    LogicalKeyboardKey.arrowUp,
+    LogicalKeyboardKey.arrowDown,
+    LogicalKeyboardKey.pageUp,
+    LogicalKeyboardKey.pageDown,
+    LogicalKeyboardKey.home,
+    LogicalKeyboardKey.end,
+  ];
+
+  /// Arrows move by year and row, Page Up/Down by a screenful, Home and End to
+  /// the ends of the row. Dismissing (Escape by default) returns to the days.
+  Widget _keys(int year, Widget child) => Actions(
+    actions: {DismissIntent: CallbackAction<DismissIntent>(onInvoke: (_) => widget.onDismissed())},
+    child: FrostKeyBindings(
+      bindings: {
+        for (final key in _yearKeys)
+          FrostKeyPress(key): () {
+            _move(_target(key, year));
+            return true;
+          },
+      },
+      child: child,
+    ),
+  );
+
+  int _target(LogicalKeyboardKey key, int year) {
     final rtl = Directionality.of(context) == TextDirection.rtl;
     final columns = widget.columns, column = (year - widget.first) % columns;
     final page = math.max(1, _scroll!.position.viewportDimension ~/ widget.rowHeight) * columns;
-    final target = switch (event.logicalKey) {
+    return switch (key) {
       LogicalKeyboardKey.arrowLeft => year + (rtl ? 1 : -1),
       LogicalKeyboardKey.arrowRight => year + (rtl ? -1 : 1),
       LogicalKeyboardKey.arrowUp => year - columns,
@@ -113,12 +136,8 @@ class _CalendarYearsState extends State<FrostCalendarYears> {
       LogicalKeyboardKey.pageUp => year - page,
       LogicalKeyboardKey.pageDown => year + page,
       LogicalKeyboardKey.home => year - column,
-      LogicalKeyboardKey.end => year + columns - 1 - column,
-      _ => null,
+      _ => year + columns - 1 - column,
     };
-    if (target == null) return KeyEventResult.ignored;
-    _move(target);
-    return KeyEventResult.handled;
   }
 
   Widget _year(BuildContext context, int index) {
@@ -132,10 +151,9 @@ class _CalendarYearsState extends State<FrostCalendarYears> {
       label: text,
       onTap: () => widget.onSelected(year),
       child: ExcludeSemantics(
-        child: Focus(
-          canRequestFocus: false,
-          onKeyEvent: (_, event) => _key(event, year),
-          child: FrostInputSurface(
+        child: _keys(
+          year,
+          FrostInputSurface(
             focusNode: _node(year),
             onTap: () => widget.onSelected(year),
             builder: (context, states) => Padding(

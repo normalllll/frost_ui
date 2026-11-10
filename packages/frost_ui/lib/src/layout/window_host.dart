@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:frost_window/frost_window.dart';
 
 import '../foundation/scope.dart';
@@ -229,26 +228,20 @@ class _FrostWindowHostState extends State<FrostWindowHost> with WidgetsBindingOb
   @override
   Widget build(BuildContext context) {
     if (!frostUsesCustomTitleBar) return widget.child;
-    return Shortcuts(
-      shortcuts: {
-        const SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true, includeRepeats: false): VoidCallbackIntent(_navigateBack),
-        const SingleActivator(LogicalKeyboardKey.goBack, includeRepeats: false): VoidCallbackIntent(_navigateBack),
-      },
-      child: Overlay.wrap(
-        child: FocusScope(
-          node: _contentFocus,
-          child: ListenableBuilder(
-            listenable: widget.controller,
-            child: widget.child,
-            builder: (context, child) => FrostScope(
-              config: FrostScope.maybeOf(context)?.config,
-              reduceTransparency: _reduceTransparency || widget.controller.state.reduceTransparency,
-              child: FrostWindowCaptionScope(
-                window: _actions,
-                systemBackdropAvailable: widget.controller.state.backdropAvailable,
-                systemBackdropActive: widget.controller.state.backdropActive && !_reduceTransparency && !widget.controller.state.reduceTransparency,
-                child: child!,
-              ),
+    return Overlay.wrap(
+      child: FocusScope(
+        node: _contentFocus,
+        child: ListenableBuilder(
+          listenable: widget.controller,
+          child: widget.child,
+          builder: (context, child) => FrostScope(
+            config: FrostScope.maybeOf(context)?.config,
+            reduceTransparency: _reduceTransparency || widget.controller.state.reduceTransparency,
+            child: FrostWindowCaptionScope(
+              window: _actions,
+              systemBackdropAvailable: widget.controller.state.backdropAvailable,
+              systemBackdropActive: widget.controller.state.backdropActive && !_reduceTransparency && !widget.controller.state.reduceTransparency,
+              child: child!,
             ),
           ),
         ),

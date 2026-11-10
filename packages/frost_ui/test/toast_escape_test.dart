@@ -24,7 +24,7 @@ Future<void> settle(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('Escape dismisses the toasts', (tester) async {
+  testWidgets('Escape leaves the toasts to the app', (tester) async {
     await tester.pumpWidget(app());
     FrostToast.error('Fetch failed');
     FrostToast.info('Second');
@@ -32,8 +32,8 @@ void main() {
     expect(find.text('Fetch failed'), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await settle(tester);
-    expect(find.text('Fetch failed'), findsNothing);
-    expect(find.text('Second'), findsNothing);
+    expect(find.text('Fetch failed'), findsOneWidget);
+    expect(find.text('Second'), findsOneWidget);
   });
 
   testWidgets('dismissAll dismisses every notice, queued ones included', (tester) async {
@@ -60,10 +60,9 @@ void main() {
     await settle(tester);
     expect(find.text('Body'), findsNothing);
     expect(find.text('Saved'), findsOneWidget);
-    // With the dialog gone, the next Escape reaches the toast.
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await settle(tester);
-    expect(find.text('Saved'), findsNothing);
+    expect(find.text('Saved'), findsOneWidget);
   });
 
   testWidgets('Escape still closes a dialog when no toast shows', (tester) async {

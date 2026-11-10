@@ -127,18 +127,18 @@ void main() {
   });
 
   for (final base in [false, true]) {
-    testWidgets('without creation keys remain unbound and reopen/cycle/close work base=$base', (tester) async {
+    testWidgets('the host binds no tab keys and leaves them to the app base=$base', (tester) async {
       final tabs = base ? FrostTabsController<String>.withBaseTab(baseTab: 'Home') : FrostTabsController<String>(initial: 'Home');
       tabs.open('Video', activate: false);
       addTearDown(tabs.dispose);
-      var outerNew = 0, forbiddenNew = 0, reopened = 0;
+      var outerNew = 0, hostNew = 0, reopened = 0;
       await tester.pumpWidget(
         frostTestApp(
           CallbackShortcuts(
             bindings: {const SingleActivator(LogicalKeyboardKey.keyT, control: true): () => outerNew++},
             child: FrostTabHost<String>(
               controller: tabs,
-              onNewTab: base ? () => forbiddenNew++ : null,
+              onNewTab: () => hostNew++,
               onReopen: () => reopened++,
               builder: (_, tab) => TextButton(onPressed: () {}, child: Text('Page $tab')),
             ),
@@ -148,26 +148,14 @@ void main() {
       await tester.pumpAndSettle();
       await chord(tester, LogicalKeyboardKey.keyT);
       expect(outerNew, 1);
-      expect(forbiddenNew, 0);
+      expect(hostNew, 0);
       await chord(tester, LogicalKeyboardKey.keyT, shift: true);
-      expect(reopened, 1);
-      await chord(tester, LogicalKeyboardKey.tab);
-      expect(tabs.active, 'Video');
-      await chord(tester, LogicalKeyboardKey.tab);
-      expect(tabs.active, 'Home');
-      await chord(tester, LogicalKeyboardKey.digit9);
-      expect(tabs.active, 'Video');
-      await chord(tester, LogicalKeyboardKey.digit1);
-      expect(tabs.active, 'Home');
-      if (base) {
-        await chord(tester, LogicalKeyboardKey.keyW);
-        await chord(tester, LogicalKeyboardKey.f4);
-        expect(tabs.length, 2);
+      expect(reopened, 0);
+      for (final key in [LogicalKeyboardKey.tab, LogicalKeyboardKey.pageDown, LogicalKeyboardKey.digit9, LogicalKeyboardKey.keyW, LogicalKeyboardKey.f4]) {
+        await chord(tester, key);
       }
-      await chord(tester, LogicalKeyboardKey.tab);
-      await chord(tester, LogicalKeyboardKey.keyW);
       expect(tabs.active, 'Home');
-      expect(tabs.length, 1);
+      expect(tabs.length, 2);
     });
   }
 

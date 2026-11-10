@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 
 import '../feedback/_skeleton_geometry.dart';
 import '../foundation/_control_geometry.dart';
+import '../foundation/_key_bindings.dart';
 import '../foundation/_tab_metrics.dart';
 import '../foundation/density.dart';
 import '../foundation/metrics.dart';
@@ -93,22 +94,24 @@ class _AppTabBarState extends State<FrostTabBar> with TickerProviderStateMixin {
     widget.onTap?.call(index);
   }
 
-  KeyEventResult _key(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent || widget.tabs.isEmpty) return KeyEventResult.ignored;
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-    final current = _nodes.indexWhere((n) => n.hasFocus);
-    final from = current < 0 ? _visual!.source.index : current;
-    final target = switch (event.logicalKey) {
-      LogicalKeyboardKey.arrowRight => (from + (rtl ? -1 : 1)) % widget.tabs.length,
-      LogicalKeyboardKey.arrowLeft => (from + (rtl ? 1 : -1)) % widget.tabs.length,
-      LogicalKeyboardKey.home => 0,
-      LogicalKeyboardKey.end => widget.tabs.length - 1,
-      _ => null,
+  /// Left and Right (mirrored in RTL) move to the neighbouring tab, wrapping;
+  /// Home and End to the first and last. Held keys do not repeat.
+  Map<ShortcutActivator, bool Function()> get _keys {
+    bool to(int Function(int from, int count, bool rtl) target) {
+      if (widget.tabs.isEmpty) return false;
+      final current = _nodes.indexWhere((n) => n.hasFocus);
+      final index = target(current < 0 ? _visual!.source.index : current, widget.tabs.length, Directionality.of(context) == TextDirection.rtl);
+      _nodes[index].requestFocus();
+      _activate(index);
+      return true;
+    }
+
+    return {
+      const FrostKeyPress(LogicalKeyboardKey.arrowRight, repeat: false): () => to((from, count, rtl) => (from + (rtl ? -1 : 1)) % count),
+      const FrostKeyPress(LogicalKeyboardKey.arrowLeft, repeat: false): () => to((from, count, rtl) => (from + (rtl ? 1 : -1)) % count),
+      const FrostKeyPress(LogicalKeyboardKey.home, repeat: false): () => to((_, _, _) => 0),
+      const FrostKeyPress(LogicalKeyboardKey.end, repeat: false): () => to((_, count, _) => count - 1),
     };
-    if (target == null) return KeyEventResult.ignored;
-    _nodes[target].requestFocus();
-    _activate(target);
-    return KeyEventResult.handled;
   }
 
   @override
@@ -144,10 +147,8 @@ class _AppTabBarState extends State<FrostTabBar> with TickerProviderStateMixin {
     final natural = [for (final tab in widget.tabs) _labelWidth(context, tab) + frostTabInset * 2];
     return FrostBleed(
       amount: frostTabInset,
-      child: Focus(
-        skipTraversal: true,
-        canRequestFocus: false,
-        onKeyEvent: _key,
+      child: FrostKeyBindings(
+        bindings: _keys,
         child: FrostMeasuredLayoutBuilder(
           naturalSize: Size(natural.fold(0.0, (a, b) => a + b), hitHeight),
           builder: (context, constraints) {

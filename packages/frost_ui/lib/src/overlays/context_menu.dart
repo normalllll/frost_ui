@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
+import '../foundation/_key_bindings.dart';
 import '../foundation/scope.dart';
 import '../foundation/tokens.dart';
 import 'adaptive_panel.dart';
@@ -181,16 +182,19 @@ class _FrostContextMenuRegionState extends State<FrostContextMenuRegion> {
     });
   }
 
-  KeyEventResult _key(FocusNode node, KeyEvent event) {
-    if (!_enabled || event is! KeyDownEvent) return KeyEventResult.ignored;
-    final menuKey = event.logicalKey == LogicalKeyboardKey.contextMenu;
-    final shiftF10 = event.logicalKey == LogicalKeyboardKey.f10 && HardwareKeyboard.instance.isShiftPressed;
-    if (!menuKey && !shiftF10) return KeyEventResult.ignored;
+  /// The ContextMenu key and Shift+F10 open the menu below the focused control.
+  Map<ShortcutActivator, bool Function()> get _keys => {
+    const FrostKeyPress(LogicalKeyboardKey.contextMenu, repeat: false): _openFromKeyboard,
+    const FrostKeyPress(LogicalKeyboardKey.f10, repeat: false): () => HardwareKeyboard.instance.isShiftPressed && _openFromKeyboard(),
+  };
+
+  bool _openFromKeyboard() {
+    if (!_enabled) return false;
     final focus = FocusManager.instance.primaryFocus;
     final render = focus?.context?.findRenderObject() ?? context.findRenderObject();
-    if (render is! RenderBox || !render.hasSize) return KeyEventResult.ignored;
+    if (render is! RenderBox || !render.hasSize) return false;
     _open(render.localToGlobal(Offset(0, render.size.height)), origin: focus);
-    return KeyEventResult.handled;
+    return true;
   }
 
   @override
@@ -204,9 +208,8 @@ class _FrostContextMenuRegionState extends State<FrostContextMenuRegion> {
   Widget build(BuildContext context) => MetaData(
     metaData: this,
     behavior: HitTestBehavior.translucent,
-    child: Focus(
-      canRequestFocus: false,
-      onKeyEvent: _key,
+    child: FrostKeyBindings(
+      bindings: _keys,
       child: Listener(
         behavior: HitTestBehavior.opaque,
         onPointerDown: _pointerDown,

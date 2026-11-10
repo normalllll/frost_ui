@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../controls/_input_surface.dart';
 import '../feedback/_skeleton_geometry.dart';
+import '../foundation/_key_bindings.dart';
 import '../foundation/control_scope.dart';
 import '../foundation/density.dart';
 import '../foundation/metrics.dart';
@@ -76,18 +77,23 @@ class FrostPageIndicator extends StatelessWidget {
   final ValueChanged<int>? onSelected;
   final bool onMedia;
 
-  KeyEventResult _key(BuildContext context, KeyEvent event) {
-    if (event is KeyUpEvent) return KeyEventResult.ignored;
-    final forward = Directionality.of(context) == TextDirection.rtl ? LogicalKeyboardKey.arrowLeft : LogicalKeyboardKey.arrowRight;
-    final backward = forward == LogicalKeyboardKey.arrowLeft ? LogicalKeyboardKey.arrowRight : LogicalKeyboardKey.arrowLeft;
-    if (event.logicalKey == forward) {
+  /// Right goes to the next page and Left to the previous one, mirrored in RTL.
+  Map<ShortcutActivator, bool Function()> _keys(BuildContext context) {
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    bool forward() {
       if (current < count - 1) onSelected!(current + 1);
-    } else if (event.logicalKey == backward) {
-      if (current > 0) onSelected!(current - 1);
-    } else {
-      return KeyEventResult.ignored;
+      return true;
     }
-    return KeyEventResult.handled;
+
+    bool backward() {
+      if (current > 0) onSelected!(current - 1);
+      return true;
+    }
+
+    return {
+      const FrostKeyPress(LogicalKeyboardKey.arrowRight): rtl ? backward : forward,
+      const FrostKeyPress(LogicalKeyboardKey.arrowLeft): rtl ? forward : backward,
+    };
   }
 
   @override
@@ -116,7 +122,7 @@ class FrostPageIndicator extends StatelessWidget {
       onDecrease: onSelected != null && current > 0 ? () => onSelected(current - 1) : null,
       excludeSemantics: true,
       child: _Focusable(
-        onKey: onSelected == null ? null : (event) => _key(context, event),
+        keys: onSelected == null ? null : _keys(context),
         onActivate: next,
         child: count > _maximumDotCount
             ? marks(
@@ -208,18 +214,16 @@ class FrostPageIndicator extends StatelessWidget {
 
 /// The indicator's one Tab stop, with a focus ring and no other feedback.
 class _Focusable extends StatelessWidget {
-  const _Focusable({required this.onKey, required this.onActivate, required this.child});
-  final KeyEventResult Function(KeyEvent event)? onKey;
+  const _Focusable({required this.keys, required this.onActivate, required this.child});
+  final Map<ShortcutActivator, bool Function()>? keys;
   final VoidCallback? onActivate;
   final Widget child;
 
   @override
   Widget build(BuildContext context) => onActivate == null
       ? child
-      : Focus(
-          canRequestFocus: false,
-          skipTraversal: true,
-          onKeyEvent: (_, event) => onKey!(event),
+      : FrostKeyBindings(
+          bindings: keys ?? const {},
           child: FrostInputSurface(
             onTap: onActivate,
             builder: (context, states) =>

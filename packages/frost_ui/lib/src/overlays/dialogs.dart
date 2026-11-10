@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../controls/_button_control.dart';
 import '../controls/_button_types.dart';
@@ -275,20 +274,16 @@ class _ModalActionHostState extends State<_ModalActionHost> {
     }
   }
 
-  /// Keys arrive here only after the focused control and its ancestors passed
-  /// on them. Enter belongs to the focused button, so only Escape stops here.
-  KeyEventResult _key(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent || event.logicalKey != LogicalKeyboardKey.escape) return KeyEventResult.ignored;
-    final index = widget.actions.indexWhere((action) => action.role == FrostButtonRole.cancel);
-    if (index < 0) return KeyEventResult.ignored;
-    // A disabled cancel consumes Escape, including the route's scrim fallback.
-    if (!widget.actions[index].enabled) return KeyEventResult.handled;
+  /// Dismissing (Escape by default) runs the cancel action. Without one the
+  /// intent passes on to the route.
+  void _dismiss(int index) {
+    // A disabled cancel takes the dismissal, so the route does not close either.
+    if (!widget.actions[index].enabled) return;
     if (frostModalCanDismiss(context)) {
       unawaited(_run(index));
     } else {
       unawaited(frostDismissModal(context));
     }
-    return KeyEventResult.handled;
   }
 
   @override
@@ -342,17 +337,19 @@ class _ModalActionHostState extends State<_ModalActionHost> {
                 ),
             ],
           );
-    return FocusScope(
-      node: _hostFocus,
-      onKeyEvent: _key,
-      child: FrostDialogSubmitScope(
-        // Finishing a field runs the default action, unless that is destructive:
-        // those take a press on the button itself.
-        submit: () async {
-          final index = widget.actions.indexWhere((action) => action.isDefault);
-          if (index >= 0 && widget.actions[index].role != FrostButtonRole.destructive) await _run(index);
-        },
-        child: widget.builder(context, buttons, _contentFocus),
+    return Actions(
+      actions: {if (cancel.isNotEmpty) DismissIntent: CallbackAction<DismissIntent>(onInvoke: (_) => _dismiss(cancel.first))},
+      child: FocusScope(
+        node: _hostFocus,
+        child: FrostDialogSubmitScope(
+          // Finishing a field runs the default action, unless that is destructive:
+          // those take a press on the button itself.
+          submit: () async {
+            final index = widget.actions.indexWhere((action) => action.isDefault);
+            if (index >= 0 && widget.actions[index].role != FrostButtonRole.destructive) await _run(index);
+          },
+          child: widget.builder(context, buttons, _contentFocus),
+        ),
       ),
     );
   }

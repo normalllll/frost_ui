@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 
 import '../feedback/_skeleton_geometry.dart';
 import '../foundation/_control_geometry.dart';
+import '../foundation/_key_bindings.dart';
 import '../foundation/_layout_scope.dart';
 import '../foundation/control_scope.dart';
 import '../foundation/metrics.dart';
@@ -333,44 +334,46 @@ class _TableState<T> extends State<FrostTable<T>> {
     _highlight = mounted.where(_rowVisible).firstOrNull ?? 0;
   });
 
-  KeyEventResult _key(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent && event is! KeyRepeatEvent) return KeyEventResult.ignored;
-    // Independent cell controls own their activation keys.
-    if (!_focus.hasPrimaryFocus || widget.rows.isEmpty || !FrostControlScope.enabledOf(context)) return KeyEventResult.ignored;
-    final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.arrowDown || key == LogicalKeyboardKey.arrowUp) {
-      final old = _highlight;
-      final next = old == null
-          ? (key == LogicalKeyboardKey.arrowDown ? 0 : widget.rows.length - 1)
-          : (old + (key == LogicalKeyboardKey.arrowDown ? 1 : -1)).clamp(0, widget.rows.length - 1);
-      final generation = ++_revealGeneration;
-      // Preserve direction until an offscreen lazy row has been reached.
-      final target = _rowKeys[next]?.currentContext;
-      if (target != null) {
-        _revealRow(
-          target,
-          key == LogicalKeyboardKey.arrowDown ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd : ScrollPositionAlignmentPolicy.keepVisibleAtStart,
-        );
-      } else if (_vertical.hasClients) {
-        final position = _vertical.position;
-        final estimate = frostControlGeometry(context, FrostControlSize.regular).height;
-        position.jumpTo((next * estimate).clamp(0.0, position.maxScrollExtent));
-        WidgetsBinding.instance.addPostFrameCallback((_) => _reveal(next, generation));
-      }
-      setState(() => _highlight = next);
-      return KeyEventResult.handled;
+  /// Up and Down move the row highlight; Space toggles the highlighted row's
+  /// selection and Enter activates it. Keys from a focused cell control are
+  /// that control's.
+  Map<ShortcutActivator, bool Function()> get _keys => {
+    const FrostKeyPress(LogicalKeyboardKey.arrowDown): () => _moveHighlight(down: true),
+    const FrostKeyPress(LogicalKeyboardKey.arrowUp): () => _moveHighlight(down: false),
+    const FrostKeyPress(LogicalKeyboardKey.space): () {
+      if (!_ownsKeys || widget.selection == null) return false;
+      final index = _highlight;
+      if (index == null) return false;
+      widget.selection!.toggle(widget.rows[index]);
+      return true;
+    },
+    const FrostKeyPress(LogicalKeyboardKey.enter): () {
+      final index = _highlight;
+      if (!_ownsKeys || index == null) return false;
+      widget.onActivate?.call(widget.rows[index]);
+      return true;
+    },
+  };
+
+  bool get _ownsKeys => _focus.hasPrimaryFocus && widget.rows.isNotEmpty && FrostControlScope.enabledOf(context);
+
+  bool _moveHighlight({required bool down}) {
+    if (!_ownsKeys) return false;
+    final old = _highlight;
+    final next = old == null ? (down ? 0 : widget.rows.length - 1) : (old + (down ? 1 : -1)).clamp(0, widget.rows.length - 1);
+    final generation = ++_revealGeneration;
+    // Preserve direction until an offscreen lazy row has been reached.
+    final target = _rowKeys[next]?.currentContext;
+    if (target != null) {
+      _revealRow(target, down ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd : ScrollPositionAlignmentPolicy.keepVisibleAtStart);
+    } else if (_vertical.hasClients) {
+      final position = _vertical.position;
+      final estimate = frostControlGeometry(context, FrostControlSize.regular).height;
+      position.jumpTo((next * estimate).clamp(0.0, position.maxScrollExtent));
+      WidgetsBinding.instance.addPostFrameCallback((_) => _reveal(next, generation));
     }
-    if (_highlight case final index?) {
-      if (key == LogicalKeyboardKey.space && widget.selection != null) {
-        widget.selection!.toggle(widget.rows[index]);
-        return KeyEventResult.handled;
-      }
-      if (key == LogicalKeyboardKey.enter) {
-        widget.onActivate?.call(widget.rows[index]);
-        return KeyEventResult.handled;
-      }
-    }
-    return KeyEventResult.ignored;
+    setState(() => _highlight = next);
+    return true;
   }
 
   Widget _compact(BuildContext context) {
@@ -404,7 +407,6 @@ class _TableState<T> extends State<FrostTable<T>> {
     final list = Focus(
       focusNode: _focus,
       canRequestFocus: FrostControlScope.enabledOf(context),
-      onKeyEvent: _key,
       onFocusChange: _focusChanged,
       child: ListView.builder(
         controller: _vertical,
@@ -437,7 +439,8 @@ class _TableState<T> extends State<FrostTable<T>> {
         ),
       ),
     );
-    return widget.selection == null ? list : FrostSelectionScope<T>(selection: widget.selection!, items: widget.rows, child: list);
+    final keyed = FrostKeyBindings(bindings: _keys, child: list);
+    return widget.selection == null ? keyed : FrostSelectionScope<T>(selection: widget.selection!, items: widget.rows, child: keyed);
   }
 
   @override
@@ -448,7 +451,6 @@ class _TableState<T> extends State<FrostTable<T>> {
     Widget table = Focus(
       focusNode: _focus,
       canRequestFocus: FrostControlScope.enabledOf(context),
-      onKeyEvent: _key,
       onFocusChange: _focusChanged,
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -502,6 +504,7 @@ class _TableState<T> extends State<FrostTable<T>> {
         },
       ),
     );
+    table = FrostKeyBindings(bindings: _keys, child: table);
     if (widget.selection case final selection?) table = FrostSelectionScope<T>(selection: selection, items: widget.rows, child: table);
     return table;
   }

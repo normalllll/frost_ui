@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' show SelectionArea, SelectionAreaState;
 import 'package:flutter/rendering.dart' show SelectedContent;
 import 'package:flutter/widgets.dart';
 
+import '../foundation/_key_bindings.dart';
 import '_text_selection_chrome.dart';
 
 /// Makes the text in [child] selectable across widgets with Frost's handles
@@ -37,23 +38,38 @@ class FrostSelectionAreaState extends State<FrostSelectionArea> {
   }
 
   @override
-  Widget build(BuildContext context) => Actions(
-    actions: {DismissIntent: _clear},
-    child: SelectionArea(
-      key: _area,
-      selectionControls: frostTextSelectionControls,
-      contextMenuBuilder: (context, state) => frostSelectionMenu(context, state.contextMenuAnchors, state.contextMenuButtonItems),
-      onSelectionChanged: _changed,
-      child: widget.child,
+  // The region consumes DismissIntent even with nothing selected, so Escape is
+  // bound here only while there is a selection; then it reaches the page.
+  Widget build(BuildContext context) => FrostDismissKey(
+    active: () => _selected,
+    child: Actions(
+      actions: {DismissIntent: _clear},
+      child: SelectionArea(
+        key: _area,
+        selectionControls: frostTextSelectionControls,
+        contextMenuBuilder: (context, state) => frostSelectionMenu(context, state.contextMenuAnchors, state.contextMenuButtonItems),
+        onSelectionChanged: _changed,
+        child: widget.child,
+      ),
     ),
   );
 }
 
+/// Clears a selection; with nothing selected it hands the intent to the
+/// enclosing page, since the region passes DismissIntent up only to the
+/// nearest action and stops at a disabled one.
 class _ClearSelectionAction extends Action<DismissIntent> {
   _ClearSelectionAction(this.area);
   final FrostSelectionAreaState area;
+  Action<DismissIntent>? _outer(DismissIntent intent) => Actions.maybeFind<DismissIntent>(area.context, intent: intent);
   @override
-  bool isEnabled(DismissIntent intent) => area._selected;
+  bool isEnabled(DismissIntent intent) => area._selected || (_outer(intent)?.isEnabled(intent) ?? false);
   @override
-  void invoke(DismissIntent intent) => area.clearSelection();
+  Object? invoke(DismissIntent intent) {
+    if (area._selected) {
+      area.clearSelection();
+      return null;
+    }
+    return Actions.maybeInvoke(area.context, intent);
+  }
 }

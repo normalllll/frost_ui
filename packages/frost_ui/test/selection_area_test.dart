@@ -92,4 +92,41 @@ void main() {
     expect(changes.last, isNull);
     expect(tester.takeException(), isNull);
   });
+
+  for (final throughAction in [true, false]) {
+    testWidgets('Escape clears a selection first, then reaches the page; page uses ${throughAction ? 'a dismiss action' : 'a key handler'}', (tester) async {
+      var page = 0;
+      final area = FrostSelectionArea(child: const Text(_first));
+      Widget host = Align(alignment: Alignment.topLeft, child: SizedBox(width: 400, child: area));
+      host = throughAction
+          ? Shortcuts(
+              shortcuts: const {SingleActivator(LogicalKeyboardKey.escape): DismissIntent()},
+              child: Actions(actions: {DismissIntent: CallbackAction<DismissIntent>(onInvoke: (_) => page++)}, child: host),
+            )
+          : Focus(
+              onKeyEvent: (_, event) {
+                if (event is! KeyDownEvent || event.logicalKey != LogicalKeyboardKey.escape) return KeyEventResult.ignored;
+                page++;
+                return KeyEventResult.handled;
+              },
+              child: host,
+            );
+      await tester.pumpWidget(frostTestApp(platform: TargetPlatform.windows, host));
+      final from = tester.getTopLeft(find.text(_first)) + const Offset(1, 9);
+      final gesture = await tester.startGesture(from, kind: PointerDeviceKind.mouse);
+      await tester.pump();
+      await gesture.moveTo(tester.getBottomRight(find.text(_first)) - const Offset(1, 9));
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(page, 0, reason: 'the first Escape clears the selection');
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(page, 1, reason: 'with nothing selected Escape reaches the page');
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

@@ -297,48 +297,24 @@ void main() {
     expect(_tabRect(tester, 'c').width, greaterThan(width));
   });
 
-  testWidgets('tab keys work from inside a tab', (tester) async {
-    final controller = FrostTabsController<_Tab>(initial: _Tab('a'));
-    addTearDown(controller.dispose);
-    var created = 0;
-    await tester.pumpWidget(_host(controller, onNewTab: () => controller.open(_Tab('n${created++}'))));
-    await tester.tap(find.text('a:0'));
-    await tester.pump();
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
-    await tester.pumpAndSettle();
-    expect(_names(controller), ['a', 'n0']);
-    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-    await tester.pumpAndSettle();
-    expect(controller.active.name, 'a');
-    await tester.sendKeyEvent(LogicalKeyboardKey.digit9);
-    await tester.pumpAndSettle();
-    expect(controller.active.name, 'n0');
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyW);
-    await tester.pumpAndSettle();
-    expect(_names(controller), ['a']);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyW);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-    await tester.pumpAndSettle();
-    expect(_names(controller), ['a']);
-  });
-  testWidgets('tab shortcuts follow the theme platform, not the build target', (tester) async {
+  testWidgets('tab keys from inside a tab are left to the app', (tester) async {
     final controller = FrostTabsController<_Tab>(initial: _Tab('a'));
     addTearDown(controller.dispose);
     controller.open(_Tab('b'), activate: false);
-    await tester.pumpWidget(_host(controller, platform: TargetPlatform.macOS));
+    var created = 0;
+    await tester.pumpWidget(_host(controller, onNewTab: () => created++));
+    await tester.tap(find.text('a:0'));
     await tester.pump();
-    Focus.of(tester.element(find.text('a:0'))).requestFocus();
-    await tester.pump();
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-    await tester.pump();
-    expect(controller.activeIndex, 0);
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
-    await tester.pump();
-    expect(controller.activeIndex, 1);
+    for (final modifier in [LogicalKeyboardKey.controlLeft, LogicalKeyboardKey.metaLeft]) {
+      await tester.sendKeyDownEvent(modifier);
+      for (final key in [LogicalKeyboardKey.keyT, LogicalKeyboardKey.tab, LogicalKeyboardKey.digit2, LogicalKeyboardKey.digit9, LogicalKeyboardKey.keyW]) {
+        await tester.sendKeyEvent(key);
+      }
+      await tester.sendKeyUpEvent(modifier);
+      await tester.pumpAndSettle();
+    }
+    expect(created, 0);
+    expect(_names(controller), ['a', 'b']);
+    expect(controller.active.name, 'a');
   });
 }

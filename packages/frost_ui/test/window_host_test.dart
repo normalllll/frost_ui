@@ -220,7 +220,7 @@ void main() {
     }
   });
 
-  testWidgets('native and keyboard Back reach focused content action', (tester) async {
+  testWidgets('native Back reaches focused content action and Alt+Left stays unbound', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
     mockChannel();
     try {
@@ -253,10 +253,10 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
       await tester.pump();
-      expect(back, 1);
+      expect(back, 0, reason: 'Alt+Left is the app\'s to bind');
       tester.binding.channelBuffers.push(channel.name, const StandardMethodCodec().encodeMethodCall(const MethodCall('navigateBack')), (_) {});
       await tester.pump();
-      expect(back, 2);
+      expect(back, 1);
       await tester.pumpWidget(const SizedBox());
       focus.dispose();
     } finally {

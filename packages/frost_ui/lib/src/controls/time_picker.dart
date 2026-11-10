@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import '../feedback/_skeleton_geometry.dart';
+import '../foundation/_key_bindings.dart';
 import '../foundation/control_scope.dart';
 import '../foundation/metrics.dart';
 import '../foundation/radius.dart';
@@ -93,7 +94,7 @@ class _TimePickerState extends State<FrostTimePicker> {
   void initState() {
     super.initState();
     for (final part in _TimePart.values) {
-      _nodes[part] = FocusNode(onKeyEvent: (_, event) => _key(part, event))..addListener(() => _focused(part));
+      _nodes[part] = FocusNode()..addListener(() => _focused(part));
       if (part != _TimePart.period) {
         _controllers[part] = TextEditingController()..addListener(() => _input(part));
         // An editor must never restore the enclosing page's PageStorage offset.
@@ -255,25 +256,33 @@ class _TimePickerState extends State<FrostTimePicker> {
     _emit();
   }
 
-  KeyEventResult _key(_TimePart part, KeyEvent event) {
-    if (!_enabled || (event is! KeyDownEvent && event is! KeyRepeatEvent)) return KeyEventResult.ignored;
-    final key = event.logicalKey, rtl = Directionality.of(context) == TextDirection.rtl;
-    if (key == LogicalKeyboardKey.arrowUp || key == LogicalKeyboardKey.arrowDown) {
-      _step(part, key == LogicalKeyboardKey.arrowUp ? 1 : -1);
-    } else if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight) {
-      _move(part, (key == LogicalKeyboardKey.arrowRight) != rtl ? 1 : -1);
-    } else if (key == LogicalKeyboardKey.backspace) {
-      setState(() => _assign(part, null));
-      if (part != _TimePart.period) _write(part);
-      _emit(cleared: true);
-    } else if (part == _TimePart.period && key == LogicalKeyboardKey.space) {
-      _step(part, 1);
-    } else if (part == _TimePart.period && key == LogicalKeyboardKey.enter) {
-      if (event is KeyDownEvent) _complete(part);
-    } else {
-      return KeyEventResult.ignored;
+  /// Up and Down step the part, Left and Right move between parts, Backspace
+  /// clears it. The period also steps on Space and completes on Enter.
+  Map<ShortcutActivator, bool Function()> _keys(_TimePart part) {
+    bool run(VoidCallback action) {
+      if (!_enabled) return false;
+      action();
+      return true;
     }
-    return KeyEventResult.handled;
+
+    bool rtl() => Directionality.of(context) == TextDirection.rtl;
+    return {
+      const FrostKeyPress(LogicalKeyboardKey.arrowUp): () => run(() => _step(part, 1)),
+      const FrostKeyPress(LogicalKeyboardKey.arrowDown): () => run(() => _step(part, -1)),
+      const FrostKeyPress(LogicalKeyboardKey.arrowLeft): () => run(() => _move(part, rtl() ? 1 : -1)),
+      const FrostKeyPress(LogicalKeyboardKey.arrowRight): () => run(() => _move(part, rtl() ? -1 : 1)),
+      const FrostKeyPress(LogicalKeyboardKey.backspace): () => run(() {
+        setState(() => _assign(part, null));
+        if (part != _TimePart.period) _write(part);
+        _emit(cleared: true);
+      }),
+      if (part == _TimePart.period) ...{
+        const FrostKeyPress(LogicalKeyboardKey.space): () => run(() => _step(part, 1)),
+        const FrostKeyPress(LogicalKeyboardKey.enter, repeat: false): () => run(() => _complete(part)),
+        // A held Enter completes once.
+        const FrostKeyPress(LogicalKeyboardKey.enter, press: false): () => _enabled,
+      },
+    };
   }
 
   @override
@@ -376,19 +385,23 @@ class _TimePickerState extends State<FrostTimePicker> {
       height = math.max(height, painter.height);
       painter.dispose();
     }
-    return AnimatedContainer(
-      key: ValueKey(part.name),
-      duration: FrostMotion.duration(context, FrostMotion.hover),
-      width: width + inset * 2 + (part == _TimePart.period ? 0 : _timeCursorWidth + _frameworkCaretGap),
-      padding: EdgeInsets.symmetric(horizontal: inset),
-      decoration: ShapeDecoration(
-        shape: FrostRadius.shape(context, FrostRadius.xs),
-        color: focus ? tokens.selectionFill : tokens.selectionFill.withValues(alpha: 0),
-      ),
-      child: TweenAnimationBuilder<TextStyle?>(
-        tween: TextStyleTween(end: style),
+    return FrostKeyBindings(
+      key: ObjectKey(part),
+      bindings: _keys(part),
+      child: AnimatedContainer(
+        key: ValueKey(part.name),
         duration: FrostMotion.duration(context, FrostMotion.hover),
-        builder: (context, animatedStyle, _) => _segmentInput(part, height, animatedStyle!),
+        width: width + inset * 2 + (part == _TimePart.period ? 0 : _timeCursorWidth + _frameworkCaretGap),
+        padding: EdgeInsets.symmetric(horizontal: inset),
+        decoration: ShapeDecoration(
+          shape: FrostRadius.shape(context, FrostRadius.xs),
+          color: focus ? tokens.selectionFill : tokens.selectionFill.withValues(alpha: 0),
+        ),
+        child: TweenAnimationBuilder<TextStyle?>(
+          tween: TextStyleTween(end: style),
+          duration: FrostMotion.duration(context, FrostMotion.hover),
+          builder: (context, animatedStyle, _) => _segmentInput(part, height, animatedStyle!),
+        ),
       ),
     );
   }

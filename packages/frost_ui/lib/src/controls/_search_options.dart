@@ -227,33 +227,33 @@ class FrostSearchOptions {
   /// highlight: a resting pointer is not one. Down and Up without it start at
   /// the first and last option; with it every arrow goes to the nearest option
   /// that way. Up from the top clears it. Left and Right are left to the
-  /// editor when no option lies that way.
-  KeyEventResult move(LogicalKeyboardKey key) {
+  /// editor when no option lies that way. Returns whether it took the key.
+  bool move(LogicalKeyboardKey key) {
     final order = readingOrder();
-    if (order.isEmpty) return KeyEventResult.ignored;
+    if (order.isEmpty) return false;
     final from = _keyboard;
     final current = from == null ? null : order.where((entry) => identical(entry.option, from)).firstOrNull;
     if (current == null) {
       if (key == LogicalKeyboardKey.arrowDown) {
         _setKeyboard(order.first.option);
-        return KeyEventResult.handled;
+        return true;
       }
       if (key == LogicalKeyboardKey.arrowUp) {
         _setKeyboard(order.last.option);
-        return KeyEventResult.handled;
+        return true;
       }
-      return KeyEventResult.ignored;
+      return false;
     }
     final target = _nearest(order, current, key);
     if (target != null) {
       _setKeyboard(target);
-      return KeyEventResult.handled;
+      return true;
     }
     if (key == LogicalKeyboardKey.arrowUp) {
       _setKeyboard(null);
-      return KeyEventResult.handled;
+      return true;
     }
-    return key == LogicalKeyboardKey.arrowDown ? KeyEventResult.handled : KeyEventResult.ignored;
+    return key == LogicalKeyboardKey.arrowDown;
   }
 
   FrostSearchOptionTarget? _nearest(List<FrostSearchOptionEntry> order, FrostSearchOptionEntry current, LogicalKeyboardKey key) {

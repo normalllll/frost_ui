@@ -1,9 +1,9 @@
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../controls/_button_control.dart';
 import '../controls/_button_types.dart';
 import '../controls/buttons.dart';
+import '../foundation/_key_bindings.dart';
 import '../foundation/density.dart';
 import '../foundation/icon_data.dart';
 import '../foundation/metrics.dart';
@@ -49,15 +49,10 @@ class FrostSelectionBar<T> extends StatelessWidget {
       final all = allItems.toSet();
       return _SelectionBarVisibility(
         visible: selection.active,
-        child: Focus(
-          canRequestFocus: false,
-          onKeyEvent: (_, event) {
-            if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape && selection.active) {
-              selection.exit();
-              return KeyEventResult.handled;
-            }
-            return KeyEventResult.ignored;
-          },
+        // Dismissing (Escape by default) leaves selection while it is active;
+        // otherwise the intent passes on.
+        child: FrostDismissKey(child: Actions(
+          actions: {if (selection.active) DismissIntent: CallbackAction<DismissIntent>(onInvoke: (_) => selection.exit())},
           child: Semantics(
             container: true,
             explicitChildNodes: true,
@@ -124,7 +119,7 @@ class FrostSelectionBar<T> extends StatelessWidget {
               ),
             ),
           ),
-        ),
+        )),
       );
     },
   );

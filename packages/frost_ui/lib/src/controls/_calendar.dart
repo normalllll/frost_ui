@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../feedback/_skeleton_geometry.dart';
 import '../foundation/_control_geometry.dart';
+import '../foundation/_key_bindings.dart';
 import '../foundation/density.dart';
 import '../foundation/metrics.dart';
 import '../foundation/scope.dart';
@@ -192,12 +193,32 @@ class _CalendarState extends State<FrostCalendar> {
     });
   }
 
-  KeyEventResult _key(KeyEvent event, DateTime day, int count) {
-    if (event is! KeyDownEvent && event is! KeyRepeatEvent) return KeyEventResult.ignored;
+  static const _dayKeys = [
+    LogicalKeyboardKey.arrowLeft,
+    LogicalKeyboardKey.arrowRight,
+    LogicalKeyboardKey.arrowUp,
+    LogicalKeyboardKey.arrowDown,
+    LogicalKeyboardKey.pageUp,
+    LogicalKeyboardKey.pageDown,
+    LogicalKeyboardKey.home,
+    LogicalKeyboardKey.end,
+  ];
+
+  /// Arrows move by day and week, Page Up/Down by month, Home and End to the
+  /// ends of the week.
+  Map<ShortcutActivator, bool Function()> _keys(DateTime day, int count) => {
+    for (final key in _dayKeys)
+      FrostKeyPress(key): () {
+        _focus(_target(key, day), count);
+        return true;
+      },
+  };
+
+  DateTime _target(LogicalKeyboardKey key, DateTime day) {
     final rtl = Directionality.of(context) == TextDirection.rtl;
     final firstWeekday = MaterialLocalizations.of(context).firstDayOfWeekIndex;
     final weekOffset = (day.weekday % 7 - firstWeekday + 7) % 7;
-    final target = switch (event.logicalKey) {
+    return switch (key) {
       LogicalKeyboardKey.arrowLeft => DateTime(day.year, day.month, day.day + (rtl ? 1 : -1)),
       LogicalKeyboardKey.arrowRight => DateTime(day.year, day.month, day.day + (rtl ? -1 : 1)),
       LogicalKeyboardKey.arrowUp => DateTime(day.year, day.month, day.day - 7),
@@ -205,12 +226,8 @@ class _CalendarState extends State<FrostCalendar> {
       LogicalKeyboardKey.pageUp => frostShiftMonth(day, -1),
       LogicalKeyboardKey.pageDown => frostShiftMonth(day, 1),
       LogicalKeyboardKey.home => DateTime(day.year, day.month, day.day - weekOffset),
-      LogicalKeyboardKey.end => DateTime(day.year, day.month, day.day + 6 - weekOffset),
-      _ => null,
+      _ => DateTime(day.year, day.month, day.day + 6 - weekOffset),
     };
-    if (target == null) return KeyEventResult.ignored;
-    _focus(target, count);
-    return KeyEventResult.handled;
   }
 
   double _minimumCell(BuildContext context) {
@@ -517,9 +534,8 @@ class _CalendarState extends State<FrostCalendar> {
                       color: inRange ? tokens.selectionFill : tokens.selectionFill.withValues(alpha: 0),
                     ),
                   ),
-                Focus(
-                  canRequestFocus: false,
-                  onKeyEvent: (_, event) => _key(event, day, count),
+                FrostKeyBindings(
+                  bindings: _keys(day, count),
                   child: FrostInputSurface(
                     focusNode: _gridNode(day, count),
                     onTap: enabled ? () => widget.onSelected(day) : null,

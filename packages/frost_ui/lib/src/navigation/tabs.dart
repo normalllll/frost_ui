@@ -4,11 +4,9 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart';
 
 import '../controls/_close_control.dart';
 import '../controls/buttons.dart';
-import '../controls/shortcuts.dart';
 import '../feedback/_skeleton_geometry.dart';
 import '../foundation/_focus_modality.dart';
 import '../foundation/control_scope.dart';
@@ -23,7 +21,6 @@ import '../foundation/typography.dart';
 import '../motion/_spring_simulation.dart';
 import '../overlays/tooltip.dart';
 import '../primitives/_measured_layout_builder.dart';
-import 'shell_navigation_scope.dart';
 
 /// Browser-style tabs: their order, the one in front, and where new ones go.
 /// A tab is any object the app keeps per tab (its router, say), compared by
@@ -165,15 +162,19 @@ class FrostTabsController<T extends Object> extends ChangeNotifier {
 /// first shown. Hidden tabs keep their state but have tickers, focus,
 /// pointer input and semantics turned off.
 ///
-/// Owns the browser tab keys while focus is inside: Ctrl+T ([onNewTab]),
-/// Ctrl+W and Ctrl+F4, Ctrl+(Shift+)Tab, Ctrl+PageUp/PageDown, Ctrl+1–8,
-/// Ctrl+9 and Ctrl+Shift+T ([onReopen]).
+/// Binds no keys. Tab keys such as Ctrl+W or Ctrl+Tab are the app's: it maps
+/// them with its own `Shortcuts` to [FrostTabsController.close],
+/// [FrostTabsController.activateRelative] and [FrostTabsController.activate].
 class FrostTabHost<T extends Object> extends StatefulWidget {
   const FrostTabHost({required this.controller, required this.builder, this.onNewTab, this.onReopen, super.key});
 
   final FrostTabsController<T> controller;
   final Widget Function(BuildContext context, T tab) builder;
+
+  /// Not called by the host, which binds no keys.
   final VoidCallback? onNewTab;
+
+  /// Not called by the host, which binds no keys.
   final VoidCallback? onReopen;
 
   @override
@@ -284,43 +285,14 @@ class _FrostTabHostState<T extends Object> extends State<FrostTabHost<T>> {
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
-    FrostShortcut key(LogicalKeyboardKey key, {bool shift = false}) => FrostShortcut(key, primary: true, shift: shift);
-    void select(int index) => controller.activate(math.min(index, controller.length - 1));
-    const digits = [
-      LogicalKeyboardKey.digit1,
-      LogicalKeyboardKey.digit2,
-      LogicalKeyboardKey.digit3,
-      LogicalKeyboardKey.digit4,
-      LogicalKeyboardKey.digit5,
-      LogicalKeyboardKey.digit6,
-      LogicalKeyboardKey.digit7,
-      LogicalKeyboardKey.digit8,
-    ];
-    final enabled = FrostShellNavigationScope.maybeOf(context)?.ownsBackControl ?? true;
-    return FrostShortcuts(
-      bindings: !enabled
-          ? const {}
-          : {
-              if (controller.baseTab == null) key(LogicalKeyboardKey.keyT): ?widget.onNewTab,
-              key(LogicalKeyboardKey.keyT, shift: true): ?widget.onReopen,
-              key(LogicalKeyboardKey.keyW): () => controller.close(controller.activeIndex),
-              key(LogicalKeyboardKey.f4): () => controller.close(controller.activeIndex),
-              key(LogicalKeyboardKey.tab): () => controller.activateRelative(1),
-              key(LogicalKeyboardKey.tab, shift: true): () => controller.activateRelative(-1),
-              key(LogicalKeyboardKey.pageDown): () => controller.activateRelative(1),
-              key(LogicalKeyboardKey.pageUp): () => controller.activateRelative(-1),
-              for (final (index, digit) in digits.indexed) key(digit): () => select(index),
-              key(LogicalKeyboardKey.digit9): () => select(controller.length - 1),
-            },
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // The front tab paints last, over the one fading out.
-          for (final tab in controller.tabs)
-            if (_built.contains(tab) && tab != _shown) _slot(tab),
-          _slot(_shown),
-        ],
-      ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // The front tab paints last, over the one fading out.
+        for (final tab in controller.tabs)
+          if (_built.contains(tab) && tab != _shown) _slot(tab),
+        _slot(_shown),
+      ],
     );
   }
 }

@@ -26,11 +26,15 @@ void main() {
   );
   void focus(WidgetTester tester) => Focus.of(tester.element(find.byType(PageView))).requestFocus();
   PageController pages(WidgetTester tester) => tester.widget<PageView>(find.byType(PageView)).controller!;
-  Widget overlayPager(int count) => FrostPager(itemCount: count, itemBuilder: (_, i) => Text('page $i'), indicatorPlacement: FrostPageIndicatorPlacement.overlay);
+  Widget overlayPager(int count) =>
+      FrostPager(itemCount: count, itemBuilder: (_, i) => Text('page $i'), indicatorPlacement: FrostPageIndicatorPlacement.overlay);
   Finder plate(WidgetTester tester) => find.descendant(
     of: find.byType(FrostPageIndicator),
     matching: find.byWidgetPredicate(
-      (w) => w is DecoratedBox && w.decoration is ShapeDecoration && (w.decoration as ShapeDecoration).color == FrostThemeTokens.of(tester.element(find.byType(FrostPageIndicator))).onMediaScrim,
+      (w) =>
+          w is DecoratedBox &&
+          w.decoration is ShapeDecoration &&
+          (w.decoration as ShapeDecoration).color == FrostThemeTokens.of(tester.element(find.byType(FrostPageIndicator))).onMediaScrim,
     ),
   );
 
@@ -250,7 +254,13 @@ void main() {
     await tester.pumpWidget(app(overlayPager(3)));
     final shape = (tester.widget<DecoratedBox>(plate(tester)).decoration as ShapeDecoration).shape;
     expect(shape, isNot(isA<StadiumBorder>()));
-    expect(shape, anyOf(isA<RoundedRectangleBorder>().having((s) => s.borderRadius, 'radius', BorderRadius.circular(4)), isA<RoundedSuperellipseBorder>().having((s) => s.borderRadius, 'radius', BorderRadius.circular(4))));
+    expect(
+      shape,
+      anyOf(
+        isA<RoundedRectangleBorder>().having((s) => s.borderRadius, 'radius', BorderRadius.circular(4)),
+        isA<RoundedSuperellipseBorder>().having((s) => s.borderRadius, 'radius', BorderRadius.circular(4)),
+      ),
+    );
     await tester.pumpWidget(app(overlayPager(15), touch: true));
     expect(tester.getSize(plate(tester)).height, tester.getSize(find.text('1 of 15')).height + 8);
     expect(tester.getRect(find.byType(PageView)).bottom - tester.getRect(plate(tester)).bottom, 12);
@@ -288,7 +298,9 @@ void main() {
       ),
     );
     final strip = find.byType(FrostThumbnailStrip);
-    final focusWidget = find.descendant(of: strip, matching: find.byType(Focus)).first;
+    final focusWidget = find
+        .descendant(of: strip, matching: find.byWidgetPredicate((widget) => widget is Focus && (widget.focusNode?.canRequestFocus ?? false)))
+        .first;
     tester.widget<Focus>(focusWidget).focusNode!.requestFocus();
     await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
