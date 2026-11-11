@@ -111,7 +111,7 @@ class _FrostDetailRoute<T> extends PageRoute<T> {
   String? get barrierLabel => null;
   @override
   Widget buildPage(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) =>
-      _page._secondaryDestination ? FrostDestinationRoot(route: this, child: _page.child) : _page.child;
+      _page._secondaryDestination ? FrostDestinationRoot(route: this, secondary: true, child: _page.child) : _page.child;
   @override
   Widget buildTransitions(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) => frostOwnedPageTransition(
     context,

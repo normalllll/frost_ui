@@ -199,6 +199,21 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('with the bottom bar a secondary destination pushed over the opener paints its title beside Back', (tester) async {
+    _window(tester, _phone);
+    await tester.pumpWidget(_app(secondary: true));
+    await tester.pumpAndSettle();
+    expect(_inHeader('Downloads page'), isTrue);
+    expect(find.descendant(of: find.byType(FrostPageHeader).last, matching: find.byType(FrostCompactBackButton)), findsOneWidget);
+    // A primary root under it still leaves its title to the bottom bar.
+    expect(_visible('Home page'), isFalse);
+    _window(tester, _sidebar);
+    await tester.pumpAndSettle();
+    expect(_inHeader('Downloads page'), isFalse);
+    expect(_visible('Downloads page'), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final pushed in [false, true]) {
     testWidgets('the title row keeps the page title after a dialog over the shell closes (pushed: $pushed)', (tester) async {
       _window(tester, _sidebar);

@@ -68,7 +68,7 @@ class FrostPageHeaderSearchController extends ChangeNotifier {
 /// Under a shell whose top row shows page titles (the sidebar layout), the
 /// visible page gives [title] to that row, and every header keeps it for screen
 /// readers only; elsewhere the root page of a shell destination leaves it to
-/// the sidebar or the bottom bar the same way. The title stays declared for
+/// the sidebar the same way, or to the bottom bar when it is a primary destination. The title stays declared for
 /// screen readers and for the title row once the window widens. A header with nothing
 /// else to show is then just the page's top margin, as tall as its side inset,
 /// or nothing above a tab row of a [FrostHeaderSections]. A title that is a control, such as a [FrostTitleMenu], belongs in [leading],
@@ -296,8 +296,10 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
     final fontSize = headline.fontSize!;
     final extraLine = (scaler.scale(fontSize) - fontSize * 1.3) * headline.height!;
     final scales = extraLine > 0;
-    // The sidebar or the bottom bar already names a destination's root page;
-    // its header keeps the title for screen readers only. With nothing else it is only the
+    // The sidebar already names a destination's root page, and the bottom bar
+    // a primary one; its header keeps the title for screen readers only. A
+    // secondary destination pushed over the opener under the bottom bar is
+    // named by its own header. With nothing else it is only the
     // page's top margin, as tall as the side inset.
     // Where the shell's title row or top bar shows page titles, the visible
     // page gives it its title, and every header keeps the title for screen
@@ -312,7 +314,9 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
     }
     final titleUnpainted =
         titleRow != null ||
-        widget.title != null && shell != null && FrostDestinationRoot.contains(context);
+        widget.title != null &&
+            shell != null &&
+            (FrostAutoScaffold.usesHorizontalLayoutOf(context) ? FrostDestinationRoot.contains(context) : FrostDestinationRoot.containsPrimary(context));
     final title = titleUnpainted ? null : widget.title;
     // Laid out at its own size but unpainted and inert, so it is read out
     // without taking room or input.

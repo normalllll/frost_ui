@@ -3,12 +3,16 @@ import 'package:flutter/widgets.dart';
 /// Marks the root page of a shell destination: the page under
 /// [FrostShellDestination], or a secondary destination's root page. The
 /// sidebar already names these pages, so their headers leave the title out
-/// there.
+/// there. The bottom bar names only the primary ones: a secondary
+/// destination is pushed over the opener there.
 class FrostDestinationRoot extends InheritedWidget {
-  const FrostDestinationRoot({required this.route, required super.child, super.key});
+  const FrostDestinationRoot({required this.route, required super.child, this.secondary = false, super.key});
 
   /// The route of the marked page.
   final ModalRoute<Object?>? route;
+
+  /// Whether the page is a secondary destination's root.
+  final bool secondary;
 
   /// Whether [context] is on a destination root page itself: the marked route,
   /// or the first route of a Navigator inside it, such as a router's retained
@@ -20,6 +24,13 @@ class FrostDestinationRoot extends InheritedWidget {
     return route == root.route || (route?.isFirst ?? false);
   }
 
+  /// Whether [context] is on a primary destination's root page, which the
+  /// bottom bar names as well as the sidebar.
+  static bool containsPrimary(BuildContext context) {
+    final root = context.getInheritedWidgetOfExactType<FrostDestinationRoot>();
+    return root != null && !root.secondary && contains(context);
+  }
+
   @override
-  bool updateShouldNotify(FrostDestinationRoot oldWidget) => route != oldWidget.route;
+  bool updateShouldNotify(FrostDestinationRoot oldWidget) => route != oldWidget.route || secondary != oldWidget.secondary;
 }
