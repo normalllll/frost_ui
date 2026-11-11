@@ -17,13 +17,21 @@ part of 'pinned_chrome.dart';
 /// [PageStorageKey] on its scroll view. Do not keep off-screen sections alive:
 /// a [NestedScrollView] scrolls every attached section together.
 class FrostSliverSectionsHeader extends StatelessWidget {
-  const FrostSliverSectionsHeader({required this.lead, required this.tabs, super.key});
+  const FrostSliverSectionsHeader({required this.lead, required this.tabs, this.trailing, super.key});
 
   /// Laid out at the content column's full width.
   final Widget lead;
 
   /// Usually a [FrostTabBar] with `scrollable: true`.
   final Widget tabs;
+
+  /// Controls that belong to the selected section, such as a [FrostToolbar]
+  /// of pickers and a menu; they stick with the tabs. Measured at their
+  /// natural width: when the tabs at theirs leave room, at the end of the tabs'
+  /// row; otherwise in a row of their own below the tabs, at the full width, so
+  /// a toolbar overflows into its menu. Rebuild with the selected section's
+  /// controls, or none, as the selection changes.
+  final Widget? trailing;
 
   /// How far the stuck tabs go under the header.
   static const _tuckDistance = 12.0;
@@ -51,10 +59,118 @@ class FrostSliverSectionsHeader extends StatelessWidget {
               listenable: band,
               builder: (context, _) => FrostPinnedChromeGlass._(opacity: band.reveal ?? 0, hiddenExtent: 0, animate: false),
             ),
-          FrostContentColumn(maxWidth: double.infinity, child: tabs),
+          FrostContentColumn(
+            maxWidth: double.infinity,
+            // One parent whether or not the section has controls, so the tabs
+            // keep their state as the selection changes.
+            child: _TabsWithTrailing(tabs: tabs, trailing: trailing),
+          ),
         ],
       ),
     );
+  }
+}
+
+enum _TabsSlot { tabs, trailing }
+
+/// The tabs and the selected section's controls: one row when both fit at
+/// their natural widths, otherwise the controls take a full-width row below.
+class _TabsWithTrailing extends SlottedMultiChildRenderObjectWidget<_TabsSlot, RenderBox> {
+  const _TabsWithTrailing({required this.tabs, required this.trailing});
+  final Widget tabs;
+  final Widget? trailing;
+
+  @override
+  Iterable<_TabsSlot> get slots => _TabsSlot.values;
+
+  @override
+  Widget? childForSlot(_TabsSlot slot) => switch (slot) {
+    _TabsSlot.tabs => tabs,
+    _TabsSlot.trailing => trailing,
+  };
+
+  @override
+  _RenderTabsWithTrailing createRenderObject(BuildContext context) => _RenderTabsWithTrailing(Directionality.of(context));
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderTabsWithTrailing renderObject) => renderObject.direction = Directionality.of(context);
+}
+
+class _RenderTabsWithTrailing extends RenderBox with SlottedContainerRenderObjectMixin<_TabsSlot, RenderBox> {
+  _RenderTabsWithTrailing(this._direction);
+
+  /// Between the tabs and the controls in one row, as in a header's own row.
+  static const _gap = FrostGap.related;
+
+  TextDirection _direction;
+  set direction(TextDirection value) {
+    if (_direction == value) return;
+    _direction = value;
+    markNeedsLayout();
+  }
+
+  RenderBox get _tabs => childForSlot(_TabsSlot.tabs)!;
+  RenderBox? get _trailing => childForSlot(_TabsSlot.trailing);
+
+  @override
+  double computeMinIntrinsicWidth(double height) => _tabs.getMinIntrinsicWidth(height);
+  @override
+  double computeMaxIntrinsicWidth(double height) {
+    final trailing = _trailing?.getMaxIntrinsicWidth(height) ?? 0;
+    return _tabs.getMaxIntrinsicWidth(height) + (trailing == 0 ? 0 : trailing + _gap);
+  }
+
+  @override
+  double computeMinIntrinsicHeight(double width) => _tabs.getMinIntrinsicHeight(width) + (_trailing?.getMinIntrinsicHeight(width) ?? 0);
+  @override
+  double computeMaxIntrinsicHeight(double width) => _tabs.getMaxIntrinsicHeight(width) + (_trailing?.getMaxIntrinsicHeight(width) ?? 0);
+
+  @override
+  void performLayout() {
+    final width = constraints.maxWidth, tabs = _tabs, trailing = _trailing;
+    final height = constraints.maxHeight;
+    if (trailing == null) {
+      tabs.layout(constraints, parentUsesSize: true);
+      (tabs.parentData! as BoxParentData).offset = Offset.zero;
+      size = tabs.size;
+      return;
+    }
+    // Natural widths first: whether one row holds both. The controls are
+    // asked rather than laid out twice, so a toolbar fits itself only once.
+    tabs.layout(BoxConstraints(maxHeight: height), parentUsesSize: true);
+    final natural = trailing.getMaxIntrinsicWidth(height);
+    final ltr = _direction == TextDirection.ltr;
+    final room = natural == 0 ? 0.0 : natural + _gap;
+    if (tabs.size.width + room <= width + .5) {
+      trailing.layout(BoxConstraints(maxWidth: natural, maxHeight: height), parentUsesSize: true);
+      tabs.layout(BoxConstraints(maxWidth: math.max(0, width - room), maxHeight: height), parentUsesSize: true);
+      final row = math.max(tabs.size.height, trailing.size.height);
+      (tabs.parentData! as BoxParentData).offset = Offset(ltr ? 0 : width - tabs.size.width, (row - tabs.size.height) / 2);
+      (trailing.parentData! as BoxParentData).offset = Offset(ltr ? width - trailing.size.width : 0, (row - trailing.size.height) / 2);
+      size = constraints.constrain(Size(width, row));
+      return;
+    }
+    tabs.layout(BoxConstraints(maxWidth: width, maxHeight: height), parentUsesSize: true);
+    trailing.layout(BoxConstraints.tightFor(width: width).copyWith(maxHeight: height), parentUsesSize: true);
+    (tabs.parentData! as BoxParentData).offset = Offset(ltr ? 0 : width - tabs.size.width, 0);
+    (trailing.parentData! as BoxParentData).offset = Offset(0, tabs.size.height);
+    size = constraints.constrain(Size(width, tabs.size.height + trailing.size.height));
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    for (final child in children) {
+      context.paintChild(child, offset + (child.parentData! as BoxParentData).offset);
+    }
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    for (final child in children) {
+      final offset = (child.parentData! as BoxParentData).offset;
+      if (result.addWithPaintOffset(offset: offset, position: position, hitTest: (result, local) => child.hitTest(result, position: local))) return true;
+    }
+    return false;
   }
 }
 

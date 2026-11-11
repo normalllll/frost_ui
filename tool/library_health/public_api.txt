@@ -493,7 +493,7 @@ ctor	FrostSliverExpand.new	layout/sliver_expand.dart	expanded,key,sliver	baselin
 ctor	FrostSliverGrid.new	layout/grid.dart	aspectRatio,itemBuilder,itemCount,key,minItemWidth	baseline-20261102
 ctor	FrostSliverList.columns	lists/sliver_list.dart	dividers,itemBuilder,itemCount,itemKey,key,maxColumns,minColumnWidth	baseline-20261102
 ctor	FrostSliverList.new	lists/sliver_list.dart	dividers,itemBuilder,itemCount,itemKey,key	baseline-20261102
-ctor	FrostSliverSectionsHeader.new	layout/pinned_sections_sliver.dart	key,lead,tabs	reviewed:20261108:lead scrolls away, tabs stick; joins private chrome glass
+ctor	FrostSliverSectionsHeader.new	layout/pinned_sections_sliver.dart	key,lead,tabs,trailing	reviewed:20261112:pass: the choice between one row and two depends on the tabs' natural width, which an app cannot measure without duplicating the tabs and the toolbar
 ctor	FrostSliverWaterfallGrid.new	layout/waterfall_grid.dart	columns,controller,crossAxisSpacing,itemBuilder,items,key,mainAxisSpacing,maxColumns,padding,preferredTileWidth	baseline-20261102
 ctor	FrostSplitView.new	navigation/split_view.dart	header,initialPrimaryWidth,key,onCloseSecondary,onPrimaryWidthChanged,primary,resizable,secondary	baseline-20261102
 ctor	FrostSpringBuilder.new	motion/spring.dart	builder,child,key,spring,value	baseline-20261102
