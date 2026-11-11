@@ -154,8 +154,9 @@ void main() {
     final before = itemTop(tester, 10);
 
     await title(tester, 'Title');
-    expect(find.text('Title'), findsOneWidget);
-    expect(tester.getSize(find.byType(FrostPageHeader)).height, FrostPageHeader.horizontalHeight);
+    // The shell's top row draws the title; the header keeps an invisible copy for screen readers.
+    expect(find.text('Title'), findsNWidgets(2));
+    expect(tester.getSize(find.byType(FrostPageHeader)).height, gap(tester));
     expect(itemTop(tester, 10), before);
 
     await title(tester, null);
@@ -163,7 +164,7 @@ void main() {
     expect(tester.takeException(), isNull);
   }, variant: _desktop);
 
-  testWidgets('a title still shown when the body returns to the top does not cover it', (tester) async {
+  testWidgets('a title still shown when the body returns to the top leaves it at the top margin', (tester) async {
     await pump(tester);
     scroll.jumpTo(200);
     await tester.pump();
@@ -171,14 +172,14 @@ void main() {
     scroll.jumpTo(0);
     await tester.pump();
     await tester.pump();
-    expect(itemTop(tester, 0) - pageTop(tester), FrostPageHeader.horizontalHeight);
+    expect(itemTop(tester, 0) - pageTop(tester), gap(tester));
     expect(tester.takeException(), isNull);
   }, variant: _desktop);
 
-  testWidgets('a title given at the top takes its row', (tester) async {
+  testWidgets('a title given at the top leaves the body at the top margin, the shell row drawing it', (tester) async {
     await pump(tester);
     await title(tester, 'Title');
-    expect(itemTop(tester, 0) - pageTop(tester), FrostPageHeader.horizontalHeight);
+    expect(itemTop(tester, 0) - pageTop(tester), gap(tester));
     expect(tester.takeException(), isNull);
   }, variant: _desktop);
 

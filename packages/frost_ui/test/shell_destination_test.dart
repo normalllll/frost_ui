@@ -98,7 +98,8 @@ void main() {
     expect(target.currentState, same(targetState));
     tester.view.physicalSize = const Size(1100, 800);
     await tester.pumpAndSettle();
-    expect(tester.getSize(find.byKey(body)).height, 784);
+    // The wide layout's top bar (44 on touch) sits above the body, which keeps the 8 inset below it.
+    expect(tester.getSize(find.byKey(body)).height, 748);
     expect(tester.takeException(), isNull);
   });
 }

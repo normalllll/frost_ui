@@ -573,19 +573,25 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
         final titleContent = titleWidget == null ? null : KeyedSubtree(key: _titleContentKey, child: titleWidget);
         final usesCaptionNavigation =
             hasCaption && (captionState?.mode == FrostCaptionMode.client || captionState?.mode == FrostCaptionMode.nativeControls || widget.tabs != null);
-        // macOS windows carry no app icon or name, as Finder and System Settings.
-        final captionBrand = captionState?.mode == FrostCaptionMode.nativeControls ? null : widget.brand?.expanded;
-        // The title row names the visible page; tabs name their own pages.
-        final showsPageTitle = usesCaptionNavigation && useHorizontalLayout && widget.tabs == null;
         final touch = !FrostDensity.of(context).usesPointer;
-        final syntheticCaption = !hasCaption && useHorizontalLayout && widget.tabs != null;
+        // Without a title row (a full-screen iPad, an Android tablet) a sidebar
+        // layout gets a top bar of the same shape, without window buttons. A
+        // full-screen window stays immersive.
+        final syntheticCaption = !hasCaption && useHorizontalLayout && (widget.tabs != null || hasNavigation && !fullscreen);
+        // macOS windows carry no app icon or name, as Finder and System Settings,
+        // and a tablet's top bar none either; the tab strip keeps its brand.
+        final captionBrand = captionState?.mode == FrostCaptionMode.nativeControls || syntheticCaption && widget.tabs == null ? null : widget.brand?.expanded;
+        // The title row names the visible page; tabs name their own pages.
+        final showsPageTitle = (usesCaptionNavigation || syntheticCaption) && useHorizontalLayout && widget.tabs == null;
         final showCaption = hasCaption || syntheticCaption;
         final captionInset = syntheticCaption ? MediaQuery.paddingOf(context).top : 0.0;
         final bottomAligned = widget.sidebarAlignment == FrostSidebarAlignment.bottom || widget.sidebarAlignment == FrostSidebarAlignment.automatic && touch;
         final floatingTask = !useHorizontalLayout && widget.showsMobileNavigation && widget.taskEntry != null;
         // The native-controls strip contains no app navigation. Keep its normal
         // 28px height, but grow for actual AppKit geometry rather than clipping it.
-        final captionHeight = widget.tabs != null
+        final captionHeight = syntheticCaption && widget.tabs == null
+            ? math.max(titleRowHeight, FrostDensity.of(context).targetHeight)
+            : widget.tabs != null
             ? math.max(titleRowHeight, nativeControls.isEmpty ? 0.0 : nativeControls.bottom + FrostGap.inline)
             : captionState?.mode == FrostCaptionMode.nativeControls && widget.tabs == null && !useHorizontalLayout && !(titleInCaption && titleContent != null)
             ? math.max(_nativeCaptionHeight, nativeControls.isEmpty ? 0.0 : nativeControls.bottom + FrostGap.inline)

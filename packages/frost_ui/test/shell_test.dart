@@ -67,7 +67,7 @@ void main() {
   });
   for (final platform in [TargetPlatform.android, TargetPlatform.linux]) {
     for (final caption in [false, true]) {
-      testWidgets('brand follows actual custom-caption capability on $platform, caption=$caption', (tester) async {
+      testWidgets('brand shows only in a title row with window buttons on $platform, caption=$caption', (tester) async {
         tester.view.physicalSize = const Size(1400, 900);
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.reset);
@@ -80,13 +80,13 @@ void main() {
             platform: platform,
           ),
         );
-        expect(find.text('Capability brand'), findsOneWidget);
+        // The brand is in a title row with window buttons; a top bar without a window carries none.
+        expect(find.text('Capability brand'), caption ? findsOneWidget : findsNothing);
         expect(findFrostTooltip('L.back'), findsOneWidget);
         if (!caption) {
           final back = tester.getRect(findFrostTooltip('L.back'));
           final first = tester.getRect(find.byType(FrostNavItem).first);
-          final slotHeight = back.height < 40 ? 40 : back.height;
-          expect(first.top, closeTo(back.center.dy + slotHeight / 2 + 6, .01), reason: 'brand shares the Back row instead of adding another vertical slot');
+          expect(first.top, greaterThanOrEqualTo(back.bottom), reason: 'Back is in the top bar, not above the destinations');
         }
         expect(tester.takeException(), isNull);
       });
@@ -220,7 +220,7 @@ void main() {
         ),
       );
       final rect = tester.getRect(find.byKey(pageKey));
-      expect(rect, Rect.fromLTRB(176, caption ? 40 : FrostGap.related, 1400, 892));
+      expect(rect, Rect.fromLTRB(176, 40, 1400, 892));
       expect(findFrostTooltip('L.collapseNavigation'), findsOneWidget);
       expect(findFrostTooltip('L.back'), findsOneWidget);
       final scope = tester.widget<FrostShellNavigationScope>(find.byType(FrostShellNavigationScope));

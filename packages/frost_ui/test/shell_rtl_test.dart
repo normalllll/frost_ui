@@ -88,10 +88,12 @@ void main() {
         if (!withWindow) expect(tester.getCenter(_back).dx, _width - _rail / 2);
         final icon = tester.getCenter(find.descendant(of: find.byType(FrostNavItem).first, matching: find.byType(FrostIcon)).first);
         expect(icon.dx, closeTo(_width - _rail / 2, .01));
-        if (expanded) {
+        if (expanded && withWindow) {
           final brand = tester.getRect(find.byKey(_iconKey));
           expect(brand.center.dx, greaterThan(_width / 2));
         }
+        // Only a title row with window buttons carries the brand; a top bar without a window does not.
+        if (!withWindow) expect(find.byKey(_iconKey), findsNothing);
         expect(tester.takeException(), isNull);
       });
     }

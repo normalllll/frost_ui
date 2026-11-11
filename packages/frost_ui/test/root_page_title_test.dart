@@ -117,12 +117,13 @@ Widget _settings(String title, List<FrostToolbarItem> actions) => FrostSettingsS
 );
 
 void main() {
-  testWidgets('in the sidebar layout a root page header leaves its title to the sidebar and is only the top margin', (tester) async {
+  testWidgets('in the sidebar layout a root page header leaves its title to the shell row and is only the top margin', (tester) async {
     final semantics = tester.ensureSemantics();
     _window(tester, _sidebar);
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
-    expect(_visible('Home page'), isFalse);
+    expect(_inHeader('Home page'), isFalse);
+    expect(_visible('Home page'), isTrue);
     expect(find.bySemanticsLabel('Home page'), findsOneWidget);
     expect(tester.getSemantics(find.bySemanticsLabel('Home page')).getSemanticsData().flagsCollection.isHeader, isTrue);
     expect(tester.getSize(find.byType(FrostPageHeader)).height, _inset);
@@ -138,7 +139,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(_visible('Home page'), isFalse);
+    expect(_inHeader('Home page'), isFalse);
     expect(tester.getSize(find.byType(FrostPageHeader)).height, greaterThan(_inset));
     expect(tester.takeException(), isNull);
   });
@@ -151,16 +152,18 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('a pushed page keeps its title in the sidebar layout; a secondary root leaves it', (tester) async {
+  testWidgets('in the sidebar layout the shell row draws the title of a pushed page and a root page, never the header', (tester) async {
     _window(tester, _sidebar);
     await tester.pumpWidget(_app(pushed: true));
     await tester.pumpAndSettle();
+    expect(_inHeader('Ranking page'), isFalse);
     expect(_visible('Ranking page'), isTrue);
     await tester.pumpWidget(_app(secondary: true));
     await tester.pumpAndSettle();
-    expect(_visible('Downloads page'), isFalse);
+    expect(_inHeader('Downloads page'), isFalse);
     await tester.pumpWidget(_app(secondary: true, pushed: true));
     await tester.pumpAndSettle();
+    expect(_inHeader('Ranking page'), isFalse);
     expect(_visible('Ranking page'), isTrue);
     expect(tester.takeException(), isNull);
   });
@@ -210,14 +213,17 @@ void main() {
   }
 }
 
-/// Whether [text] is painted: present and under no fully transparent layer.
-bool _visible(String text) {
-  final found = find.text(text).evaluate();
-  if (found.isEmpty) return false;
+/// Whether [text] is painted by the page header: present there and under no fully transparent layer.
+bool _inHeader(String text) => _painted(find.descendant(of: find.byType(FrostPageHeader), matching: find.text(text)).evaluate());
+
+/// Whether [text] is painted anywhere: the shell's top row or the page header.
+bool _visible(String text) => _painted(find.text(text).evaluate());
+
+bool _painted(Iterable<Element> found) => found.any((element) {
   var painted = true;
-  found.single.visitAncestorElements((element) {
-    if (element.widget case Opacity(opacity: 0)) painted = false;
+  element.visitAncestorElements((ancestor) {
+    if (ancestor.widget case Opacity(opacity: 0)) painted = false;
     return painted;
   });
   return painted;
-}
+});

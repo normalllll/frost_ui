@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
+import 'package:frost_ui/src/controls/_button_control.dart';
 import 'package:frost_ui/src/layout/window_caption_scope.dart' show FrostHitKind;
 import 'support.dart';
 import 'window_caption_test.dart' show FakeWindow;
@@ -99,12 +100,12 @@ void main() {
           expect(tester.getSize(arrow), const Size(20, 20));
           expect(rect.right, lessThanOrEqualTo(brand!.left));
         } else {
-          // The sidebar back is a plain icon button in the rail's first row.
-          expect(rect.size, const Size(36, 36));
-          expect(find.byKey(const ValueKey('brand')), findsOneWidget);
-          // The button is centred in the 40-high row, whose top matches the content's.
-          expect(tester.getTopLeft(find.byKey(const ValueKey('content'))).dy, tester.getTopLeft(back).dy - 2);
-          expect(tester.widget<FrostButton>(back).onPressed, isNull);
+          // Without a window the top bar holds Back on the icon axis (two half-rail widths wide), no brand.
+          expect(rect.size, const Size(60, 40));
+          expect(rect.top, 0);
+          expect(find.byKey(const ValueKey('brand')), findsNothing);
+          expect(tester.getTopLeft(find.byKey(const ValueKey('content'))).dy, rect.bottom);
+          expect(tester.widget<FrostButtonControl>(back).onPressed, isNull);
         }
         update(() => canBack = true);
         await tester.pump();

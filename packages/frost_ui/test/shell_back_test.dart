@@ -146,10 +146,10 @@ void main() {
         if (horizontal) {
           expect(_enabled(tester), isFalse);
           expect(position!.center.dx, 30);
-          expect(position.top, window != null ? 0 : FrostGap.related + (position.height < 40 ? (40 - position.height) / 2 : 0));
+          expect(position.top, 0, reason: 'Back sits in the top row, with or without window buttons');
+          expect(position.size, Size(60, pointer ? 40 : 44), reason: 'the row is as high as the control target');
           if (window != null) {
             expect(position.left, 0);
-            expect(position.size, const Size(60, 40));
             final control = tester.widget<FrostButtonControl>(_back());
             expect(control.geometry!.cornerRadius, isNull);
             expect(position.right, lessThanOrEqualTo(tester.getRect(find.text('Brand')).left));

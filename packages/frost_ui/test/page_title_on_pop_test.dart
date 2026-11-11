@@ -52,7 +52,8 @@ class _StackState extends State<_Stack> {
 double _size(WidgetTester tester, String title) => tester.renderObject<RenderParagraph>(find.text(title)).text.style!.fontSize!;
 
 void main() {
-  for (final width in [1147.0, 390.0]) {
+  // A sidebar layout draws the title in the shell row (see shell_page_title_test.dart); the header paints it on a phone.
+  for (final width in [390.0]) {
     Future<_StackState> pump(WidgetTester tester) async {
       tester.view.physicalSize = Size(width, 717);
       tester.view.devicePixelRatio = 1;

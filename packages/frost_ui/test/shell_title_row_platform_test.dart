@@ -103,6 +103,7 @@ Rect _title(WidgetTester tester) => tester.getRect(
 );
 
 void main() {
+  tabletTests();
   for (final window in _Window.values) {
     testWidgets('${window.name}: Back, then the page title, in the title row, and Back holds its place as the sidebar collapses', (tester) async {
       await _pump(tester, _shell(window));
@@ -131,6 +132,51 @@ void main() {
       final back = tester.getRect(_back), title = _title(tester), search = tester.getRect(find.byKey(_searchKey));
       expect(back.right, lessThanOrEqualTo(title.left));
       expect(title.right, lessThanOrEqualTo(search.left));
+      expect(tester.takeException(), isNull);
+    });
+  }
+}
+
+Widget _tablet(TargetPlatform platform, {bool expanded = true}) => frostTestApp(
+  FrostShell(
+    destinations: const [
+      FrostNavDestination(icon: FrostIconData.glyph(Icons.home), label: 'Browse'),
+      FrostNavDestination(icon: FrostIconData.glyph(Icons.tag), label: 'Tags'),
+    ],
+    selectedIndex: 0,
+    atDestinationRoot: false,
+    canGoBack: true,
+    onBack: () {},
+    onDestinationSelected: (_) {},
+    showsMobileNavigation: true,
+    initiallyExpanded: expanded,
+    brand: const FrostShellBrand(expanded: FrostText('BooruFlow', key: _brandKey)),
+    child: FrostShellDestination(
+      child: Scaffold(
+        body: Column(
+          children: [
+            FrostPageHeader(title: FrostText('Post 42')),
+            const Expanded(child: SizedBox.expand()),
+          ],
+        ),
+      ),
+    ),
+  ),
+  platform: platform,
+);
+
+void tabletTests() {
+  for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+    testWidgets('$platform: a sidebar layout without a title row gets a top bar with Back and the title, no window buttons', (tester) async {
+      await _pump(tester, _tablet(platform));
+      final back = tester.getRect(_back), title = _title(tester);
+      expect(find.byType(FrostCaptionButtons), findsNothing);
+      expect(find.byKey(_brandKey), findsNothing, reason: 'a tablet top bar carries no brand');
+      expect(title.left, greaterThanOrEqualTo(back.right));
+      expect(title.center.dy, closeTo(back.center.dy, 2));
+      expect(back.height, greaterThanOrEqualTo(44), reason: 'a touch target');
+      await _pump(tester, _tablet(platform, expanded: false));
+      expect(tester.getRect(_back), back);
       expect(tester.takeException(), isNull);
     });
   }

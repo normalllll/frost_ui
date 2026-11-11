@@ -75,79 +75,50 @@ void _expectVisibleBrand(WidgetTester tester) {
 void main() {
   // The standard sidebar: a 60 rail, 176 expanded for the short label.
   const railWidth = 60.0, expandedWidth = 176.0;
-  // macOS carries Back in its title row: shell_title_row_platform_test.dart.
+  // Without a window caption the shell draws a top bar with Back and no brand: shell_title_row_platform_test.dart.
   for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
     for (final expanded in [false, true]) {
-      testWidgets('sidebar header uses fixed Back and reveals brand platform=$platform expanded=$expanded', (tester) async {
+      testWidgets('top bar without a window holds Back on the sidebar icon axis and no brand platform=$platform expanded=$expanded', (tester) async {
         tester.view.physicalSize = const Size(1200, 700);
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.reset);
-        final mac = platform == TargetPlatform.macOS;
-        final window = mac ? FakeWindow() : null;
-        if (window != null) {
-          window.current = const FrostCaptionState(
-            maximized: false,
-            active: true,
-            maximizeHovered: false,
-            maximizePressed: false,
-            failed: false,
-            mode: FrostCaptionMode.nativeControls,
-            leftButtons: [],
-            rightButtons: [],
-            nativeControls: Rect.fromLTRB(9, 9, 69, 23),
-          );
-        }
         var backCalls = 0;
-        await tester.pumpWidget(_shell(window, platform: platform, expanded: expanded, canGoBack: true, onBack: () => backCalls++));
+        await tester.pumpWidget(_shell(null, platform: platform, expanded: expanded, canGoBack: true, onBack: () => backCalls++));
         final backFinder = find.byKey(const ValueKey('frost-shell-back'));
         final back = tester.getRect(backFinder);
         final sidebarLeft = tester.getRect(find.byKey(_pageKey)).left - (expanded ? expandedWidth : railWidth);
         expect(back.center.dx, closeTo(sidebarLeft + railWidth / 2, .01));
         final navigationIcon = find.descendant(of: find.byType(FrostNavItem).first, matching: find.byType(FrostIcon)).first;
         expect(tester.getCenter(navigationIcon).dx, closeTo(back.center.dx, .01));
-        expect(back.top, greaterThanOrEqualTo(mac ? 28 : 0));
-        expect(tester.getRect(find.byKey(_pageKey)).top, mac ? 28 : FrostGap.related);
-        final brandFinder = find.byKey(_iconKey);
-        if (expanded) {
-          final brand = tester.getRect(brandFinder);
-          expect(brand.left, greaterThan(back.right));
-          expect(brand.center.dy, closeTo(back.center.dy, .01));
-          expect(tester.element(brandFinder).findAncestorWidgetOfExactType<Opacity>()!.opacity, 1);
-        } else {
-          expect(tester.element(brandFinder).findAncestorWidgetOfExactType<Opacity>()!.opacity, 0);
-        }
+        expect(back.top, 0);
+        expect(back.size, const Size(railWidth, 44));
+        expect(tester.getRect(find.byKey(_pageKey)).top, back.bottom);
+        expect(find.byKey(_iconKey), findsNothing, reason: 'a top bar without a window carries no brand');
         await tester.tap(backFinder);
         expect(backCalls, 1);
         expect(find.byType(FrostCaptionButtons), findsNothing);
-        if (mac) {
-          expect(window!.calls.last, [const FrostHitRegion(rect: Rect.fromLTWH(0, 0, 1200, 28), kind: FrostHitKind.caption)]);
-        }
         expect(tester.takeException(), isNull);
       });
     }
   }
 
-  testWidgets('sidebar header keeps Back stationary and brand text layout stable through expansion', (tester) async {
+  testWidgets('top bar keeps Back stationary through sidebar expansion', (tester) async {
     tester.view.physicalSize = const Size(1200, 700);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(_shell(null, platform: TargetPlatform.android, canGoBack: true));
     final back = find.byKey(const ValueKey('frost-shell-back'));
     final before = tester.getRect(back);
-    final textWidth = tester.getSize(find.byKey(_nameKey)).width;
     await tester.tap(findFrostTooltip('L.expandNavigation'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 80));
     expect(tester.getRect(back), before);
-    expect(tester.getSize(find.byKey(_nameKey)).width, textWidth);
     await tester.pumpAndSettle();
     expect(tester.getRect(back), before);
-    expect(tester.getSize(find.byKey(_nameKey)).width, textWidth);
-    expect(tester.element(find.byKey(_iconKey)).findAncestorWidgetOfExactType<Opacity>()!.opacity, 1);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('sidebar header mirrors in RTL and accommodates large text', (tester) async {
+  testWidgets('top bar mirrors in RTL and accommodates large text', (tester) async {
     tester.view.physicalSize = const Size(1200, 700);
     tester.view.devicePixelRatio = 1;
     tester.platformDispatcher.textScaleFactorTestValue = 2;
@@ -155,11 +126,9 @@ void main() {
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await tester.pumpWidget(_shell(null, platform: TargetPlatform.android, expanded: true, direction: TextDirection.rtl));
     final back = tester.getRect(find.byKey(const ValueKey('frost-shell-back')));
-    final brand = tester.getRect(find.byKey(_iconKey));
     expect(back.left, greaterThanOrEqualTo(1200 - railWidth));
     expect(back.right, lessThanOrEqualTo(1200));
-    expect(brand.right, lessThan(back.left));
-    expect(brand.center.dy, closeTo(back.center.dy, .01));
+    expect(find.byKey(_iconKey), findsNothing);
     final first = tester.getRect(find.byType(FrostNavItem).first);
     expect(first.top, greaterThanOrEqualTo(back.bottom));
     expect(tester.takeException(), isNull);
@@ -227,7 +196,7 @@ void main() {
   }
 
   for (final expanded in [false, true]) {
-    testWidgets('inset sidebar and page share top inset without a custom caption expanded=$expanded', (tester) async {
+    testWidgets('page starts below the top bar without a custom caption expanded=$expanded', (tester) async {
       tester.view.physicalSize = const Size(1440, 900);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -235,7 +204,7 @@ void main() {
       final toggle = findFrostTooltip(expanded ? 'L.collapseNavigation' : 'L.expandNavigation');
       expect(tester.getRect(toggle).bottom, lessThanOrEqualTo(900));
       expect(tester.getRect(toggle).top, greaterThan(800));
-      expect(tester.getRect(find.byKey(_pageKey)).top, FrostGap.related);
+      expect(tester.getRect(find.byKey(_pageKey)).top, 40, reason: 'the page starts below the top bar');
       expect(tester.takeException(), isNull);
     });
   }
