@@ -360,8 +360,10 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
   final _highlightRevision = ValueNotifier<int>(0);
   late final _options = FrostSearchOptions(onSelect: _select, onHighlight: () => _highlightRevision.value++);
   FrostHeaderSearchBody? _body;
-  // The content last shown, kept while the dropdown fades out.
+  // The content last shown, and the width it was shown at, kept while the
+  // dropdown fades out so it does not reflow as the field narrows.
   Widget? _lastContent;
+  double? _shownWidth;
   String _text = '';
   bool _suppressed = false;
   bool _keptOpen = false;
@@ -635,7 +637,7 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
               context,
               ExcludeFocus(
                 child: SizedBox(
-                  width: anchor.width,
+                  width: _visible || _shownWidth == null ? _shownWidth = anchor.width : _shownWidth,
                   child: ConstrainedBox(
                     constraints: BoxConstraints(maxHeight: maximumHeight),
                     child: FrostControlScope(
