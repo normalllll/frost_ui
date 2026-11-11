@@ -98,7 +98,9 @@ class _CaptionRow extends StatelessWidget {
                 ),
               )
             else ...[
-              Expanded(child: drag(_CaptionLead(brand: brand, pageTitle: pageTitle))),
+              Expanded(
+                child: drag(_CaptionLead(brand: brand, pageTitle: pageTitle)),
+              ),
               if (titleContent != null) ...[
                 ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: constraints.maxWidth * .45),
@@ -164,7 +166,12 @@ class _CaptionLead extends StatelessWidget {
                   ),
                 ),
         );
-        return _CaptionLeadRow(children: [if (brand != null) _CaptionBrand(child: brand), ClipRect(child: shown)]);
+        return _CaptionLeadRow(
+          children: [
+            if (brand != null) _CaptionBrand(child: brand),
+            ClipRect(child: shown),
+          ],
+        );
       },
     );
   }
@@ -180,7 +187,8 @@ class _CaptionLeadRow extends MultiChildRenderObjectWidget {
 
 class _CaptionLeadData extends ContainerBoxParentData<RenderBox> {}
 
-class _RenderCaptionLead extends RenderBox with ContainerRenderObjectMixin<RenderBox, _CaptionLeadData>, RenderBoxContainerDefaultsMixin<RenderBox, _CaptionLeadData> {
+class _RenderCaptionLead extends RenderBox
+    with ContainerRenderObjectMixin<RenderBox, _CaptionLeadData>, RenderBoxContainerDefaultsMixin<RenderBox, _CaptionLeadData> {
   _RenderCaptionLead(this._direction);
   // A title narrower than this is not worth showing.
   static const _minimumTitle = 24.0;
@@ -420,32 +428,40 @@ class _ShellCaptionBack extends StatelessWidget {
   final double width;
   final VoidCallback? onBack;
   @override
-  Widget build(BuildContext context) => FrostTouchTarget(
-    // A pointer density gets the same target from the click surface.
-    enabled: onBack != null && !FrostDensity.of(context).usesPointer,
-    child: SizedBox(
-      width: width,
-      height: _shellCaptionHeight,
-      child: FrostButtonControl(
-        key: const ValueKey('frost-shell-back'),
-        label: FrostScope.labelsOf(context).back,
-        icon: frostBackIcon(context),
-        iconStyle: FrostIconButtonStyle.plain,
-        onPressed: onBack,
-        geometry: const FrostButtonGeometry(
-          // Navigation keeps ordinary rounded feedback; only native caption actions are square.
-          horizontalInset: 0,
-          verticalInset: 0,
-          minimumWidth: _shellCaptionHeight,
-          alignment: MainAxisAlignment.center,
-          visualHeight: _shellCaptionHeight,
-          maximumHitHeight: _shellCaptionHeight,
-          iconSize: 20,
-          edgeBleed: 0,
+  Widget build(BuildContext context) {
+    final look = FrostBackLook.of(context, kde: FrostWindowCaptionScope.stateOf(context)?.style == FrostCaptionStyle.breeze);
+    return FrostTouchTarget(
+      // A pointer density gets the same target from the click surface.
+      enabled: onBack != null && !FrostDensity.of(context).usesPointer,
+      child: SizedBox(
+        width: width,
+        height: _shellCaptionHeight,
+        child: FrostButtonControl(
+          key: const ValueKey('frost-shell-back'),
+          label: FrostScope.labelsOf(context).back,
+          icon: look.chevron ? frostStepChevron(context, previous: true) : frostBackIcon(context),
+          iconStyle: FrostIconButtonStyle.plain,
+          onPressed: onBack,
+          geometry: FrostButtonGeometry(
+            cornerRadius: switch (look) {
+              FrostBackLook.apple || FrostBackLook.material => _shellCaptionHeight / 2,
+              FrostBackLook.gnome => FrostRadius.lg,
+              FrostBackLook.windows => null,
+            },
+            // Navigation keeps ordinary rounded feedback; only native caption actions are square.
+            horizontalInset: 0,
+            verticalInset: 0,
+            minimumWidth: _shellCaptionHeight,
+            alignment: MainAxisAlignment.center,
+            visualHeight: _shellCaptionHeight,
+            maximumHitHeight: _shellCaptionHeight,
+            iconSize: 20,
+            edgeBleed: 0,
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 // Collapse navigation chrome before taking room from the content or native

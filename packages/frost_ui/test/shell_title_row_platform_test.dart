@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
+import 'package:frost_ui/src/controls/_button_control.dart';
 import 'package:frost_ui/src/navigation/window_caption.dart' show FrostCaptionButtons;
 
 import 'support.dart';
@@ -104,6 +105,7 @@ Rect _title(WidgetTester tester) => tester.getRect(
 
 void main() {
   tabletTests();
+  glyphTests();
   for (final window in _Window.values) {
     testWidgets('${window.name}: Back, then the page title, in the title row, and Back holds its place as the sidebar collapses', (tester) async {
       await _pump(tester, _shell(window));
@@ -178,6 +180,24 @@ void tabletTests() {
       await _pump(tester, _tablet(platform, expanded: false));
       expect(tester.getRect(_back), back);
       expect(tester.takeException(), isNull);
+    });
+  }
+}
+
+/// Back's glyph: a chevron on Apple platforms and GNOME, an arrow on Windows and Android.
+void glyphTests() {
+  FrostIconData glyph(WidgetTester tester) => tester.widget<FrostButtonControl>(_back).icon!;
+  FrostIconSet icons(WidgetTester tester) => FrostIconSet.of(tester.element(_back));
+  for (final window in _Window.values) {
+    testWidgets('${window.name}: Back draws the platform glyph', (tester) async {
+      await _pump(tester, _shell(window));
+      expect(glyph(tester), window == _Window.windows ? icons(tester).back : icons(tester).chevronLeft);
+    });
+  }
+  for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+    testWidgets('$platform: Back draws the platform glyph', (tester) async {
+      await _pump(tester, _tablet(platform));
+      expect(glyph(tester), platform == TargetPlatform.iOS ? icons(tester).chevronLeft : icons(tester).back);
     });
   }
 }

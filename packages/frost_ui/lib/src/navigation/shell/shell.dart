@@ -6,7 +6,7 @@ import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:frost_window/frost_window.dart' show FrostCaptionMode;
+import 'package:frost_window/frost_window.dart' show FrostCaptionMode, FrostCaptionStyle;
 
 import '../../controls/_button_control.dart';
 import '../../controls/_button_types.dart';
@@ -16,6 +16,7 @@ import '../../controls/caption_search.dart';
 import '../../controls/picker_option.dart';
 import '../../display/count_badge.dart';
 import '../../feedback/_skeleton_geometry.dart';
+import '../../foundation/_back_look.dart';
 import '../../foundation/_control_geometry.dart';
 import '../../foundation/_page_title_scope.dart';
 import '../../foundation/_touch_targets.dart';
