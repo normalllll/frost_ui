@@ -24,6 +24,7 @@ import '../overlays/tooltip.dart';
 import '../primitives/_eager_layout_builder.dart';
 import '../primitives/glyph.dart';
 import '../primitives/keyline.dart';
+import '_toolbar_date.dart';
 import '_toolbar_middle_scope.dart';
 import 'sort_menu.dart';
 import 'toolbar_menu_button.dart';

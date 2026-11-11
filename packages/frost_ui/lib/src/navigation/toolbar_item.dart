@@ -36,6 +36,24 @@ sealed class FrostToolbarItem {
     FrostToolbarPriority priority,
   }) = _Menu;
 
+  /// A one-line date choice: the trigger shows the chosen date, or
+  /// [placeholder] (such as "Latest"), and opens the same calendar as
+  /// [FrostDatePicker] within [firstDate] and [lastDate]. With [clearable] the
+  /// calendar offers Clear while a date is chosen. [label] names the choice for
+  /// tooltips, screen readers and the overflow menu, whose entry opens the
+  /// calendar in a sheet or dialog.
+  factory FrostToolbarItem.date({
+    required DateTime? value,
+    required ValueChanged<DateTime?> onChanged,
+    required String label,
+    DateTime? firstDate,
+    DateTime? lastDate,
+    String? placeholder,
+    bool clearable,
+    bool showsYear,
+    FrostToolbarPriority priority,
+  }) = _Date;
+
   /// Sort trigger and overflow submenu generated from one set of fields.
   static FrostToolbarItem sortMenu<T>({
     required List<FrostPickerOption<T>> fields,
@@ -209,6 +227,41 @@ class _Custom extends FrostToolbarItem {
   );
   @override
   FrostMenuEntry _overflow(BuildContext context) => overflowEntry;
+}
+
+class _Date extends FrostToolbarItem {
+  _Date({
+    required DateTime? value,
+    required ValueChanged<DateTime?> onChanged,
+    required String label,
+    DateTime? firstDate,
+    DateTime? lastDate,
+    String? placeholder,
+    bool clearable = false,
+    bool showsYear = false,
+    FrostToolbarPriority priority = FrostToolbarPriority.normal,
+  }) : choice = FrostToolbarDateChoice(
+         value: value,
+         onChanged: onChanged,
+         label: label,
+         firstDate: firstDate,
+         lastDate: lastDate,
+         placeholder: placeholder,
+         clearable: clearable,
+         showsYear: showsYear,
+       ),
+       super(priority);
+  final FrostToolbarDateChoice choice;
+  @override
+  bool get _canCompact => false;
+  @override
+  Widget _build(BuildContext context, bool compact) => FrostToolbarDateButton(choice: choice);
+  @override
+  FrostMenuEntry _overflow(BuildContext context) => FrostMenuAction(
+    _overflowChoiceLabel(choice.label, choice.valueText(context)),
+    leading: FrostGlyph.icon(FrostIconSet.of(context).calendar),
+    onSelected: () => choice.open(context),
+  );
 }
 
 class _SortMenu<T> extends FrostToolbarItem {
