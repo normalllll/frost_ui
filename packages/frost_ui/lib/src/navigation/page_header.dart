@@ -27,6 +27,7 @@ import '../primitives/text.dart';
 import '_destination_root.dart';
 import '_page_header_leading.dart';
 import '_shell_back_scope.dart';
+import '_shell_page_title.dart';
 import '_toolbar_middle_scope.dart';
 import 'back_to_first_button.dart';
 import 'shell_navigation_scope.dart';
@@ -170,6 +171,22 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
   /// The pinned bar this header last told about its row.
   FrostChromeScrollAway? _away;
 
+  /// The shell row this header gave its title to, if any.
+  FrostShellPageTitle? _titleRow;
+
+  /// Whether this page and every page holding its navigator are current and
+  /// on stage.
+  bool _visible(BuildContext context) {
+    if (!TickerMode.valuesOf(context).enabled) return false;
+    var route = ModalRoute.of(context);
+    while (route != null) {
+      if (!route.isCurrent) return false;
+      final owner = route.navigator;
+      route = owner == null ? null : ModalRoute.of(owner.context);
+    }
+    return true;
+  }
+
   /// Whether this page, or a page holding its navigator, is being removed.
   bool _leaving(BuildContext context) {
     var route = ModalRoute.of(context);
@@ -210,6 +227,7 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
 
   @override
   void dispose() {
+    _titleRow?.release(this);
     if (widget.searchController?._header == this) widget.searchController!._header = null;
     if (_expanded) _rowSpan?.expanded = false;
     _away?.clearLeftOutRow(this);
@@ -266,7 +284,19 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
     // The sidebar already names a destination's root page; its header keeps
     // the title for screen readers only. With nothing else it is only the
     // page's top margin, as tall as the side inset.
-    final namedBySidebar = widget.title != null && shell != null && FrostAutoScaffold.usesHorizontalLayoutOf(context) && FrostDestinationRoot.contains(context);
+    // Where the shell's title row or top bar shows page titles, the visible
+    // page gives it its title, and every header keeps the title for screen
+    // readers only: a covered or leaving page is named by the page above it.
+    final titleRow = widget.title == null ? null : FrostShellPageTitleScope.maybeOf(context);
+    if (!identical(titleRow, _titleRow)) _titleRow?.release(this);
+    _titleRow = titleRow;
+    if (titleRow != null && _visible(context) && !_leaving(context)) {
+      titleRow.claim(this, widget.title!);
+    } else {
+      titleRow?.release(this);
+    }
+    final namedBySidebar =
+        titleRow != null || widget.title != null && shell != null && FrostAutoScaffold.usesHorizontalLayoutOf(context) && FrostDestinationRoot.contains(context);
     final title = namedBySidebar ? null : widget.title;
     // Laid out at its own size but unpainted and inert, so it is read out
     // without taking room or input.

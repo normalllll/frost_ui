@@ -17,7 +17,9 @@ class _CaptionRow extends StatelessWidget {
     this.expandsSearch = false,
     this.searchAtEnd = false,
     this.tabs,
+    this.pageTitle,
   });
+  final FrostShellPageTitle? pageTitle;
   final double iconAxis;
   final bool nativeCaption, showsBack, expandsSearch, searchAtEnd;
   final Widget? brand, titleContent, brandIcon;
@@ -71,6 +73,7 @@ class _CaptionRow extends StatelessWidget {
                   brandIcon: brandIcon,
                   brandLabel: brandLabel,
                   titleContent: titleContent,
+                  pageTitle: pageTitle,
                   nativeCaption: nativeCaption,
                   searchAtEnd: searchAtEnd,
                   // Match the leading clearance of Back in either caption mode.
@@ -82,7 +85,7 @@ class _CaptionRow extends StatelessWidget {
                 ),
               )
             else ...[
-              Expanded(child: drag(_CaptionBrand(child: brand))),
+              Expanded(child: drag(_CaptionLead(brand: brand, pageTitle: pageTitle))),
               if (titleContent != null) ...[
                 ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: constraints.maxWidth * .45),
@@ -108,6 +111,106 @@ class _CaptionRow extends StatelessWidget {
       ),
     );
   }
+}
+
+// The brand, then the visible page's title in the rest of the slot. The
+// title ellipsizes and leaves before the brand gives up any width, and a new
+// title fades in as the page it names arrives.
+class _CaptionLead extends StatelessWidget {
+  const _CaptionLead({required this.brand, required this.pageTitle});
+  final Widget? brand;
+  final FrostShellPageTitle? pageTitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final pageTitle = this.pageTitle;
+    if (pageTitle == null) return _CaptionBrand(child: brand);
+    return ListenableBuilder(
+      listenable: pageTitle,
+      builder: (context, _) {
+        final tokens = FrostThemeTokens.of(context);
+        final title = pageTitle.title;
+        final shown = AnimatedSwitcher(
+          duration: FrostMotion.duration(context, FrostMotion.layoutFade),
+          switchInCurve: FrostMotion.hoverCurve,
+          switchOutCurve: FrostMotion.hoverCurve,
+          layoutBuilder: (current, previous) => Stack(alignment: AlignmentDirectional.centerStart, children: [...previous, ?current]),
+          child: title == null
+              ? const SizedBox.shrink()
+              : KeyedSubtree(
+                  key: ObjectKey(pageTitle.owner),
+                  // The page header keeps the title for screen readers.
+                  child: ExcludeSemantics(
+                    child: DefaultTextStyle.merge(
+                      style: TextStyle(color: brand == null ? tokens.textPrimary : tokens.textSecondary),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      child: FrostPageTitleScope(role: brand == null ? FrostTextRole.headline : FrostTextRole.callout, child: title),
+                    ),
+                  ),
+                ),
+        );
+        return _CaptionLeadRow(children: [if (brand != null) _CaptionBrand(child: brand), ClipRect(child: shown)]);
+      },
+    );
+  }
+}
+
+class _CaptionLeadRow extends MultiChildRenderObjectWidget {
+  const _CaptionLeadRow({required super.children});
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderCaptionLead(Directionality.of(context));
+  @override
+  void updateRenderObject(BuildContext context, _RenderCaptionLead renderObject) => renderObject.direction = Directionality.of(context);
+}
+
+class _CaptionLeadData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderCaptionLead extends RenderBox with ContainerRenderObjectMixin<RenderBox, _CaptionLeadData>, RenderBoxContainerDefaultsMixin<RenderBox, _CaptionLeadData> {
+  _RenderCaptionLead(this._direction);
+  // A title narrower than this is not worth showing.
+  static const _minimumTitle = 24.0;
+  TextDirection _direction;
+  set direction(TextDirection value) {
+    if (_direction == value) return;
+    _direction = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _CaptionLeadData) child.parentData = _CaptionLeadData();
+  }
+
+  @override
+  void performLayout() {
+    final height = constraints.maxHeight;
+    size = constraints.constrain(Size(constraints.hasBoundedWidth ? constraints.maxWidth : 0, height.isFinite ? height : 0));
+    void place(RenderBox child, double at) {
+      final dx = _direction == TextDirection.ltr ? at : size.width - at - child.size.width;
+      (child.parentData! as _CaptionLeadData).offset = Offset(dx, (size.height - child.size.height) / 2);
+    }
+
+    final title = lastChild!;
+    final brand = childCount > 1 ? firstChild : null;
+    var x = 0.0;
+    if (brand != null) {
+      final natural = math.min(brand.getMaxIntrinsicWidth(size.height), size.width);
+      brand.layout(BoxConstraints.tightFor(width: natural, height: size.height), parentUsesSize: true);
+      place(brand, 0);
+      x = brand.size.width + FrostGap.section;
+    }
+    final room = size.width - x;
+    title.layout(BoxConstraints(maxWidth: room >= _minimumTitle ? room : 0, maxHeight: size.height), parentUsesSize: true);
+    place(title, x);
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) => defaultPaint(context, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) => defaultHitTestChildren(result, position: position);
 }
 
 // The App's brand in whatever slot the shell gives it, start-aligned and
@@ -346,7 +449,9 @@ class _TabbedCaptionContent extends StatefulWidget {
     required this.endInset,
     required this.searchCenter,
     this.brandLabel,
+    this.pageTitle,
   });
+  final FrostShellPageTitle? pageTitle;
   final FrostShellTabs<Object>? tabs;
   final Widget? brand, brandIcon, titleContent;
   final String? brandLabel;
@@ -386,7 +491,7 @@ class _TabbedCaptionContentState extends State<_TabbedCaptionContent> {
             ? 0.0
             : hasTabs
             ? (brandIcon == null ? 0.0 : 24.0)
-            : (brand == null ? 0.0 : 160.0 * scale);
+            : (brand == null && widget.pageTitle == null ? 0.0 : 160.0 * scale);
         final tabActionWidth = tabs?.canCreateTab == true ? math.max(40.0, FrostDensity.of(context).targetHeight) : 0.0;
         var tabWidth = !hasTabs ? 0.0 : contentCount * frostShellTabMinWidth * scale + baseWidth + tabActionWidth;
         var searchWidth = titleContent == null ? 0.0 : (widget.searchAtEnd ? frostCaptionSearchEndWidth : frostCaptionSearchWidth);
@@ -447,7 +552,7 @@ class _TabbedCaptionContentState extends State<_TabbedCaptionContent> {
                         : brandWidth,
                     child: drag(
                       fullBrand
-                          ? _CaptionBrand(child: brand)
+                          ? _CaptionLead(brand: brand, pageTitle: widget.pageTitle)
                           : ClipRect(
                               child: Align(
                                 alignment: AlignmentDirectional.centerStart,

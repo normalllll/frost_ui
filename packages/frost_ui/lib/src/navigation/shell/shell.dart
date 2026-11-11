@@ -17,6 +17,7 @@ import '../../controls/picker_option.dart';
 import '../../display/count_badge.dart';
 import '../../feedback/_skeleton_geometry.dart';
 import '../../foundation/_control_geometry.dart';
+import '../../foundation/_page_title_scope.dart';
 import '../../foundation/_touch_targets.dart';
 import '../../foundation/control_scope.dart';
 import '../../foundation/density.dart';
@@ -55,6 +56,7 @@ import '../_destination_root.dart';
 import '../_destination_status.dart';
 import '../_navigation_tile.dart';
 import '../_shell_back_scope.dart';
+import '../_shell_page_title.dart';
 import '../_tab_brand.dart';
 import '../page_header.dart';
 import '../shell_navigation_scope.dart';
@@ -315,6 +317,7 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
   final _scaffoldKey = GlobalKey();
   final _pageKey = GlobalKey();
   final _titleContentKey = GlobalKey();
+  final _pageTitle = FrostShellPageTitle();
   late final AnimationController _sidebarProgress = AnimationController(vsync: this, value: widget.initiallyExpanded ? 1 : 0);
   final FocusNode _moreButtonFocus = FocusNode(debugLabel: 'More navigation');
   final ValueNotifier<({int index, int sequence})> _primaryReselection = ValueNotifier((index: 0, sequence: 0));
@@ -462,6 +465,7 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
 
   @override
   void dispose() {
+    _pageTitle.dispose();
     _overlayBounds.dispose();
     _layoutIdentity.dispose();
     _sidebarProgress.dispose();
@@ -568,6 +572,8 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
         final titleWidget = widget.titleBarSearch ?? widget.titleBarContent;
         final titleContent = titleWidget == null ? null : KeyedSubtree(key: _titleContentKey, child: titleWidget);
         final usesCaptionNavigation = hasCaption && (captionState?.mode == FrostCaptionMode.client || widget.tabs != null);
+        // The title row names the visible page; tabs name their own pages.
+        final showsPageTitle = usesCaptionNavigation && useHorizontalLayout && widget.tabs == null;
         final touch = !FrostDensity.of(context).usesPointer;
         final syntheticCaption = !hasCaption && useHorizontalLayout && widget.tabs != null;
         final showCaption = hasCaption || syntheticCaption;
@@ -674,7 +680,10 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
                                                       ),
                                                     ),
                                                   Expanded(
-                                                    child: NotificationListener<NavigationNotification>(onNotification: _contentNavigated, child: widget.child),
+                                                    child: NotificationListener<NavigationNotification>(
+                                                      onNotification: _contentNavigated,
+                                                      child: FrostShellPageTitleScope(title: showsPageTitle ? _pageTitle : null, child: widget.child),
+                                                    ),
                                                   ),
                                                 ],
                                               ),
@@ -779,6 +788,7 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
                                       showsBack: (usesCaptionNavigation || syntheticCaption) && useHorizontalLayout,
                                       onBack: canGoBack ? goBack : null,
                                       brand: usesCaptionNavigation || syntheticCaption ? widget.brand?.expanded : null,
+                                      pageTitle: showsPageTitle ? _pageTitle : null,
                                     ),
                                   ),
                                 // Above the content Navigator, so pushed
