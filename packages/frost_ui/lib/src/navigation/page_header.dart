@@ -65,8 +65,11 @@ class FrostPageHeaderSearchController extends ChangeNotifier {
 /// does not, so an App that navigates after a query collapses it through
 /// [searchController]. Rows with enough room keep their layout.
 ///
-/// In the sidebar layout the root page of a shell destination leaves [title]
-/// to the sidebar and keeps it for screen readers only. A header with nothing
+/// Under a shell whose top row shows page titles (the sidebar layout), the
+/// visible page gives [title] to that row, and every header keeps it for screen
+/// readers only; elsewhere the root page of a shell destination leaves it to
+/// the sidebar or the bottom bar the same way. The title stays declared for
+/// screen readers and for the title row once the window widens. A header with nothing
 /// else to show is then just the page's top margin, as tall as its side inset,
 /// or nothing above a tab row of a [FrostHeaderSections]. A title that is a control, such as a [FrostTitleMenu], belongs in [leading],
 /// which stays.
@@ -168,21 +171,26 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
   /// Whether the title last took the secondary page's role.
   bool? _secondary;
 
+  /// Whether the header last had Back while its page was not leaving.
+  var _hadBack = false;
+
   /// The pinned bar this header last told about its row.
   FrostChromeScrollAway? _away;
 
   /// The shell row this header gave its title to, if any.
   FrostShellPageTitle? _titleRow;
 
-  /// Whether this page and every page holding its navigator are current and
-  /// on stage.
-  bool _visible(BuildContext context) {
+  /// Whether this page and every page holding its navigator inside the shell
+  /// of [titleRow] are current and on stage. A route over the whole shell, such
+  /// as a dialog, covers the title row too, so it does not count.
+  bool _visible(BuildContext context, FrostShellPageTitle titleRow) {
     if (!TickerMode.valuesOf(context).enabled) return false;
     var route = ModalRoute.of(context);
     while (route != null) {
-      if (!route.isCurrent) return false;
       final owner = route.navigator;
-      route = owner == null ? null : ModalRoute.of(owner.context);
+      if (owner == null || !identical(owner.context.getInheritedWidgetOfExactType<FrostShellPageTitleScope>()?.title, titleRow)) break;
+      if (!route.isCurrent) return false;
+      route = ModalRoute.of(owner.context);
     }
     return true;
   }
@@ -271,18 +279,25 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
     _rowSpan = FrostHeaderRowSpanScope.read(context);
     final height = FrostSizeClass.of(context) != FrostSizeClass.compact ? FrostPageHeader.horizontalHeight : FrostPageHeader.verticalHeight;
     final scaler = MediaQuery.textScalerOf(context);
-    final back = FrostPageHeader.leadingFor(context, onBack: widget.onBack);
+    final leaving = _leaving(context);
+    var back = FrostPageHeader.leadingFor(context, onBack: widget.onBack);
+    // A page leaving its navigator looks as it did at rest until it has gone:
+    // it keeps the Back it had, inert, so the header keeps its height, and the
+    // title it had, though the shell can already report the page below.
+    if (leaving) {
+      back = _hadBack ? IgnorePointer(child: ExcludeFocus(child: back ?? FrostCompactBackButton(onPressed: () {}))) : null;
+    } else {
+      _hadBack = back != null;
+    }
     final shell = FrostShellNavigationScope.maybeOf(context);
-    // A page leaving its navigator keeps the title it had: the shell can already
-    // report the page below, and the page is still on screen until it has gone.
-    final secondary = _secondary = _leaving(context) ? _secondary ?? false : back != null || (shell?.canGoBack ?? false);
+    final secondary = _secondary = leaving ? _secondary ?? false : back != null || (shell?.canGoBack ?? false);
     final titleRole = secondary ? FrostTextRole.headline : FrostTextRole.title1;
     final headline = FrostTypography.of(context).style(titleRole);
     final fontSize = headline.fontSize!;
     final extraLine = (scaler.scale(fontSize) - fontSize * 1.3) * headline.height!;
     final scales = extraLine > 0;
-    // The sidebar already names a destination's root page; its header keeps
-    // the title for screen readers only. With nothing else it is only the
+    // The sidebar or the bottom bar already names a destination's root page;
+    // its header keeps the title for screen readers only. With nothing else it is only the
     // page's top margin, as tall as the side inset.
     // Where the shell's title row or top bar shows page titles, the visible
     // page gives it its title, and every header keeps the title for screen
@@ -290,17 +305,18 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
     final titleRow = widget.title == null ? null : FrostShellPageTitleScope.maybeOf(context);
     if (!identical(titleRow, _titleRow)) _titleRow?.release(this);
     _titleRow = titleRow;
-    if (titleRow != null && _visible(context) && !_leaving(context)) {
+    if (titleRow != null && _visible(context, titleRow) && !leaving) {
       titleRow.claim(this, widget.title!);
     } else {
       titleRow?.release(this);
     }
-    final namedBySidebar =
-        titleRow != null || widget.title != null && shell != null && FrostAutoScaffold.usesHorizontalLayoutOf(context) && FrostDestinationRoot.contains(context);
-    final title = namedBySidebar ? null : widget.title;
+    final titleUnpainted =
+        titleRow != null ||
+        widget.title != null && shell != null && FrostDestinationRoot.contains(context);
+    final title = titleUnpainted ? null : widget.title;
     // Laid out at its own size but unpainted and inert, so it is read out
     // without taking room or input.
-    final titleNode = namedBySidebar
+    final titleNode = titleUnpainted
         ? Semantics(
             header: true,
             container: true,

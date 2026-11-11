@@ -55,6 +55,23 @@ const _sidebar = Size(1147, 717), _phone = Size(390, 844);
 /// The side inset of a page in the sidebar layout.
 const _inset = 24.0;
 
+Widget _sourced(String title, List<FrostToolbarItem> actions) => Column(
+  children: [
+    FrostPageHeader(
+      title: FrostText(title),
+      leading: [
+        FrostTitleMenu(
+          title: 'Danbooru',
+          entries: [FrostMenuAction('Gelbooru', onSelected: () {})],
+        ),
+      ],
+      middle: FrostSearchEntry(placeholder: 'Search', onPressed: () {}),
+      actions: actions,
+    ),
+    const Expanded(child: SizedBox.expand()),
+  ],
+);
+
 Widget _sectioned(String title, List<FrostToolbarItem> actions) => _SectionedPage(title: title, actions: actions);
 
 class _SectionedPage extends StatefulWidget {
@@ -144,11 +161,114 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('with the bottom bar the root page keeps its title', (tester) async {
+  testWidgets('with the bottom bar a root header paints no title and keeps it for screen readers', (tester) async {
+    final semantics = tester.ensureSemantics();
     _window(tester, _phone);
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
-    expect(_visible('Home page'), isTrue);
+    expect(_visible('Home page'), isFalse);
+    expect(tester.getSemantics(find.bySemanticsLabel('Home page')).getSemanticsData().flagsCollection.isHeader, isTrue);
+    semantics.dispose();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('with the bottom bar a root header with a source menu and a search keeps them without the title', (tester) async {
+    final semantics = tester.ensureSemantics();
+    _window(tester, _phone);
+    await tester.pumpWidget(_app(page: _sourced));
+    await tester.pumpAndSettle();
+    expect(_visible('Home page'), isFalse);
+    expect(find.bySemanticsLabel('Home page'), findsOneWidget);
+    expect(_inHeader('Danbooru'), isTrue);
+    expect(find.descendant(of: find.byType(FrostPageHeader), matching: find.byType(FrostSearchEntry)), findsOneWidget);
+    semantics.dispose();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('with the bottom bar a pushed page paints its title beside Back, and gives it to the title row once wide', (tester) async {
+    _window(tester, _phone);
+    await tester.pumpWidget(_app(pushed: true));
+    await tester.pumpAndSettle();
+    expect(_inHeader('Ranking page'), isTrue);
+    final header = find.byType(FrostPageHeader).last;
+    expect(find.descendant(of: header, matching: find.byType(FrostCompactBackButton)), findsOneWidget);
+    _window(tester, _sidebar);
+    await tester.pumpAndSettle();
+    expect(_inHeader('Ranking page'), isFalse);
+    expect(_visible('Ranking page'), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final pushed in [false, true]) {
+    testWidgets('the title row keeps the page title after a dialog over the shell closes (pushed: $pushed)', (tester) async {
+      _window(tester, _sidebar);
+      final rebuild = ValueNotifier(0);
+      addTearDown(rebuild.dispose);
+      Widget asking(String title, List<FrostToolbarItem> actions) => ValueListenableBuilder(
+        valueListenable: rebuild,
+        builder: (context, _, _) => Column(
+          children: [
+            FrostPageHeader(
+              title: FrostText(title),
+              actions: [
+                FrostToolbarItem.action(
+                  icon: testIcons.add,
+                  label: 'Ask $title',
+                  showsLabel: true,
+                  onPressed: () => showFrostConfirm(context: context, title: 'Block?', confirmLabel: 'Block', cancelLabel: 'Keep'),
+                ),
+              ],
+            ),
+            const Expanded(child: SizedBox.expand()),
+          ],
+        ),
+      );
+      await tester.pumpWidget(_app(page: asking, pushed: pushed));
+      await tester.pumpAndSettle();
+      final name = pushed ? 'Ranking page' : 'Home page';
+      expect(_visible(name), isTrue);
+      await tester.tap(find.text('Ask $name').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Block?'), findsOneWidget);
+      // The page rebuilds while the dialog covers the shell.
+      rebuild.value++;
+      await tester.pumpAndSettle();
+      expect(_visible(name), isTrue);
+      await tester.tap(find.text('Keep'));
+      await tester.pumpAndSettle();
+      expect(find.text('Block?'), findsNothing);
+      expect(_visible(name), isTrue);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('a popped page keeps its inert Back, its header height and its body in place until it has gone', (tester) async {
+    _window(tester, _phone);
+    Widget list(String title, List<FrostToolbarItem> actions) => FrostPinnedChrome(
+      chrome: FrostPageHeader(title: FrostText(title)),
+      body: ListView(children: [for (var i = 0; i < 40; i++) FrostText('$title row $i')]),
+    );
+    await tester.pumpWidget(_app(page: list, pushed: true));
+    await tester.pumpAndSettle();
+    final header = find.ancestor(of: find.text('Ranking page'), matching: find.byType(FrostPageHeader));
+    final height = tester.getSize(header).height;
+    // The transition moves and slightly scales the whole page; the body stays
+    // put within it, far from the header row it would lose.
+    double row() => tester.getTopLeft(find.text('Ranking page row 0')).dy - tester.getTopLeft(header).dy;
+    final resting = row();
+    await tester.pumpWidget(_app(page: list));
+    await tester.pump();
+    var frames = 0;
+    while (find.text('Ranking page row 0').evaluate().isNotEmpty) {
+      expect(tester.getSize(header).height, height);
+      expect(row(), moreOrLessEquals(resting, epsilon: 4));
+      final back = find.descendant(of: header, matching: find.byType(FrostCompactBackButton));
+      expect(back, findsOneWidget);
+      expect(find.ancestor(of: back, matching: find.byWidgetPredicate((widget) => widget is IgnorePointer && widget.ignoring)), findsWidgets);
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(++frames, lessThan(200));
+    }
+    expect(frames, greaterThan(1), reason: 'the exit must be observed');
     expect(tester.takeException(), isNull);
   });
 
@@ -185,7 +305,7 @@ void main() {
   }
 
   testWidgets('section tabs in a row of their own start on the content edge on a pushed page too', (tester) async {
-    _window(tester, const Size(700, 717));
+    _window(tester, _phone);
     await tester.pumpWidget(_app(page: _sectioned, pushed: true));
     await tester.pumpAndSettle();
     final header = tester.getRect(find.byType(FrostPageHeader).last);

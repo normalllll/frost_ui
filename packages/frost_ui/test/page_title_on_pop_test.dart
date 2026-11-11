@@ -24,35 +24,20 @@ class _StackState extends State<_Stack> {
   );
 
   @override
-  Widget build(BuildContext context) => FrostShell(
-    destinations: const [
-      FrostNavDestination(icon: FrostIconData.glyph(Icons.home), label: 'Home'),
-      FrostNavDestination(icon: FrostIconData.glyph(Icons.search), label: 'Find'),
+  Widget build(BuildContext context) => Navigator(
+    pages: [
+      MaterialPage<void>(key: const ValueKey('root'), child: _page('Root')),
+      if (depth > 0) MaterialPage<void>(key: const ValueKey('a'), child: _page('Page A')),
     ],
-    selectedIndex: 0,
-    atDestinationRoot: depth == 0,
-    onDestinationSelected: (_) {},
-    canGoBack: depth > 0,
-    onBack: () => go(depth - 1),
-    showsMobileNavigation: true,
-    brand: const FrostShellBrand(expanded: Text('Application')),
-    child: Navigator(
-      pages: [
-        MaterialPage<void>(
-          key: const ValueKey('root'),
-          child: FrostShellDestination(child: _page('Root')),
-        ),
-        if (depth > 0) MaterialPage<void>(key: const ValueKey('a'), child: _page('Page A')),
-      ],
-      onDidRemovePage: (_) {},
-    ),
+    onDidRemovePage: (_) => go(depth - 1),
   );
 }
 
 double _size(WidgetTester tester, String title) => tester.renderObject<RenderParagraph>(find.text(title)).text.style!.fontSize!;
 
 void main() {
-  // A sidebar layout draws the title in the shell row (see shell_page_title_test.dart); the header paints it on a phone.
+  // Under a shell no header paints its title (see shell_page_title_test.dart and
+  // root_page_title_test.dart); a header outside one does.
   for (final width in [390.0]) {
     Future<_StackState> pump(WidgetTester tester) async {
       tester.view.physicalSize = Size(width, 717);

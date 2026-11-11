@@ -234,7 +234,8 @@ void main() {
     );
     final glass = find.byType(FrostPinnedChromeGlass);
     expect(tester.widget<FrostPinnedChromeGlass>(glass).opacity, 0);
-    expect(tester.getTopLeft(glass).dy, FrostGap.related);
+    // The sheet starts below the top bar a sidebar layout without a window has.
+    expect(tester.getTopLeft(glass).dy, 40);
     expect(find.ancestor(of: glass, matching: find.byWidgetPredicate((w) => w is ClipRRect || w is ClipRSuperellipse || w is ClipPath)), findsWidgets);
     await tester.drag(find.text('item 3'), const Offset(0, -200));
     await tester.pumpAndSettle();
