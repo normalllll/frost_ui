@@ -11,6 +11,8 @@ class FrostWrap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gaps = FrostGap.of(context), gap = compact ? gaps.inline : gaps.related;
-    return FrostSpacedWrap(spacing: gap, runSpacing: gap, alignment: WrapAlignment.start, children: children);
+    return FrostWrapRuns(
+      child: FrostSpacedWrap(spacing: gap, runSpacing: gap, alignment: WrapAlignment.start, children: children),
+    );
   }
 }

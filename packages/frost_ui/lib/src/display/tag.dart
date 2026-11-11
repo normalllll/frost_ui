@@ -7,6 +7,7 @@ import '../controls/_button_control.dart';
 import '../feedback/_skeleton_geometry.dart';
 import '../feedback/skeleton.dart';
 import '../foundation/_control_geometry.dart';
+import '../foundation/_touch_targets.dart';
 import '../foundation/control_scope.dart';
 import '../foundation/density.dart';
 import '../foundation/metrics.dart';
@@ -17,6 +18,7 @@ import '../foundation/tokens.dart';
 import '../foundation/typography.dart';
 import '../overlays/context_menu.dart';
 import '../overlays/menu_entry.dart';
+import '../primitives/_spaced_wrap.dart';
 import '../primitives/icon.dart';
 import '_tag_metrics.dart';
 import 'data_dot.dart';
@@ -66,6 +68,9 @@ class FrostTag extends StatelessWidget {
       style: style,
       textScaler: MediaQuery.textScalerOf(context),
     );
+    // In a wrap the runs are spaced by the pills: the tag lays out at its
+    // painted height and a finger still gets the full target.
+    final inRuns = FrostWrapRuns.contains(context);
     Widget control = ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: _tagMaxWidth),
       child: FrostTagButton(
@@ -80,6 +85,7 @@ class FrostTag extends StatelessWidget {
           minimumWidth: 0,
           alignment: MainAxisAlignment.start,
           visualHeight: geometry.height,
+          maximumHitHeight: inRuns ? geometry.height : null,
           cornerRadius: this.style == FrostTagStyle.topic ? geometry.height / 2 : FrostRadius.xs,
         ),
         labelWidget: Row(
@@ -112,6 +118,7 @@ class FrostTag extends StatelessWidget {
         ),
       ),
     );
+    if (inRuns) control = FrostTouchTarget(enabled: enabled && onPressed != null, child: control);
     if (contextMenu.isNotEmpty) control = FrostContextMenuRegion(entries: contextMenu, enabled: enabled, child: control);
     if (!enabled) control = Semantics(enabled: false, child: Opacity(opacity: .38, child: control));
     return FrostSkeletonShape(

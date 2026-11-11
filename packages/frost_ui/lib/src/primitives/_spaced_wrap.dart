@@ -46,3 +46,15 @@ class _RenderSpacingInNaturalWidth extends RenderProxyBox {
   @override
   double computeMaxIntrinsicWidth(double height) => super.computeMaxIntrinsicWidth(height) + _spacing;
 }
+
+/// Library-only: marks the runs of a FrostWrap. A compact control there, such
+/// as a tag, lays out at its painted height and leaves its touch target to
+/// FrostTouchTarget, so the gap between runs is the gap that is seen.
+class FrostWrapRuns extends InheritedWidget {
+  const FrostWrapRuns({required super.child, super.key});
+
+  static bool contains(BuildContext context) => context.getInheritedWidgetOfExactType<FrostWrapRuns>() != null;
+
+  @override
+  bool updateShouldNotify(FrostWrapRuns oldWidget) => false;
+}
