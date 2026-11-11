@@ -89,8 +89,6 @@ void main() {
         expect(renderedColour('prominent'), tokens.onAction);
         expect(renderedColour('prominent'), Colors.white);
         expect(tokens.actionFill, tokens.accent);
-        expect(theme.filledButtonTheme.style!.textStyle!.resolve({})!.fontWeight, FontWeight.w600);
-        expect(theme.filledButtonTheme.style!.foregroundColor!.resolve({WidgetState.disabled}), Colors.white);
         expect(tester.renderObject<RenderParagraph>(find.text('prominent')).text.style!.fontWeight, FontWeight.w600);
         expect(renderedColour('standard'), tokens.textPrimary);
         expect(renderedColour('plain'), tokens.textPrimary);

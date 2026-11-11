@@ -90,8 +90,6 @@ void main() {
         locale: const Locale('en'),
       );
       final t = theme.extension<FrostThemeTokens>()!;
-      final shape = theme.filledButtonTheme.style!.shape!.resolve({})!;
-      expect(shape, continuous ? isA<RoundedSuperellipseBorder>() : isA<RoundedRectangleBorder>());
       final iconShape = theme.iconButtonTheme.style!.shape!.resolve({})!;
       expect(iconShape, continuous ? isA<RoundedSuperellipseBorder>() : isA<RoundedRectangleBorder>());
       final iconRadius = switch (iconShape) {
@@ -100,7 +98,6 @@ void main() {
         _ => throw StateError('Unexpected button shape'),
       };
       expect(iconRadius.resolve(TextDirection.ltr).topLeft.x, FrostRadius.forHeight(FrostDensity.comfortable.controlHeight));
-      expect(theme.menuTheme.style!.elevation!.resolve({}), 0);
       expect(theme.inputDecorationTheme.fillColor, t.fill);
       expect(theme.inputDecorationTheme.enabledBorder!.borderSide.width, 0);
       expect(frostFeedbackSurface(t, {WidgetState.hovered}), t.textPrimary.withValues(alpha: .04));

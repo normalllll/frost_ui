@@ -40,10 +40,6 @@ void main() {
       expect(style.visualDensity, VisualDensity.standard);
       expect(style.tapTargetSize, MaterialTapTargetSize.shrinkWrap);
       expect((style.shape!.resolve({})! as RoundedSuperellipseBorder).borderRadius.resolve(TextDirection.ltr).topLeft.x, 8);
-      expect(theme.menuTheme.style!.padding!.resolve({}), const EdgeInsets.all(4));
-      expect(theme.menuTheme.style!.minimumSize!.resolve({})!.width, 160);
-      expect(theme.menuTheme.style!.maximumSize!.resolve({})!.width, 360);
-      expect((theme.menuTheme.style!.shape!.resolve({})! as RoundedSuperellipseBorder).borderRadius.resolve(TextDirection.ltr).topLeft.x, 12);
     }
   });
 

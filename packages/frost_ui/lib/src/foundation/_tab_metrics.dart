@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-// Tabs share fixed indicator geometry with the Material migration fallback.
+// Fixed indicator geometry shared by tab bars and section tabs.
 const frostTabIndicatorWidth = 16.0;
 const frostTabIndicatorHeight = 3.0;
 const frostTabInset = 11.0;
