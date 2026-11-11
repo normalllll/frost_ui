@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
+import 'package:frost_ui/src/overlays/_popover_surface.dart' show frostPopoverContentInset;
 
 import 'page_support.dart';
 import 'support.dart';
@@ -190,7 +191,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('catgirl'), findsOneWidget);
     // A floating panel under the field; the page stays visible around it.
-    final panel = tester.getRect(find.ancestor(of: find.text('catgirl'), matching: find.byType(Scrollable)).first);
+    // The content, inset inside the scroll view that runs to the panel edges.
+    final view = tester.getRect(find.ancestor(of: find.text('catgirl'), matching: find.byType(Scrollable)).first);
+    final panel = Rect.fromLTRB(view.left + frostPopoverContentInset, view.top, view.right - frostPopoverContentInset, view.bottom);
     final field = tester.getRect(find.byType(FrostTextField));
     expect(panel.left, greaterThanOrEqualTo(field.left - 1));
     expect(panel.right, lessThanOrEqualTo(field.right + 1));

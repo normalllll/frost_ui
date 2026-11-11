@@ -576,8 +576,9 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
 
   /// The App's content in the dropdown's scroll view. The scroll view keeps
   /// the full width for its scrollbar; a page dropdown's content takes the
-  /// page's content column inside it.
-  Widget _suggestionList(BuildContext context) => KeyedSubtree(
+  /// page's content column inside it. [padding] insets the content inside
+  /// the scroll view, leaving the scrollbar at the view's edge.
+  Widget _suggestionList(BuildContext context, {EdgeInsets padding = EdgeInsets.zero}) => KeyedSubtree(
     key: _listKey,
     child: FrostBleed(
       amount: FrostGap.of(context).hitInset,
@@ -586,6 +587,7 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
         inline: _inline,
         child: SingleChildScrollView(
           controller: _scroll,
+          padding: padding,
           child: FrostSearchContentRoot(child: _suggestionColumn(_input.content ?? _lastContent ?? const SizedBox.shrink())),
         ),
       ),
@@ -646,7 +648,12 @@ class _SuggestingSearchInputState extends State<_SuggestingSearchInput> {
                       enabled: true,
                       child: FrostCaptionRegion(
                         kind: FrostHitKind.client,
-                        child: FrostPopoverSurface(child: _suggestionList(context)),
+                        // The scrollbar runs along the panel edge, inside
+                        // its corners; the content keeps the panel inset.
+                        child: FrostPopoverSurface(
+                          padding: const EdgeInsets.symmetric(vertical: frostPopoverContentInset),
+                          child: _suggestionList(context, padding: const EdgeInsets.symmetric(horizontal: frostPopoverContentInset)),
+                        ),
                       ),
                     ),
                   ),
