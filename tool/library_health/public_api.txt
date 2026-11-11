@@ -819,6 +819,7 @@ member	FrostListSource.rebuild	frost_data:list_source.dart	-	reviewed:20261103:m
 member	FrostListSource.refresh	frost_data:list_source.dart	-	reviewed:20261103:moved to frost_data unchanged
 member	FrostListSource.refreshRevision	frost_data:list_source.dart	-	reviewed:20261103:moved to frost_data unchanged
 member	FrostListSource.refreshing	frost_data:list_source.dart	-	reviewed:20261103:moved to frost_data unchanged
+member	FrostListSource.removeWhere	frost_data:list_source.dart	-	reviewed:20261111:in-place removal needs the method; phase edge cases are minor
 member	FrostListSource.retryAt	frost_data:list_source.dart	-	reviewed:20261103:moved to frost_data unchanged
 member	FrostLoadPhase.content	frost_data:list_source.dart	-	reviewed:20261103:moved to frost_data unchanged
 member	FrostLoadPhase.empty	frost_data:list_source.dart	-	reviewed:20261103:moved to frost_data unchanged

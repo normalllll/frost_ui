@@ -83,11 +83,12 @@ abstract class FrostListSource<T> implements Listenable {
   /// The full-page state a list view shows: the first load's skeleton (also
   /// before the first request has been issued, so a page never renders an
   /// empty list for a frame), a first-load error, a confirmed empty list,
-  /// otherwise the items (with paging and refresh handled in place).
+  /// otherwise the items (with paging and refresh handled in place). An empty
+  /// list with more pages is content, so its view asks for the next page.
   FrostLoadPhase get phase => switch (_list) {
     _ when _list.isEmpty && lastError != null => FrostLoadPhase.error,
     _ when !initialized && _list.isEmpty => FrostLoadPhase.loading,
-    _ when initialized && _list.isEmpty => FrostLoadPhase.empty,
+    _ when initialized && _list.isEmpty && (!_hasMore || _refreshRequest != null) => FrostLoadPhase.empty,
     _ => FrostLoadPhase.content,
   };
 
@@ -216,6 +217,20 @@ abstract class FrostListSource<T> implements Listenable {
     _list.isLoading = false;
     _list.indicatorStatus = IndicatorStatus.fullScreenBusying;
     _notify();
+  }
+
+  /// Removes the loaded items that match [test] in place: the others keep
+  /// their order, and the load phase, [hasMore] and the next page stay as
+  /// they are. A page loading meanwhile is still added; a refresh replaces
+  /// the list with its response. Listeners hear once.
+  /// Returns how many items were removed.
+  int removeWhere(bool Function(T item) test) {
+    if (_disposed) return 0;
+    final before = _list.length;
+    _list.removeWhere(test);
+    final removed = before - _list.length;
+    if (removed > 0) _notify();
+    return removed;
   }
 
   @protected
