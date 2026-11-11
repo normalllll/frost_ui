@@ -126,10 +126,10 @@ class FrostToast {
 
   /// Dismisses every notice, the same way each card's close button does.
   /// An app that wants Escape to clear notices binds it to this.
-  static void dismissAll() => FrostToastHost._key.currentState?._dismissAll();
+  static void dismissAll() => FrostToastHost._current?._dismissAll();
 
   static _AppToastHostState? get _host {
-    final host = FrostToastHost._key.currentState;
+    final host = FrostToastHost._current;
     if (host == null) {
       FlutterError.reportError(
         FlutterErrorDetails(
@@ -166,9 +166,13 @@ class FrostToast {
 /// Hosts the notices above [child] (the app's pages). Install once, inside
 /// the app's theme and localizations.
 class FrostToastHost extends StatefulWidget {
-  FrostToastHost({required this.child}) : super(key: _key);
+  const FrostToastHost({required this.child}) : super(key: null);
 
-  static final _key = GlobalKey<_AppToastHostState>();
+  // The hosts in mount order; notices go to the newest. A registry rather
+  // than a global key: a key would hand a removed app's host, with the pages
+  // below it, to the next app built in the same frame.
+  static final _hosts = <_AppToastHostState>[];
+  static _AppToastHostState? get _current => _hosts.lastOrNull;
 
   final Widget child;
 
@@ -360,7 +364,14 @@ class _AppToastHostState extends State<FrostToastHost> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    FrostToastHost._hosts.add(this);
+  }
+
+  @override
   void dispose() {
+    FrostToastHost._hosts.remove(this);
     for (final notice in _notices) {
       notice.timer?.cancel();
     }
