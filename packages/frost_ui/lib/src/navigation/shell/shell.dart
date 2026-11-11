@@ -571,7 +571,10 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
         final titleInCaption = hasCaption && useHorizontalLayout && (widget.tabs != null || titleRoom >= 320) && controlHeight <= titleRowHeight;
         final titleWidget = widget.titleBarSearch ?? widget.titleBarContent;
         final titleContent = titleWidget == null ? null : KeyedSubtree(key: _titleContentKey, child: titleWidget);
-        final usesCaptionNavigation = hasCaption && (captionState?.mode == FrostCaptionMode.client || widget.tabs != null);
+        final usesCaptionNavigation =
+            hasCaption && (captionState?.mode == FrostCaptionMode.client || captionState?.mode == FrostCaptionMode.nativeControls || widget.tabs != null);
+        // macOS windows carry no app icon or name, as Finder and System Settings.
+        final captionBrand = captionState?.mode == FrostCaptionMode.nativeControls ? null : widget.brand?.expanded;
         // The title row names the visible page; tabs name their own pages.
         final showsPageTitle = usesCaptionNavigation && useHorizontalLayout && widget.tabs == null;
         final touch = !FrostDensity.of(context).usesPointer;
@@ -584,12 +587,14 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
         // 28px height, but grow for actual AppKit geometry rather than clipping it.
         final captionHeight = widget.tabs != null
             ? math.max(titleRowHeight, nativeControls.isEmpty ? 0.0 : nativeControls.bottom + FrostGap.inline)
-            : captionState?.mode == FrostCaptionMode.nativeControls && widget.tabs == null && !(titleInCaption && titleContent != null)
+            : captionState?.mode == FrostCaptionMode.nativeControls && widget.tabs == null && !useHorizontalLayout && !(titleInCaption && titleContent != null)
             ? math.max(_nativeCaptionHeight, nativeControls.isEmpty ? 0.0 : nativeControls.bottom + FrostGap.inline)
             : titleInCaption && titleContent != null
             ? titleRowHeight
             : widget.tabs != null
             ? titleRowHeight
+            : captionState?.mode == FrostCaptionMode.nativeControls
+            ? math.max(_shellCaptionHeight, nativeControls.isEmpty ? 0.0 : nativeControls.bottom + FrostGap.inline)
             : _shellCaptionHeight;
         return FrostOverlayRegionData(
           bounds: _overlayBounds,
@@ -787,7 +792,7 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
                                       nativeCaption: hasCaption,
                                       showsBack: (usesCaptionNavigation || syntheticCaption) && useHorizontalLayout,
                                       onBack: canGoBack ? goBack : null,
-                                      brand: usesCaptionNavigation || syntheticCaption ? widget.brand?.expanded : null,
+                                      brand: usesCaptionNavigation || syntheticCaption ? captionBrand : null,
                                       pageTitle: showsPageTitle ? _pageTitle : null,
                                     ),
                                   ),

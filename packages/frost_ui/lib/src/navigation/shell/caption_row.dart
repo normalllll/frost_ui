@@ -32,7 +32,7 @@ class _CaptionRow extends StatelessWidget {
     Widget drag(Widget child) => nativeCaption ? FrostCaptionRegion(kind: FrostHitKind.caption, child: child) : child;
     final state = FrostWindowCaptionScope.stateOf(context);
     final rightButtons = nativeCaption && ((state?.failed ?? false) || (state?.rightButtons.isNotEmpty ?? true));
-    if (state?.mode == FrostCaptionMode.nativeControls && titleContent == null && tabs == null) {
+    if (state?.mode == FrostCaptionMode.nativeControls && titleContent == null && tabs == null && !showsBack) {
       // AppKit excludes its own buttons from native dragging. The remaining
       // strip is a single drag region, including empty space around the buttons.
       return Row(
@@ -47,17 +47,30 @@ class _CaptionRow extends StatelessWidget {
     final rtl = Directionality.of(context) == TextDirection.rtl;
     final leftButtons = nativeCaption && (state?.leftButtons.isNotEmpty ?? false);
     final endButtons = rtl ? leftButtons : rightButtons;
+    // Window buttons at the start (macOS, Linux set to the left) keep that
+    // side: Back follows their reserved width at a fixed size. Otherwise Back
+    // sits on the sidebar's icon axis from the row's leading edge.
+    final native = state?.fullscreen == true ? Rect.zero : state?.nativeControls ?? Rect.zero;
+    final buttonsLead = nativeCaption && (rtl ? rightButtons : leftButtons || !native.isEmpty);
+    final hasTabs = tabs != null && tabs!.hasVisibleTabs;
+    final backWidth = !showsBack
+        ? 0.0
+        : hasTabs
+        ? 2 * FrostGap.related + math.max(40, FrostDensity.of(context).targetHeight)
+        : buttonsLead
+        ? math.max(_shellCaptionHeight, FrostDensity.of(context).targetHeight)
+        : iconAxis * 2;
     return FrostNativeCaptionPadding(
       child: LayoutBuilder(
         builder: (context, constraints) {
           final flow = <Widget>[
             if (showsBack)
-              tabs != null && tabs!.hasVisibleTabs
+              hasTabs
                   ? Padding(
                       padding: const EdgeInsets.symmetric(horizontal: FrostGap.related),
                       child: _ShellCaptionBack(width: math.max(40, FrostDensity.of(context).targetHeight), onBack: onBack),
                     )
-                  : _ShellCaptionBack(width: iconAxis * 2, onBack: onBack),
+                  : _ShellCaptionBack(width: backWidth, onBack: onBack),
             if (tabs != null || expandsSearch)
               Expanded(
                 child: _TabbedCaptionContent(
@@ -65,10 +78,10 @@ class _CaptionRow extends StatelessWidget {
                   // The window centre, measured from the content's left edge.
                   searchCenter:
                       constraints.maxWidth / 2 -
-                      (showsBack && !rtl
-                          ? (tabs != null && tabs!.hasVisibleTabs ? 16 + math.max(40, FrostDensity.of(context).targetHeight) : iconAxis * 2)
-                          : 0) -
-                      (nativeCaption ? (state?.leftButtons.length ?? 0) * FrostCaptionMetrics.buttonWidth : 0),
+                      (showsBack && !rtl ? backWidth : 0) -
+                      (nativeCaption ? (state?.leftButtons.length ?? 0) * FrostCaptionMetrics.buttonWidth : 0) -
+                      // The padding past the traffic lights is outside these constraints.
+                      (native.isEmpty ? 0 : (native.right + FrostGap.related) / 2),
                   brand: brand,
                   brandIcon: brandIcon,
                   brandLabel: brandLabel,

@@ -75,7 +75,8 @@ void _expectVisibleBrand(WidgetTester tester) {
 void main() {
   // The standard sidebar: a 60 rail, 176 expanded for the short label.
   const railWidth = 60.0, expandedWidth = 176.0;
-  for (final platform in [TargetPlatform.macOS, TargetPlatform.android, TargetPlatform.iOS]) {
+  // macOS carries Back in its title row: shell_title_row_platform_test.dart.
+  for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
     for (final expanded in [false, true]) {
       testWidgets('sidebar header uses fixed Back and reveals brand platform=$platform expanded=$expanded', (tester) async {
         tester.view.physicalSize = const Size(1200, 700);
@@ -164,7 +165,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('native strip grows for actual control geometry without moving Back beside it', (tester) async {
+  testWidgets('the macOS title row grows for actual control geometry and keeps Back after it', (tester) async {
     tester.view.physicalSize = const Size(1200, 700);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -182,7 +183,9 @@ void main() {
     );
     await tester.pumpWidget(_shell(window, platform: TargetPlatform.macOS, expanded: true));
     expect(tester.getRect(find.byKey(_pageKey)).top, 44);
-    expect(tester.getRect(find.byKey(const ValueKey('frost-shell-back'))).top, greaterThanOrEqualTo(44));
+    final back = tester.getRect(find.byKey(const ValueKey('frost-shell-back')));
+    expect(back.left, greaterThanOrEqualTo(72));
+    expect(back.bottom, lessThanOrEqualTo(44));
     expect(tester.takeException(), isNull);
   });
 
