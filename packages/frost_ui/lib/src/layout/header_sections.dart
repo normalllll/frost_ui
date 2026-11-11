@@ -18,8 +18,10 @@ import '_header_search_body.dart';
 /// action at its full form, has room for the tabs between its leading content
 /// and its actions, the tabs sit in that row. Otherwise they take a pinned
 /// row of their own below the header, and the header row slides away while
-/// the content scrolls on and returns when it scrolls back. Focus in the
-/// header row, its search field included, keeps it shown. The choice follows
+/// the content scrolls on and returns when it scrolls back. A focused text
+/// field in the header row, its search field included, keeps it shown, as
+/// does keyboard focus on any of its controls; focus a control keeps after a
+/// pointer or touch choice, such as a picked date, does not. The choice follows
 /// the width the header actually has, not the platform or input.
 ///
 /// A row of its own keeps the page's side inset: the first tab label starts on
@@ -44,7 +46,37 @@ class FrostHeaderSections extends StatefulWidget {
 
 class _HeaderSectionsState extends State<FrostHeaderSections> {
   final _span = FrostHeaderRowSpan();
+  final _row = FocusNode(canRequestFocus: false, skipTraversal: true, debugLabel: 'header row');
+
+  /// Whether focus in the header row holds it shown.
   var _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance
+      ..addListener(_update)
+      ..addHighlightModeListener(_onHighlightMode);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance
+      ..removeListener(_update)
+      ..removeHighlightModeListener(_onHighlightMode);
+    _row.dispose();
+    super.dispose();
+  }
+
+  void _onHighlightMode(FocusHighlightMode _) => _update();
+
+  void _update() {
+    final focus = FocusManager.instance.primaryFocus;
+    final holds =
+        _row.hasFocus &&
+        (FocusManager.instance.highlightMode == FocusHighlightMode.traditional || focus?.context?.findAncestorWidgetOfExactType<EditableText>() != null);
+    if (holds != _focused && mounted) setState(() => _focused = holds);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +103,7 @@ class _HeaderSectionsState extends State<FrostHeaderSections> {
       header: FrostHeaderRowSpanScope(
         span: _span,
         // Passive: only reports whether focus is anywhere in the header row.
-        child: Focus(canRequestFocus: false, skipTraversal: true, onFocusChange: (focused) => setState(() => _focused = focused), child: widget.header),
+        child: Focus(focusNode: _row, onFocusChange: (_) => _update(), child: widget.header),
       ),
       tabs: concealed(widget.tabs),
       trailing: widget.trailing == null ? null : concealed(widget.trailing!),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 
@@ -208,6 +209,73 @@ void main() {
     expect(tester.getRect(_header).bottom, moreOrLessEquals(0, epsilon: .5));
     search.requestFocus();
     await tester.pumpAndSettle();
+    expect(tester.getRect(_header).top, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  Widget datePage(ValueNotifier<DateTime?> date) => frostTestApp(
+    DefaultTabController(
+      length: 3,
+      child: ValueListenableBuilder(
+        valueListenable: date,
+        builder: (context, value, _) => pinnedPage(
+          header: FrostPageHeader(
+            leading: [FrostTitleMenu(title: 'Ranking', entries: [FrostMenuAction('Weekly', onSelected: () {})])],
+            actions: [
+              FrostToolbarItem.date(
+                value: value,
+                onChanged: (picked) => date.value = picked,
+                label: 'Date',
+                placeholder: 'Latest',
+                firstDate: DateTime(2026, 11, 1),
+                lastDate: DateTime(2026, 11, 20),
+                showsYear: true,
+                priority: FrostToolbarPriority.high,
+              ),
+            ],
+          ),
+          tabs: const FrostTabBar(
+            scrollable: true,
+            tabs: [
+              FrostTab(label: 'New'),
+              FrostTab(label: 'Hot'),
+              FrostTab(label: 'Random'),
+            ],
+          ),
+          slivers: [SliverList.builder(itemCount: 80, itemBuilder: (_, i) => SizedBox(height: 40, child: Text('row $i')))],
+        ),
+      ),
+    ),
+  );
+
+  testWidgets('after a date picked with a pointer the header row slides away and returns as before', (tester) async {
+    viewport(tester, 412);
+    final date = ValueNotifier<DateTime?>(DateTime(2026, 11, 5));
+    addTearDown(date.dispose);
+    await tester.pumpWidget(datePage(date));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('2026').hitTestable());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('12').hitTestable());
+    await tester.pumpAndSettle();
+    expect(date.value, DateTime(2026, 11, 12));
+    await scrollContent(tester, 500);
+    expect(tester.getRect(_header).bottom, moreOrLessEquals(0, epsilon: .5));
+    await scrollContent(tester, -40);
+    expect(tester.getRect(_header).top, moreOrLessEquals(0, epsilon: .5));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a header row control reached with the keyboard keeps the row shown', (tester) async {
+    viewport(tester, 412);
+    final date = ValueNotifier<DateTime?>(null);
+    addTearDown(date.dispose);
+    await tester.pumpWidget(datePage(date));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.highlightMode, FocusHighlightMode.traditional);
+    await scrollContent(tester, 500);
     expect(tester.getRect(_header).top, 0);
     expect(tester.takeException(), isNull);
   });
