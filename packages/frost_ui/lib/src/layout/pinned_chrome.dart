@@ -335,7 +335,7 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
                   ),
                   child: _PinnedBodyScope(
                     band: _band,
-                    rowRoom: measured + _away.leftOutRow - extent,
+                    rowRoom: measured + _away.rowRoomKept - extent,
                     child: NotificationListener<ScrollMetricsNotification>(
                       onNotification: _handleMetrics,
                       child: NotificationListener<ScrollNotification>(

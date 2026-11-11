@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frost_ui/desktop.dart';
 import 'package:frost_ui/frost_ui.dart';
 
 import 'support.dart';
@@ -8,9 +9,12 @@ const _sidebar = Size(1147, 717);
 final _desktop = TargetPlatformVariant.only(TargetPlatform.windows);
 
 class _Host extends StatefulWidget {
-  const _Host({required this.body, this.actions = const [], super.key});
+  const _Host({required this.body, this.actions = const [], this.tabs, super.key});
   final Widget Function(FrostPageHeader header) body;
   final List<FrostToolbarItem> actions;
+
+  /// Shell tabs take the caption, so headers draw their own titles.
+  final FrostTabsController<String>? tabs;
   @override
   State<_Host> createState() => _HostState();
 }
@@ -32,6 +36,15 @@ class _HostState extends State<_Host> {
     onBack: () {},
     showsMobileNavigation: true,
     brand: const FrostShellBrand(expanded: Text('Application')),
+    tabs: widget.tabs == null
+        ? null
+        : FrostShellTabs<String>(
+            controller: widget.tabs!,
+            label: (_, tab) => FrostTabLabel(title: tab),
+            countLabel: (count) => '$count tabs',
+            closeTooltip: 'Close tab',
+            newTabTooltip: 'New tab',
+          ),
     child: widget.body(FrostPageHeader(title: title == null ? null : FrostText(title!), actions: widget.actions)),
   );
 }
@@ -118,13 +131,24 @@ void main() {
     scroll.dispose();
   });
 
-  Future<void> pump(WidgetTester tester, {Size size = _sidebar, List<FrostToolbarItem> actions = const [], bool sections = false}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    Size size = _sidebar,
+    List<FrostToolbarItem> actions = const [],
+    bool sections = false,
+    FrostTabsController<String>? tabs,
+  }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       frostTestApp(
-        _Host(key: host, actions: actions, body: (header) => sections ? _Sections(header: header) : _list(header, scroll)),
+        _Host(
+          key: host,
+          actions: actions,
+          tabs: tabs,
+          body: (header) => sections ? _Sections(header: header) : _list(header, scroll),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -199,8 +223,32 @@ void main() {
     expect(tester.takeException(), isNull);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
-  testWidgets('a sections lead starts at the top margin and the tabs stick under the row without moving when it comes', (tester) async {
+  testWidgets('where the shell row draws titles the tabs stick right under the top margin, still as the title comes and goes', (tester) async {
     await pump(tester, sections: true);
+    final top = pageTop(tester), margin = gap(tester);
+    expect(tester.getTopLeft(find.byKey(const ValueKey('lead'))).dy - top, margin);
+
+    final outer = tester.state<NestedScrollViewState>(find.byType(NestedScrollView)).outerController;
+    outer.jumpTo(outer.position.maxScrollExtent >= 1000 ? 1000 : outer.position.maxScrollExtent);
+    await tester.pump();
+    await tester.pump();
+    final stuck = tester.getTopLeft(find.byType(FrostTabBar)).dy, first = tester.getTopLeft(find.text('a0')).dy;
+    expect(stuck - top, margin - 12, reason: 'tucked under the margin, with no room kept for a row a title will not bring');
+
+    await title(tester, 'Name');
+    expect(tester.getSize(find.byType(FrostPageHeader)).height, margin);
+    expect(tester.getTopLeft(find.byType(FrostTabBar)).dy, stuck);
+    expect(tester.getTopLeft(find.text('a0')).dy, first);
+    await title(tester, null);
+    expect(tester.getTopLeft(find.byType(FrostTabBar)).dy, stuck);
+    expect(tester.getTopLeft(find.text('a0')).dy, first);
+    expect(tester.takeException(), isNull);
+  }, variant: _desktop);
+
+  testWidgets('where the header would draw the title the tabs stick under the row it brings, without moving when it comes', (tester) async {
+    final tabs = FrostTabsController<String>.withBaseTab(baseTab: 'Home');
+    addTearDown(tabs.dispose);
+    await pump(tester, sections: true, tabs: tabs);
     final top = pageTop(tester), margin = gap(tester);
     expect(tester.getTopLeft(find.byKey(const ValueKey('lead'))).dy - top, margin);
 
@@ -212,6 +260,7 @@ void main() {
     expect(stuck - top, FrostPageHeader.horizontalHeight - 12);
 
     await title(tester, 'Name');
+    expect(find.text('Name'), findsOneWidget, reason: 'the header draws it');
     expect(tester.getTopLeft(find.byType(FrostTabBar)).dy, stuck);
     expect(tester.getTopLeft(find.text('a0')).dy, first);
     expect(tester.takeException(), isNull);

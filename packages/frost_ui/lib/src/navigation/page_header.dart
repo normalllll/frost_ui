@@ -350,7 +350,12 @@ class _PageHeaderState extends State<FrostPageHeader> with SingleTickerProviderS
     final leavesRowOut =
         widget.title == null && onlyTitle && _rowSpan == null && shell != null && (away?.rowMayCollapse ?? false) && FrostAutoScaffold.usesHorizontalLayoutOf(context);
     final margin = FrostGap.of(context).page;
-    away?.reportLeftOutRow(this, leavesRowOut ? math.max(0, (scales ? height + extraLine : height) - margin) : 0);
+    // A title brings the row back only where the shell does not draw titles.
+    away?.reportLeftOutRow(
+      this,
+      leavesRowOut ? math.max(0, (scales ? height + extraLine : height) - margin) : 0,
+      returnsWithTitle: FrostShellPageTitleScope.maybeOf(context) == null,
+    );
     if (leavesRowOut) {
       return FrostNativeCaptionPadding(child: SizedBox(width: double.infinity, height: margin));
     }

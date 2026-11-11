@@ -29,20 +29,28 @@ class FrostChromeScrollAway extends ChangeNotifier {
 
   Object? _rowOwner;
   double _leftOutRow = 0;
+  bool _rowReturnsWithTitle = false;
 
   /// How much shorter the chrome is for having left out an empty row.
   double get leftOutRow => _leftOutRow;
 
+  /// The left-out row's height when a title would bring it back, so what
+  /// sticks under the chrome keeps room for it. 0 where the shell draws page
+  /// titles: there what sticks follows the chrome as it is drawn.
+  double get rowRoomKept => _rowReturnsWithTitle ? _leftOutRow : 0;
+
   /// Written from the page header's build, before the chrome lays out.
-  void reportLeftOutRow(Object owner, double height) {
+  void reportLeftOutRow(Object owner, double height, {required bool returnsWithTitle}) {
     _rowOwner = owner;
     _leftOutRow = height;
+    _rowReturnsWithTitle = returnsWithTitle;
   }
 
   void clearLeftOutRow(Object owner) {
     if (!identical(_rowOwner, owner)) return;
     _rowOwner = null;
     _leftOutRow = 0;
+    _rowReturnsWithTitle = false;
   }
 
   /// Written from layout; listeners hear of it once the frame ends.
