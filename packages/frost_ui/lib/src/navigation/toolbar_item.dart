@@ -61,6 +61,10 @@ sealed class FrostToolbarItem {
 
   /// Whether the item shows as a bare icon target in this form.
   bool _iconOnly(bool compact) => false;
+
+  /// Whether the item draws a filled plate in this form, which starts on the
+  /// content edge when the item comes first in the row.
+  bool _platedIn(bool compact) => false;
   bool get _isOverflowGroup => false;
   bool get _isPicker => false;
   Widget _build(BuildContext context, bool compact);
@@ -133,6 +137,8 @@ class _Picker<T> extends FrostToolbarItem {
   @override
   bool get _isPicker => true;
   @override
+  bool _platedIn(bool compact) => !compact;
+  @override
   Widget _build(BuildContext context, bool compact) => compact
       ? FrostPicker<T>.menu(value: value, options: choices, onChanged: onChanged, label: label)
       : FrostPicker<T>.segmented(options: choices, value: value, onChanged: onChanged, label: label);
@@ -186,6 +192,8 @@ class _Custom extends FrostToolbarItem {
   final bool plated;
   @override
   bool get _canCompact => false;
+  @override
+  bool _platedIn(bool compact) => plated;
   @override
   bool get _isOverflowGroup => overflowEntry is FrostMenuSection;
   @override

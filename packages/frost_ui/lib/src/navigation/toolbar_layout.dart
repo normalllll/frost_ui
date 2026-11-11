@@ -111,6 +111,7 @@ class _ToolbarLayout extends MultiChildRenderObjectWidget {
     required this.startRoom,
     required this.endRoom,
     required this.plateRoom,
+    required this.startPlateRoom,
     required this.minimumHeight,
     required this.direction,
     required this.items,
@@ -129,8 +130,8 @@ class _ToolbarLayout extends MultiChildRenderObjectWidget {
   final double? edgeInset;
   final double startRoom, endRoom;
 
-  /// How far the row's end reaches past the content edge.
-  final double plateRoom;
+  /// How far the row's end and start reach past the content edge.
+  final double plateRoom, startPlateRoom;
   final TextDirection direction;
   final List<FrostToolbarItem> items;
   final int controlsCount;
@@ -170,7 +171,12 @@ class _RenderToolbar extends RenderBox with ContainerRenderObjectMixin<RenderBox
     return parts.fold(0.0, (sum, width) => sum + width) +
         config.gap * math.max(0, parts.length - 1) +
         (config.hasMiddle ? config.minimumMiddle + config.gap : 0) +
-        (config.items.length > config.controlsCount && _plated(config.items.last) ? config.plateRoom : 0);
+        (config.items.length > config.controlsCount && _plated(config.items.last) ? config.plateRoom : 0) +
+        (config.controlsCount > 0 &&
+                !getChildrenAsList().any((child) => (child.parentData! as _Data).kind == _Kind.leading) &&
+                config.items.first._platedIn(false)
+            ? config.startPlateRoom
+            : 0);
   }
 
   @override
@@ -262,7 +268,17 @@ class _RenderToolbar extends RenderBox with ContainerRenderObjectMixin<RenderBox
       return edgeInset == null || !icon ? 0 : math.max(0, math.min(config.endRoom, config.iconInset - edgeInset));
     }
 
-    double room() => available + shiftRoom();
+    // A filled plate first in the row starts on the content edge, as one last
+    // in the row ends on it, so the row gives up that room at its start.
+    double startPlate() {
+      if (leadWidths.any((width) => width > 0)) return 0;
+      for (var i = 0; i < math.min(config.controlsCount, forms.length); i++) {
+        if (forms[i] != _Form.hidden) return config.items[i]._platedIn(forms[i] == _Form.compact) ? config.startPlateRoom : 0;
+      }
+      return 0;
+    }
+
+    double room() => available + shiftRoom() - startPlate();
     final order = List.generate(forms.length, (i) => i)
       ..sort((a, b) {
         final result = config.items[b].priority.index.compareTo(config.items[a].priority.index);
@@ -341,9 +357,9 @@ class _RenderToolbar extends RenderBox with ContainerRenderObjectMixin<RenderBox
       viewport: available,
       quiet: !config.hasMiddle && previous is _ToolbarIdentity && layoutIdentity.onlyClusterCameOrWent(previous),
     );
-    final contentWidth = math.max(available, total() - shiftRoom());
+    final contentWidth = math.max(available, total() - shiftRoom() + startPlate());
     // How much of the end room the content before the cluster already took.
-    final absorbed = math.max(0.0, math.min(shiftRoom(), math.max(0.0, total() - available)));
+    final absorbed = math.max(0.0, math.min(shiftRoom(), math.max(0.0, total() + startPlate() - available)));
     final overflow = [
       for (var i = 0; i < forms.length; i++)
         if (forms[i] == _Form.hidden) i,
@@ -383,7 +399,7 @@ class _RenderToolbar extends RenderBox with ContainerRenderObjectMixin<RenderBox
       height = math.max(height, child.size.height);
     }
     size = constraints.constrain(Size(contentWidth, height + FrostGap.inline * 2));
-    var cursor = 0.0;
+    var cursor = startPlate();
     var atTrailing = false;
     final edgeInset = config.edgeInset;
     bool iconTarget(RenderBox box) {

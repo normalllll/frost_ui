@@ -227,6 +227,7 @@ class _FrostToolbarState extends State<FrostToolbar> with TickerProviderStateMix
                         startRoom: extraStart,
                         endRoom: extraEnd,
                         plateRoom: (direction == TextDirection.ltr ? outsets.right : outsets.left) - extraEnd,
+                        startPlateRoom: (direction == TextDirection.ltr ? outsets.left : outsets.right) - extraStart,
                         minimumHeight: hit,
                         direction: Directionality.of(context),
                         items: trailing,
