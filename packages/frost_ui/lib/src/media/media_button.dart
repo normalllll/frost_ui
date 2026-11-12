@@ -27,10 +27,11 @@ class FrostMediaButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mediaInk = FrostThemeTokens.of(context).onMediaInk;
     final offset = FrostVideoCommandScope.of(context) ? (FrostDensity.of(context).usesPointer ? 4.0 : 12.0) : 0.0;
     final type = FrostTypography.of(
       context,
-    ).style(FrostTextRole.caption, tabular: true).copyWith(color: const Color(0xFFFFFFFF), shadows: frostMediaInkShadows);
+    ).style(FrostTextRole.caption, tabular: true).copyWith(color: mediaInk, shadows: frostMediaInkShadows);
     final chip = !_iconOnly && icon == null;
     Widget ink(Widget child) => Padding(
       padding: EdgeInsets.only(top: offset),
@@ -49,7 +50,7 @@ class FrostMediaButton extends StatelessWidget {
           : ink(
               IconTheme.merge(
                 data: const IconThemeData(shadows: frostMediaInkShadows),
-                child: FrostIcon(icon!, size: size.iconSize, color: const Color(0xFFFFFFFF)),
+                child: FrostIcon(icon!, size: size.iconSize, color: mediaInk),
               ),
             ),
       labelWidget: _iconOnly
@@ -69,7 +70,7 @@ class FrostMediaButton extends StatelessWidget {
                     )
                   : Text(
                       label,
-                      style: const TextStyle(color: Color(0xFFFFFFFF), shadows: frostMediaInkShadows),
+                      style: TextStyle(color: mediaInk, shadows: frostMediaInkShadows),
                     ),
             ),
     );

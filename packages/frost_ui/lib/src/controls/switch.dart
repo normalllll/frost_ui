@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../foundation/_focus_modality.dart';
 import '../foundation/_touch_targets.dart';
+import '../foundation/color_math.dart';
 import '../foundation/control_scope.dart';
 import '../foundation/density.dart';
 import '../foundation/feedback.dart';
@@ -219,7 +220,7 @@ class _FrostSwitchState extends State<FrostSwitch> with SingleTickerProviderStat
                           return DecoratedBox(
                             decoration: BoxDecoration(
                               color: Color.alphaBlend(
-                                Color.lerp(tokens.fill.withValues(alpha: 1), const Color(0xFF000000), progress)!.withValues(
+                                Color.lerp(tokens.fill.withValues(alpha: 1), solidWashColor(tokens.fill), progress)!.withValues(
                                   alpha: !_enabled
                                       ? 0
                                       : _pressed

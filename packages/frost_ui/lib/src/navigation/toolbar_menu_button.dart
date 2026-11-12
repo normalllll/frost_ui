@@ -10,6 +10,7 @@ import '../foundation/control_scope.dart';
 import '../foundation/icon_data.dart';
 import '../foundation/sizes.dart';
 import '../foundation/spacing.dart';
+import '../foundation/tokens.dart';
 import '../foundation/typography.dart';
 import '../overlays/menu_anchor.dart';
 import '../overlays/menu_entry.dart';
@@ -144,7 +145,7 @@ class FrostToolbarControl extends StatelessWidget {
         labelWidget: onMedia && showsLabel
             ? Text(
                 label,
-                style: const TextStyle(color: Color(0xFFFFFFFF), shadows: frostMediaInkShadows),
+                style: TextStyle(color: FrostThemeTokens.of(context).onMediaInk, shadows: frostMediaInkShadows),
               )
             : null,
       ),

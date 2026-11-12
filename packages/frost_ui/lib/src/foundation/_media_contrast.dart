@@ -122,3 +122,13 @@ double frostOnMediaChromeOpacity(FrostThemeTokens tokens) => frostContrastScrimO
 );
 
 Color frostOnMediaChromeColor(FrostThemeTokens tokens) => frostOnMediaChromeBase(tokens).withValues(alpha: frostOnMediaChromeOpacity(tokens));
+
+/// The opacity at which [FrostThemeTokens.onMediaInk] stays readable over a
+/// white frame on the [FrostThemeTokens.onMediaScrim] colour, never below
+/// [minimum].
+double frostOnMediaScrimOpacity(FrostThemeTokens tokens, {required double minimum}) => frostContrastScrimOpacity(
+  surface: tokens.onMediaScrim.withValues(alpha: 1),
+  ink: tokens.onMediaInk,
+  worst: const Color(0xFFFFFFFF),
+  minimum: minimum,
+);

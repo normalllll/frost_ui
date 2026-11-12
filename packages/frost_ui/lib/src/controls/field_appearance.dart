@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart' show Theme;
 import 'package:flutter/widgets.dart';
 
-import '../foundation/_colors.dart';
 import '../foundation/control_scope.dart';
 import '../foundation/field_appearance.dart';
 import '../foundation/tokens.dart';
@@ -25,15 +24,16 @@ class FrostFieldScope extends StatelessWidget {
     Widget content = child;
     if (appearance == FrostFieldAppearance.onMedia) {
       final theme = Theme.of(context), tokens = FrostThemeTokens.of(context);
+      final ink = tokens.onMediaInk;
       // Even the brightest frame is at most #525252 below the active .68
       // black scrim. White .78 supporting ink retains ordinary text contrast.
       final media = tokens.copyWith(
         brightness: Brightness.dark,
-        textPrimary: frostWhite,
-        textSecondary: frostWhite.withValues(alpha: .78),
-        textTertiary: frostWhite.withValues(alpha: .78),
-        textQuaternary: frostWhite.withValues(alpha: .25),
-        disabledText: frostWhite.withValues(alpha: .25),
+        textPrimary: ink,
+        textSecondary: ink.withValues(alpha: ink.a * .78),
+        textTertiary: ink.withValues(alpha: ink.a * .78),
+        textQuaternary: ink.withValues(alpha: ink.a * .25),
+        disabledText: ink.withValues(alpha: ink.a * .25),
         negativeInk: const Color(0xFFFFB4B7),
       );
       content = FrostOnMediaChromeScope(

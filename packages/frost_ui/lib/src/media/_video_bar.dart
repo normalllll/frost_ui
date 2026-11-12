@@ -26,8 +26,7 @@ const _commandInset = 5.0;
 const frostMediaChromeIdleDelay = Duration(milliseconds: 2500);
 
 /// The opacity at which on-media ink stays readable over a white frame.
-double frostVideoControlScrimOpacity(FrostThemeTokens tokens) =>
-    frostContrastScrimOpacity(surface: const Color(0xFF000000), ink: tokens.onMediaInk, worst: const Color(0xFFFFFFFF), minimum: .60);
+double frostVideoControlScrimOpacity(FrostThemeTokens tokens) => frostOnMediaScrimOpacity(tokens, minimum: .60);
 
 /// Paint derives the mask from the child's actual first-frame height.
 class FrostVideoBar extends StatelessWidget {
@@ -110,7 +109,7 @@ class FrostVideoChrome extends StatelessWidget {
     final readable = frostVideoControlScrimOpacity(tokens);
     return CustomPaint(
       painter: FrostVideoScrimPainter(
-        const Color(0xFF000000).withValues(alpha: math.max(.70, readable) * progress),
+        tokens.onMediaScrim.withValues(alpha: math.max(.70, readable) * progress),
         controlOpacity: readable * progress,
         top: top,
       ),

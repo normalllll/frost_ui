@@ -30,7 +30,7 @@ int frostSeedIndex(String seed, int length) {
 /// The placeholder fill a seed maps to in [palette].
 Color frostAvatarSeedFill(String seed, List<Color> palette) => palette[frostSeedIndex(seed, palette.length)];
 
-/// Black or white, whichever reads better on [fill]. The better of the two is
+/// White or the solid wash (black), whichever reads better on [fill]. The better of the two is
 /// at least 4.58:1 on any colour, so the initials always meet 4.5:1.
 Color frostAvatarSeedInk(Color fill) =>
-    colorContrast(fill, const Color(0xFFFFFFFF)) >= colorContrast(fill, const Color(0xFF000000)) ? const Color(0xFFFFFFFF) : const Color(0xFF000000);
+    swatchCheckInk(fill, solidWashColor(fill));

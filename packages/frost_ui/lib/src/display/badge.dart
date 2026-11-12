@@ -52,8 +52,8 @@ class FrostBadge extends StatelessWidget {
     if (solid) {
       // Brand-colour solids follow the same original-accent/white-ink policy
       // as action buttons. Semantic fills keep their separate contrast rule.
-      fill = tone == FrostBadgeTone.accent || tone == FrostBadgeTone.neutral ? tokens.actionFill : readableAccentTone(ink, const Color(0xFFFFFFFF), 4.5);
-      ink = const Color(0xFFFFFFFF);
+      fill = tone == FrostBadgeTone.accent || tone == FrostBadgeTone.neutral ? tokens.actionFill : readableAccentTone(ink, tokens.onAction, 4.5);
+      ink = tokens.onAction;
     }
     final textStyle = FrostTypography.of(context).style(textRole).copyWith(fontSize: solid ? 11 : null, fontWeight: FontWeight.w600);
     final geometry = frostControlTextGeometry(baseHeight: _badgeHeight, style: textStyle, textScaler: MediaQuery.textScalerOf(context));

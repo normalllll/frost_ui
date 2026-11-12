@@ -279,7 +279,7 @@ class _EdgeProtection extends StatelessWidget {
     final progress = reveal != null && !reveal.claimed ? reveal.progress : 1.0;
     final readable = frostVideoControlScrimOpacity(tokens);
     return CustomPaint(
-      painter: _EdgeProtectionPainter(const Color(0xFF000000).withValues(alpha: readable * progress)),
+      painter: _EdgeProtectionPainter(tokens.onMediaScrim.withValues(alpha: readable * progress)),
       child: reveal?.consume(context, child) ?? child,
     );
   }

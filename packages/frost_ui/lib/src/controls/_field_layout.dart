@@ -69,7 +69,7 @@ class FrostFieldLayout extends StatelessWidget {
       // backing so labels/errors remain readable even over a white frame.
       return FrostFieldScope.of(context) == FrostFieldAppearance.onMedia
           ? DecoratedBox(
-              decoration: BoxDecoration(color: const Color(0xC2000000), borderRadius: BorderRadius.circular(4)),
+              decoration: BoxDecoration(color: tokens.onMediaScrim.withValues(alpha: 0xC2 / 255), borderRadius: BorderRadius.circular(4)),
               child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), child: text),
             )
           : text;

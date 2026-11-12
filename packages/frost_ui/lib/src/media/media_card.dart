@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../feedback/skeleton.dart';
+import '../foundation/_media_contrast.dart';
 import '../foundation/density.dart';
 import '../foundation/metrics.dart';
 import '../foundation/radius.dart';
@@ -234,10 +235,12 @@ class FrostMediaCard extends StatelessWidget {
                                             child: LayoutBuilder(
                                               builder: (context, bounds) {
                                                 final row = FrostCoverRowScope.of(context);
+                                                final tokens = FrostThemeTokens.of(context);
+                                                final ink = tokens.onMediaInk;
                                                 return Align(
                                                   alignment: Alignment.bottomCenter,
                                                   child: CustomPaint(
-                                                    painter: FrostCoverScrim(coverHeight: bounds.maxHeight, fraction: row ? .5 : .42),
+                                                    painter: FrostCoverScrim(coverHeight: bounds.maxHeight, fraction: row ? .5 : .42, scrim: tokens.onMediaScrim, readable: frostOnMediaScrimOpacity(tokens, minimum: .5)),
                                                     child: Padding(
                                                       padding: row ? const EdgeInsets.fromLTRB(5, 0, 5, 4) : const EdgeInsets.fromLTRB(8, 0, 8, 6),
                                                       child: FrostOnMediaChromeScope(
@@ -249,10 +252,10 @@ class FrostMediaCard extends StatelessWidget {
                                                                 fontWeight: FontWeight.w500,
                                                                 height: 1.45,
                                                                 letterSpacing: 0,
-                                                                color: const Color(0xFFFFFFFF),
+                                                                color: ink,
                                                               ),
                                                           child: IconTheme(
-                                                            data: const IconThemeData(color: Color(0xFFFFFFFF), size: 13),
+                                                            data: IconThemeData(color: ink, size: 13),
                                                             child: SizedBox(width: double.infinity, child: text),
                                                           ),
                                                         ),
@@ -276,7 +279,7 @@ class FrostMediaCard extends StatelessWidget {
                                                 height: 3,
                                                 child: Stack(
                                                   children: [
-                                                    const Positioned.fill(child: ColoredBox(color: Color(0x66FFFFFF))),
+                                                    Positioned.fill(child: ColoredBox(color: _mediaTrackColor(FrostThemeTokens.of(context).onMediaInk))),
                                                     FractionallySizedBox(
                                                       widthFactor: fraction.clamp(0.0, 1.0),
                                                       heightFactor: 1,
@@ -519,3 +522,6 @@ class _SkeletonMediaCard extends FrostMediaCard {
     },
   );
 }
+
+/// The unfilled part of a card's progress line: the media ink at 40%.
+Color _mediaTrackColor(Color ink) => ink.withValues(alpha: ink.a * 0x66 / 255);

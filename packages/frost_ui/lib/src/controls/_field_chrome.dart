@@ -63,7 +63,7 @@ class FrostFieldChrome {
     final shape = FrostRadius.shape(context, touch ? 10 : 8) as OutlinedBorder;
     return FrostFieldChrome(
       fill: media
-          ? const Color(0xFF000000).withValues(
+          ? tokens.onMediaScrim.withValues(
               alpha: !enabled
                   ? .64
                   : focused
