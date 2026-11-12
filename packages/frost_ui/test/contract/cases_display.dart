@@ -469,6 +469,10 @@ const _layoutOnly = {
   'FrostSliverList.columns',
   'FrostAutoScaffold.new',
   'FrostLoadingScrollView.new',
+  // The pull state machine reads only MediaQuery; the header it drives is
+  // placed by the caller and reads the theme itself.
+  'FrostRefreshView.new',
+  'FrostNestedRefreshView.new',
   'FrostForm.new',
   'FrostMediaViewport.new',
   'FrostFormRow.new',

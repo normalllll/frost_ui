@@ -4,8 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
-import 'package:frost_ui/src/feedback/refresh_indicator.dart' show FrostRefreshSliverHeader;
-import 'package:pull_to_refresh_notification/pull_to_refresh_notification.dart';
+import 'package:frost_ui/src/feedback/_pull_refresh.dart';
 
 import '../support.dart';
 import 'baseline.dart';
@@ -114,10 +113,10 @@ BaselineAct baselinePull(double distance) => (tester, subject) async {
   }
 };
 
-/// Shows the held refreshing state of the [PullToRefreshNotification] inside the subject.
+/// Shows the held refreshing state of the [FrostPullRefresh] inside the subject.
 Future<void> baselineRefreshing(WidgetTester tester, Finder subject) async {
-  final state = tester.state<PullToRefreshNotificationState>(find.descendant(of: subject, matching: find.byType(PullToRefreshNotification)));
-  state.show(notificationDragOffset: FrostRefreshSliverHeader.reachToRefreshOffset);
+  final state = tester.state<FrostPullRefreshState>(find.descendant(of: subject, matching: find.byType(FrostPullRefresh)));
+  unawaited(state.refresh());
   await tester.pump();
 }
 

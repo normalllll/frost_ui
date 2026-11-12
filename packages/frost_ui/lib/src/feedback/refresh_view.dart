@@ -2,10 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
-import 'package:pull_to_refresh_notification/pull_to_refresh_notification.dart';
 
 import '../foundation/_focus_modality.dart';
-import '../foundation/tokens.dart';
+import '_pull_refresh.dart';
 import 'refresh_indicator.dart';
 
 typedef FrostRefreshViewBuilder = Widget Function(BuildContext context, ScrollPhysics? physics, FrostRefreshLocators locators);
@@ -130,21 +129,9 @@ class _DataRefreshViewState extends State<FrostRefreshView> with _DataRefreshCal
       ),
     );
 
-    return PullToRefreshNotification(
-      color: FrostThemeTokens.of(context).textPrimary,
-      maxDragOffset: FrostRefreshSliverHeader.maxDragOffset,
-      refreshOffset: FrostRefreshSliverHeader.refreshOffset,
-      reachToRefreshOffset: FrostRefreshSliverHeader.reachToRefreshOffset,
-      armedDragUpCancel: false,
-      // Keep the refresh extent until the action Future completes.
-      pullBackOnRefresh: false,
-      pullBackOnError: true,
-      onRefresh: _handleRefresh,
-      // Refresh availability can change with a tab. Keep the child at the
-      // same tree location so its pager, providers and scroll state survive.
-      notificationPredicate: (notification) => widget.onRefresh != null && defaultNotificationPredicate(notification),
-      child: child,
-    );
+    // Refresh availability can change with a tab. Keep the child at the
+    // same tree location so its pager, providers and scroll state survive.
+    return FrostPullRefresh(enabled: widget.onRefresh != null, onRefresh: _handleRefresh, child: child);
   }
 
   @override
@@ -182,19 +169,7 @@ class _DataNestedRefreshViewState extends State<FrostNestedRefreshView> with _Da
       child = NotificationListener<ScrollNotification>(onNotification: _handleNestedHeaderSnapNotification, child: child);
     }
 
-    return PullToRefreshNotification(
-      color: FrostThemeTokens.of(context).textPrimary,
-      maxDragOffset: FrostRefreshSliverHeader.maxDragOffset,
-      refreshOffset: FrostRefreshSliverHeader.refreshOffset,
-      reachToRefreshOffset: FrostRefreshSliverHeader.reachToRefreshOffset,
-      armedDragUpCancel: false,
-      // Keep the refresh extent until the action Future completes.
-      pullBackOnRefresh: false,
-      pullBackOnError: true,
-      onRefresh: _handleRefresh,
-      notificationPredicate: (notification) => widget.onRefresh != null && defaultNotificationPredicate(notification),
-      child: child,
-    );
+    return FrostPullRefresh(enabled: widget.onRefresh != null, nested: true, onRefresh: _handleRefresh, child: child);
   }
 
   @override

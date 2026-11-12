@@ -1,9 +1,9 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
-import 'package:pull_to_refresh_notification/pull_to_refresh_notification.dart';
 
 import '../foundation/metrics.dart';
 import '../foundation/scope.dart';
@@ -13,9 +13,10 @@ import '../foundation/typography.dart';
 import '../layout/_page_scroll_behavior.dart';
 import '../primitives/icon.dart';
 import '../primitives/text.dart';
+import '_pull_refresh.dart';
 import 'refresh_dots.dart';
 
-const frostRefreshPhysics = AlwaysScrollableClampingScrollPhysics();
+const frostRefreshPhysics = FrostRefreshPhysics();
 
 /// A refresh viewport's scrollbar over the surrounding drag devices, so an app
 /// that wants mouse drag configures it in its own [ScrollBehavior].
@@ -57,53 +58,60 @@ class _DataRefreshScrollBehavior extends ScrollBehavior {
 class FrostRefreshSliverHeader extends StatelessWidget {
   const FrostRefreshSliverHeader({super.key});
 
-  static const refreshOffset = 56.0;
-  static const reachToRefreshOffset = 84.0;
-  static const maxDragOffset = 120.0;
+  static const refreshOffset = FrostPullRefresh.holdExtent;
+  static const maxDragOffset = FrostPullRefresh.maxExtent;
 
   @override
   Widget build(BuildContext context) {
-    return PullToRefreshContainer((info) {
-      final mode = info?.mode;
-      final offset = info?.dragOffset ?? 0.0;
-
-      if ((mode == null || mode == PullToRefreshIndicatorMode.canceled) && offset <= 0) {
-        return const SliverToBoxAdapter(child: SizedBox.shrink());
-      }
-
-      return SliverToBoxAdapter(child: _DataPullRefreshHeaderBody(info: info));
-    });
+    final state = FrostPullRefresh.maybeOf(context);
+    if (state == null) return const _EmptyHeader();
+    return ValueListenableBuilder<FrostPullRefreshValue>(
+      valueListenable: state.value,
+      builder: (context, value, _) {
+        if (value.phase == FrostPullRefreshPhase.idle && value.extent <= 0) return const _EmptyHeader();
+        return SliverToBoxAdapter(
+          child: _DataPullRefreshHeaderBody(value: value, onRetry: state.refresh),
+        );
+      },
+    );
   }
 }
 
-class _DataPullRefreshHeaderBody extends StatelessWidget {
-  const _DataPullRefreshHeaderBody({required this.info});
+class _EmptyHeader extends StatelessWidget {
+  const _EmptyHeader();
 
-  final PullToRefreshScrollNotificationInfo? info;
+  @override
+  Widget build(BuildContext context) => const SliverToBoxAdapter(child: SizedBox.shrink());
+}
+
+class _DataPullRefreshHeaderBody extends StatelessWidget {
+  const _DataPullRefreshHeaderBody({required this.value, required this.onRetry});
+
+  final FrostPullRefreshValue value;
+  final Future<void> Function() onRetry;
 
   @override
   Widget build(BuildContext context) {
     final translations = FrostScope.labelsOf(context);
     final icons = FrostIconSet.of(context);
-    final mode = info?.mode;
-    final offset = info?.dragOffset ?? 0.0;
-    final height = offset.clamp(0.0, FrostRefreshSliverHeader.maxDragOffset);
-    final statusText = switch (mode) {
-      PullToRefreshIndicatorMode.armed => translations.releaseToRefresh,
-      PullToRefreshIndicatorMode.snap || PullToRefreshIndicatorMode.refresh => translations.refreshing,
-      PullToRefreshIndicatorMode.done => translations.refreshComplete,
-      PullToRefreshIndicatorMode.error => translations.refreshFailed,
-      _ => translations.pullToRefresh,
+    final phase = value.phase;
+    final height = value.extent.clamp(0.0, FrostRefreshSliverHeader.maxDragOffset);
+    final statusText = switch (phase) {
+      FrostPullRefreshPhase.armed => translations.releaseToRefresh,
+      FrostPullRefreshPhase.refreshing => translations.refreshing,
+      FrostPullRefreshPhase.done => translations.refreshComplete,
+      FrostPullRefreshPhase.failed => translations.refreshFailed,
+      FrostPullRefreshPhase.idle || FrostPullRefreshPhase.drag => translations.pullToRefresh,
     };
 
-    final indicator = switch (mode) {
-      PullToRefreshIndicatorMode.snap || PullToRefreshIndicatorMode.refresh => const ExcludeSemantics(child: FrostRefreshDots()),
-      PullToRefreshIndicatorMode.done => FrostIcon(icons.check, size: 22, color: FrostThemeTokens.of(context).textPrimary),
-      PullToRefreshIndicatorMode.error => FrostIcon(icons.error, size: 22, color: FrostThemeTokens.of(context).negativeInk),
-      _ => AnimatedRotation(
+    final indicator = switch (phase) {
+      FrostPullRefreshPhase.refreshing => const ExcludeSemantics(child: FrostRefreshDots()),
+      FrostPullRefreshPhase.done => FrostIcon(icons.check, size: 22, color: FrostThemeTokens.of(context).textPrimary),
+      FrostPullRefreshPhase.failed => FrostIcon(icons.error, size: 22, color: FrostThemeTokens.of(context).negativeInk),
+      FrostPullRefreshPhase.idle || FrostPullRefreshPhase.drag || FrostPullRefreshPhase.armed => AnimatedRotation(
         // Keep the same arrow mounted for drag <-> armed so interrupted
         // transitions continue from the currently painted angle.
-        turns: mode == PullToRefreshIndicatorMode.armed ? .5 : 0,
+        turns: phase == FrostPullRefreshPhase.armed ? .5 : 0,
         duration: FrostMotion.duration(context, FrostMotion.hover),
         curve: FrostMotion.hoverCurve,
         child: FrostIcon(icons.arrowDown, size: 22, color: FrostThemeTokens.of(context).textPrimary),
@@ -123,12 +131,8 @@ class _DataPullRefreshHeaderBody extends StatelessWidget {
       ),
     );
 
-    if (mode == PullToRefreshIndicatorMode.error && info != null) {
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => info!.pullToRefreshNotificationState.show(notificationDragOffset: FrostRefreshSliverHeader.reachToRefreshOffset),
-        child: child,
-      );
+    if (phase == FrostPullRefreshPhase.failed) {
+      return GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => unawaited(onRetry()), child: child);
     }
 
     return child;
