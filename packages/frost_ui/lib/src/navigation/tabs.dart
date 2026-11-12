@@ -754,11 +754,13 @@ class _FrostTabStripState<T extends Object> extends State<FrostTabStrip<T>> with
                 _closePressed = false;
               },
               onPointerUp: (event) {
+                if (!mounted) return;
                 if (_middlePressed == item.tab) _close(item.tab, pointer: true);
                 _middlePressed = null;
                 if (_pressed == item.tab) setState(() => _pressed = null);
               },
               onPointerCancel: (_) {
+                if (!mounted) return;
                 _middlePressed = null;
                 if (_pressed == item.tab) setState(() => _pressed = null);
               },
