@@ -101,7 +101,7 @@ class _MobileNavItem extends StatelessWidget {
     return FrostSelectionFeedback(
       selected: selected,
       foreground: selected ? tokens.selectionInk : tokens.textSecondary,
-      background: Colors.transparent,
+      background: frostClear,
       builder: (context, ink, fill, scale) => Semantics(
         button: true,
         selected: selected,

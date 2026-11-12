@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../primitives/_click_surface_visuals.dart';
 import '../primitives/click_surface.dart';

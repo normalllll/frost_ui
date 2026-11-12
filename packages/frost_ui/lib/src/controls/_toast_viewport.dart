@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../foundation/density.dart';
 import '../overlays/overlay_region.dart';

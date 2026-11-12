@@ -8,6 +8,7 @@ import 'package:frost_ui/src/layout/window_caption_scope.dart' show FrostHitKind
 import 'package:frost_ui/src/navigation/window_caption.dart' show FrostCaptionButtons;
 import 'package:frost_ui/src/primitives/_click_feedback.dart';
 import 'package:frost_ui/src/primitives/_on_media_chrome_scope.dart' show FrostOnMediaChromeScope;
+import 'package:frost_ui/src/primitives/_state_button.dart' show FrostStateButton;
 import 'support.dart';
 import 'window_caption_test.dart' show FakeWindow;
 
@@ -100,11 +101,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(calls, 0);
       if (caption) {
-        final native = tester.widgetList<IconButton>(find.descendant(of: find.byType(FrostCaptionButtons), matching: find.byType(IconButton)));
+        final native = tester.widgetList<FrostStateButton>(find.descendant(of: find.byType(FrostCaptionButtons), matching: find.byType(FrostStateButton)));
         expect(native, hasLength(3));
         for (final button in native) {
           for (final state in [WidgetState.hovered, WidgetState.pressed]) {
-            expect(button.style!.shape!.resolve({state}), const RoundedRectangleBorder());
+            expect(button.shape, const RoundedRectangleBorder());
           }
         }
       }

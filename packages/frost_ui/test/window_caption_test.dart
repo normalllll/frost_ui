@@ -7,7 +7,9 @@ import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/layout/window_caption_scope.dart' show FrostCaptionRegion, FrostCaptionSide, FrostHitKind;
 import 'package:frost_ui/src/navigation/window_caption.dart' show FrostCaptionButtons, FrostNativeCaptionPadding;
 import 'package:frost_ui/src/primitives/_focus_outline.dart';
+import 'package:frost_ui/src/primitives/_state_button.dart';
 import 'package:frost_ui/src/primitives/caption_glyph.dart' show FrostCaptionGlyph, FrostCaptionGlyphKind;
+
 import 'support.dart';
 
 class FakeWindow extends ChangeNotifier implements FrostWindowActions {
@@ -38,8 +40,9 @@ Widget region({double width = 100, double height = 40, FrostHitKind kind = Frost
   kind: kind,
   child: SizedBox(width: width, height: height),
 );
-Finder button(String label) => find.ancestor(of: find.bySemanticsLabel(label), matching: find.byType(IconButton));
-Color materialColor(WidgetTester tester, Finder root) => tester.widget<Material>(find.descendant(of: root, matching: find.byType(Material)).first).color!;
+Finder button(String label) => find.ancestor(of: find.bySemanticsLabel(label), matching: find.byType(FrostStateButton));
+Color materialColor(WidgetTester tester, Finder root) =>
+    (tester.widget<AnimatedContainer>(find.descendant(of: root, matching: find.byType(AnimatedContainer)).first).decoration! as BoxDecoration).color!;
 Widget buttons() => const Align(
   alignment: Alignment.topRight,
   child: SizedBox(height: 40, child: FrostCaptionButtons()),
@@ -78,16 +81,16 @@ void main() {
         ),
       ),
     );
-    expect(find.byType(IconButton), findsOneWidget);
-    final close = find.byWidgetPredicate((widget) => widget is IconButton && widget.tooltip == 'L.close');
+    expect(find.byType(FrostStateButton), findsOneWidget);
+    final close = find.descendant(of: find.byWidgetPredicate((widget) => widget is FrostTooltip && widget.message == 'L.close'), matching: find.byType(FrostStateButton));
     expect(tester.getSize(close).width, FrostCaptionMetrics.linuxButtonSize);
-    expect(tester.widget<IconButton>(close).style!.shape!.resolve({}), isA<CircleBorder>());
+    expect(tester.widget<FrostStateButton>(close).shape, isA<CircleBorder>());
     await tester.tap(close);
     expect(window.operations, ['close']);
     window.current = state(FrostCaptionStyle.breeze, [FrostCaptionAction.close], [FrostCaptionAction.minimize, FrostCaptionAction.maximize]);
     window.notifyListeners();
     await tester.pump();
-    expect(find.byType(IconButton), findsNWidgets(3));
+    expect(find.byType(FrostStateButton), findsNWidgets(3));
     expect(tester.getCenter(close).dx, lessThan(tester.getCenter(find.byTooltip('L.minimize')).dx));
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer();
@@ -109,7 +112,7 @@ void main() {
       mode: FrostCaptionMode.system,
     );
     await tester.pumpWidget(host(window, buttons()));
-    expect(find.byType(IconButton), findsNothing);
+    expect(find.byType(FrostStateButton), findsNothing);
   });
 
   testWidgets('native control geometry reserves one top row and never duplicates native buttons', (tester) async {
@@ -149,7 +152,7 @@ void main() {
         ),
       ),
     );
-    expect(find.byType(IconButton), findsNothing);
+    expect(find.byType(FrostStateButton), findsNothing);
     window.current = const FrostCaptionState(
       maximized: false,
       active: true,
@@ -441,7 +444,7 @@ void main() {
     final semantics = tester.ensureSemantics();
     try {
       await tester.pumpWidget(host(null, const FrostCaptionButtons()));
-      expect(find.byType(IconButton), findsNothing);
+      expect(find.byType(FrostStateButton), findsNothing);
       final window = FakeWindow()..change(maximized: true, failed: true);
       await tester.pumpWidget(host(window, buttons()));
       for (final label in ['L.retry', 'L.minimize', 'L.restore', 'L.close']) {
@@ -521,9 +524,9 @@ void main() {
       );
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pumpAndSettle();
-      final material = tester.widget<Material>(find.descendant(of: button('L.minimize'), matching: find.byType(Material)).first);
+      final material = tester.widget<FrostStateButton>(button('L.minimize'));
       expect(material.shape, isA<RoundedRectangleBorder>());
-      expect((material.shape! as OutlinedBorder).side, BorderSide.none);
+      expect((material.shape as OutlinedBorder).side, BorderSide.none);
       final ring = tester.widget<CustomPaint>(find.descendant(of: button('L.minimize'), matching: frostFocusRings()));
       expect((ring.foregroundPainter! as FrostFocusOutlinePainter).color, tokens.focus);
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show Theme, ThemeExtension;
+import 'package:flutter/widgets.dart';
 
 import '_missing_theme.dart';
 

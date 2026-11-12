@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+
+import '_colors.dart';
 
 /// A palette check chooses between white and the palette's light-mode ink.
-Color swatchCheckInk(Color fill, Color darkInk) => colorContrast(fill, Colors.white) >= colorContrast(fill, darkInk) ? Colors.white : darkInk;
+Color swatchCheckInk(Color fill, Color darkInk) => colorContrast(fill, frostWhite) >= colorContrast(fill, darkInk) ? frostWhite : darkInk;
 
 double colorContrast(Color first, Color second) {
   final a = first.computeLuminance();
@@ -47,10 +49,10 @@ Color _searchReadableTone(Color accent, Color background, double minimum) {
 }
 
 /// Product rule: always white, including custom accents and destructive fills.
-Color solidLabelTone(Color fill) => Colors.white;
+Color solidLabelTone(Color fill) => frostWhite;
 
 /// Hover and press deepen the original fill without recolouring it at rest.
-Color solidWashColor(Color fill) => Colors.black;
+Color solidWashColor(Color fill) => frostBlack;
 
 /// Feedback retains its requested strength on the already-resolved fill.
 double solidOverlayAlpha(Color fill, double requested) => requested;

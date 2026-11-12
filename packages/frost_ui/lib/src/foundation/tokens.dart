@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart' show listEquals;
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show Theme, ThemeExtension;
+import 'package:flutter/widgets.dart';
 
+import '_colors.dart';
 import '_glass_material.dart';
 import '_missing_theme.dart';
 import 'color_math.dart';
@@ -102,7 +104,7 @@ class FrostThemeTokens extends ThemeExtension<FrostThemeTokens> {
   Color get onAction => solidLabelTone(actionFill);
 
   /// Destructive fills retain their independent semantic contrast rule.
-  Color get negativeFill => readableAccentTone(_negative, Colors.white, 4.5);
+  Color get negativeFill => readableAccentTone(_negative, frostWhite, 4.5);
   Color get onNegative => solidLabelTone(negativeFill);
 
   /// Glyphs drawn directly on the raw accent (checkbox check, switch thumb,
@@ -174,7 +176,7 @@ class FrostThemeTokens extends ThemeExtension<FrostThemeTokens> {
   Color get fillSubtle => _overrides.fillSubtle ?? textPrimary.withValues(alpha: isDark ? .03 : .025);
   Color get fill => _overrides.fill ?? textPrimary.withValues(alpha: .05);
   Color get fillStrong => _overrides.fillStrong ?? textPrimary.withValues(alpha: isDark ? .08 : .085);
-  Color get separator => _overrides.separator ?? (isDark ? Colors.white : Colors.black).withValues(alpha: .06);
+  Color get separator => _overrides.separator ?? (isDark ? frostWhite : frostBlack).withValues(alpha: .06);
   Color get positiveInk => _overrides.positiveInk ?? _readableOnOpaqueSurfaces(_positive, 4.5, overlay: positiveTint);
   Color get positiveTint => _overrides.positiveTint ?? _positive.withValues(alpha: isDark ? .20 : .12);
   Color get cautionInk => _overrides.cautionInk ?? _readableOnOpaqueSurfaces(_caution, 4.5, overlay: cautionTint);
@@ -183,20 +185,20 @@ class FrostThemeTokens extends ThemeExtension<FrostThemeTokens> {
   Color get negativeTint => _overrides.negativeTint ?? _negative.withValues(alpha: isDark ? .20 : .12);
   Color get infoInk => _overrides.infoInk ?? _readableOnOpaqueSurfaces(_info, 4.5, overlay: infoTint);
   Color get infoTint => _overrides.infoTint ?? _info.withValues(alpha: isDark ? .20 : .12);
-  Color get onMediaScrim => _overrides.onMediaScrim ?? Colors.black.withValues(alpha: .54);
-  Color get onMediaInk => _overrides.onMediaInk ?? Colors.white;
+  Color get onMediaScrim => _overrides.onMediaScrim ?? frostBlack.withValues(alpha: .54);
+  Color get onMediaInk => _overrides.onMediaInk ?? frostWhite;
 
   /// Opaque white material shared by switch and slider thumbs in both themes.
   /// Do not reuse onMediaInk: its app override must not recolour controls.
-  Color get controlThumbFill => Colors.white;
-  Color get edgeHairline => _overrides.edgeHairline ?? (isDark ? Colors.white : Colors.black).withValues(alpha: .06);
-  Color get edgeHighlight => _overrides.edgeHighlight ?? Colors.white.withValues(alpha: isDark ? .06 : .45);
-  Color get mediaInnerStroke => _overrides.mediaInnerStroke ?? (isDark ? Colors.white : Colors.black).withValues(alpha: isDark ? .08 : .06);
+  Color get controlThumbFill => frostWhite;
+  Color get edgeHairline => _overrides.edgeHairline ?? (isDark ? frostWhite : frostBlack).withValues(alpha: .06);
+  Color get edgeHighlight => _overrides.edgeHighlight ?? frostWhite.withValues(alpha: isDark ? .06 : .45);
+  Color get mediaInnerStroke => _overrides.mediaInnerStroke ?? (isDark ? frostWhite : frostBlack).withValues(alpha: isDark ? .08 : .06);
   List<BoxShadow> get shadowAmbient =>
       _overrides.shadowAmbient ??
       [
         BoxShadow(
-          color: Colors.black.withValues(alpha: isDark ? .42 : .10),
+          color: frostBlack.withValues(alpha: isDark ? .42 : .10),
           blurRadius: isDark ? 24 : 28,
           offset: const Offset(0, 8),
         ),
@@ -205,7 +207,7 @@ class FrostThemeTokens extends ThemeExtension<FrostThemeTokens> {
       _overrides.shadowContact ??
       [
         BoxShadow(
-          color: Colors.black.withValues(alpha: isDark ? .32 : .06),
+          color: frostBlack.withValues(alpha: isDark ? .32 : .06),
           blurRadius: isDark ? 4 : 2,
           offset: const Offset(0, 1),
         ),
@@ -645,5 +647,5 @@ class FrostPalettes {
 abstract final class FrostCaptionColors {
   static const closeHover = Color(0xFFE81123);
   static const closePressed = Color(0xFFC50F1F);
-  static const onClose = Colors.white;
+  static const onClose = frostWhite;
 }

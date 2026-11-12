@@ -8,6 +8,7 @@ import 'package:frost_ui/src/controls/_button_control.dart';
 import 'package:frost_ui/src/foundation/_control_geometry.dart';
 import 'package:frost_ui/src/overlays/_menu_item.dart';
 import 'package:frost_ui/src/overlays/_menu_panel.dart';
+import 'package:frost_ui/src/primitives/_state_button.dart' show FrostStateButton;
 
 import 'support.dart';
 
@@ -193,8 +194,8 @@ void main() {
         expect(top, closeTo(bottom, .001));
         expect(top, closeTo(padding, .001));
         expect(frame.height, frostControlGeometry(tester.element(row('Action')), FrostControlSize.regular).height);
-        final material = tester.widget<Material>(find.descendant(of: row('Action'), matching: find.byType(Material)));
-        final shape = material.shape! as RoundedSuperellipseBorder;
+        final material = tester.widget<FrostStateButton>(find.descendant(of: row('Action'), matching: find.byType(FrostStateButton)));
+        final shape = material.shape as RoundedSuperellipseBorder;
         expect(shape.borderRadius.resolve(TextDirection.ltr).topLeft.x, 8);
         final clip = tester.widget<ClipRSuperellipse>(find.descendant(of: find.byType(FrostMenuPanel), matching: find.byType(ClipRSuperellipse)).first);
         expect(clip.borderRadius.resolve(TextDirection.ltr).topLeft.x, FrostRadius.lg);
@@ -284,8 +285,8 @@ void main() {
     expect(check, findsOneWidget);
     expect(tester.getTopLeft(check).dx - tester.getTopLeft(row('Value A')).dx, 8);
     expect(textStyle(tester, 'Value A').color, tokens.textPrimary);
-    final material = tester.widget<Material>(find.descendant(of: row('Value A'), matching: find.byType(Material)));
-    expect(material.color!.a, 0);
+    final material = tester.widget<FrostStateButton>(find.descendant(of: row('Value A'), matching: find.byType(FrostStateButton)));
+    expect(material.fill({}).a, 0);
     expect(tester.takeException(), isNull);
     handle.dispose();
   });

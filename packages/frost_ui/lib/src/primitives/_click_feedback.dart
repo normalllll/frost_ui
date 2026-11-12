@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 
 import '../foundation/_ambient_material.dart';
+import '../foundation/_colors.dart';
 import '../foundation/_premultiplied_lerp.dart';
 import '../foundation/feedback.dart';
 import '../foundation/metrics.dart';
@@ -46,9 +47,9 @@ class FrostClickFeedbackVisual extends StatelessWidget {
     final enabled = !activeStates.contains(WidgetState.disabled);
     final border = shape ?? FrostRadius.shape(context, FrostRadius.md);
     var color = switch (feedback) {
-      FrostClickFeedback.surface => frostFeedbackSurface(tokens, activeStates, resting: highlighted ? tokens.fill.withValues(alpha: .04) : Colors.transparent),
+      FrostClickFeedback.surface => frostFeedbackSurface(tokens, activeStates, resting: highlighted ? tokens.fill.withValues(alpha: .04) : frostClear),
       FrostClickFeedback.quiet => frostButtonStateLayer(tokens, activeStates, FrostFeedbackRole.quiet),
-      FrostClickFeedback.media => Colors.transparent,
+      FrostClickFeedback.media => frostClear,
     };
     final actualWindow = frostWindowBackgroundOf(context, tokens);
     if (actualWindow != null && color.a > 0) {

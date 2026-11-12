@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show Theme;
+import 'package:flutter/widgets.dart';
 
 import '../feedback/_skeleton_geometry.dart';
 import '../foundation/icon_data.dart';

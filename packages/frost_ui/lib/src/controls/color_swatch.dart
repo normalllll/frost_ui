@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../foundation/_touch_targets.dart';
 import '../foundation/color_math.dart';

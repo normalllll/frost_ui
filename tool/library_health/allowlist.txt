@@ -39,7 +39,6 @@ child-type	navigation/page_header.dart	_PageHeaderState.build	FrostText	1	baseli
 child-type	primitives/keyline.dart	frostHasBleedBoundary	FrostBleedBoundary	1	baseline-20261102
 child-type	primitives/keyline.dart	frostHasBleedBoundary	FrostSliverBleedBoundary	1	baseline-20261102
 framework	controls/toast.dart	_RenderCardsOnlyHitTest.hitTest	hitTest	1	reviewed:20261103:existing use, listed when the rule grew
-framework	feedback/refresh_indicator.dart	_DataRefreshScrollBehavior	MaterialScrollBehavior	1	baseline-20261102
 framework	foundation/_focus_modality.dart	FrostInputModality.attach	HardwareKeyboard.addHandler	1	baseline-20261102
 framework	foundation/_focus_modality.dart	FrostInputModality.attach	pointerRouter	1	baseline-20261102
 framework	foundation/_touch_targets.dart	RenderFrostTouchTargetRoot.hitTest	hitTest	1	reviewed:20261103:root touch redirect yields to any other listener
@@ -173,7 +172,7 @@ tokens	controls/_field_layout.dart	-	color	1	baseline-20261102
 tokens	controls/_field_layout.dart	-	radius	1	baseline-20261102
 tokens	controls/_field_layout.dart	-	spacing	2	baseline-20261102
 tokens	controls/_picker_segments.dart	-	spacing	3	baseline-20261102
-tokens	controls/field_appearance.dart	-	color	6	baseline-20261102
+tokens	controls/field_appearance.dart	-	color	1	baseline-20261102
 tokens	controls/search_entry.dart	-	spacing	1	baseline-20261102
 tokens	controls/search_input.dart	-	radius	1	baseline-20261102
 tokens	controls/search_input.dart	-	spacing	2	baseline-20261102

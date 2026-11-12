@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../foundation/metrics.dart';
 import '../foundation/spacing.dart';

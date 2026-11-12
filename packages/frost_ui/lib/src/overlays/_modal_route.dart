@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show SemanticsHitTestBehavior;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../foundation/_layout_scope.dart';
 import '../foundation/control_scope.dart';
@@ -72,7 +72,7 @@ Future<T?> pushFrostModal<T>({
       bottomSheet: bottomSheet,
       reducedMotion: sourceMedia.disableAnimations,
       barrierDismissible: barrierDismissible,
-      barrierColor: barrierColor ?? DialogTheme.of(context).barrierColor ?? FrostThemeTokens.of(context).onMediaScrim,
+      barrierColor: barrierColor ?? FrostThemeTokens.of(context).onMediaScrim,
       barrierLabel: FrostScope.labelsOf(context).dismiss,
       pageBuilder: (routeContext, _, _) => themes.wrap(
         FrostScope(

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show Theme;
+import 'package:flutter/widgets.dart';
 
 /// A text sample shaped ahead of time, in the locale it is drawn in.
 @immutable

@@ -1,6 +1,6 @@
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 // Fixed indicator geometry shared by tab bars and section tabs.
 const frostTabIndicatorWidth = 16.0;

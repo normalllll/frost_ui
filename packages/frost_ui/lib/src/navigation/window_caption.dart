@@ -1,15 +1,18 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:frost_window/frost_window.dart' show FrostCaptionAction, FrostCaptionIcon, FrostCaptionMode, FrostCaptionStyle;
 
+import '../foundation/_colors.dart';
 import '../foundation/color_math.dart';
-import '../foundation/feedback.dart';
+
 import '../foundation/scope.dart';
 import '../foundation/spacing.dart';
 import '../foundation/tokens.dart';
 import '../layout/window_caption_scope.dart';
+import '../overlays/tooltip.dart';
 import '../primitives/_on_media_chrome_scope.dart';
+import '../primitives/_state_button.dart';
 import '../primitives/caption_glyph.dart';
 
 abstract final class FrostCaptionMetrics {
@@ -90,43 +93,33 @@ class _CaptionButton extends StatelessWidget {
     final maximize = kind == FrostCaptionGlyphKind.maximize || kind == FrostCaptionGlyphKind.restore;
     return SizedBox(
       width: FrostCaptionMetrics.buttonWidth,
-      child: IconButton(
-        tooltip: label,
-        onPressed: () => unawaited(onPressed()),
-        icon: Semantics(
-          label: label,
-          child: Builder(
-            builder: (context) => FrostCaptionGlyph(kind, color: IconTheme.of(context).color!, size: FrostCaptionMetrics.glyphSize),
-          ),
-        ),
-        style: ButtonStyle(
+      child: FrostTooltip(
+        message: label,
+        child: FrostStateButton(
+          onPressed: () => unawaited(onPressed()),
           // Native caption colors remain platform-owned; the neutral keyboard
           // ring shares the same outside gap as ordinary buttons.
-          backgroundBuilder: (context, states, child) => frostButtonFeedbackBackground(context, {
-            if (states.contains(WidgetState.focused)) WidgetState.focused,
-            if (states.contains(WidgetState.disabled)) WidgetState.disabled,
-          }, child),
-          minimumSize: const WidgetStatePropertyAll(Size.zero),
-          maximumSize: const WidgetStatePropertyAll(Size.infinite),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          padding: const WidgetStatePropertyAll(EdgeInsets.zero),
-          shape: const WidgetStatePropertyAll(RoundedRectangleBorder()),
-          overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-          mouseCursor: const WidgetStatePropertyAll(SystemMouseCursors.basic),
-          foregroundColor: WidgetStateProperty.resolveWith((states) {
+          shape: const RoundedRectangleBorder(),
+          mouseCursor: SystemMouseCursors.basic,
+          ink: (states) {
             final color = danger && (states.contains(WidgetState.hovered) || states.contains(WidgetState.pressed))
                 ? FrostCaptionColors.onClose
                 : mediaInk ?? tokens.textPrimary;
             return color.withValues(alpha: state.active ? 1 : .6);
-          }),
-          side: const WidgetStatePropertyAll(BorderSide.none),
-          backgroundColor: WidgetStateProperty.resolveWith((states) {
+          },
+          fill: (states) {
             final hovered = states.contains(WidgetState.hovered) || (maximize && state.maximizeHovered);
             final pressed = states.contains(WidgetState.pressed) || (maximize && state.maximizePressed && state.maximizeHovered);
-            if (!hovered && !pressed) return Colors.transparent;
+            if (!hovered && !pressed) return frostClear;
             if (danger) return pressed ? FrostCaptionColors.closePressed : FrostCaptionColors.closeHover;
             return mediaInk == null ? (pressed ? tokens.fillStrong : tokens.fillSubtle) : mediaInk.withValues(alpha: pressed ? .12 : .08);
-          }),
+          },
+          child: Semantics(
+            label: label,
+            child: Builder(
+              builder: (context) => FrostCaptionGlyph(kind, color: IconTheme.of(context).color!, size: FrostCaptionMetrics.glyphSize),
+            ),
+          ),
         ),
       ),
     );
@@ -184,53 +177,43 @@ class _LinuxCaptionButton extends StatelessWidget {
           ? tokens.fillStrong
           : hovered || close
           ? tokens.fillSubtle
-          : Colors.transparent;
+          : frostClear;
     }
 
     return SizedBox(
       width: FrostCaptionMetrics.linuxButtonWidth,
       child: Center(
-        child: IconButton(
-          tooltip: label,
-          onPressed: () => unawaited(onPressed()),
-          style: ButtonStyle(
-            fixedSize: const WidgetStatePropertyAll(Size.square(FrostCaptionMetrics.linuxButtonSize)),
-            minimumSize: const WidgetStatePropertyAll(Size.square(FrostCaptionMetrics.linuxButtonSize)),
-            maximumSize: const WidgetStatePropertyAll(Size.square(FrostCaptionMetrics.linuxButtonSize)),
-            padding: const WidgetStatePropertyAll(EdgeInsets.zero),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            shape: const WidgetStatePropertyAll(CircleBorder()),
-            overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-            mouseCursor: const WidgetStatePropertyAll(SystemMouseCursors.basic),
-            backgroundColor: WidgetStateProperty.resolveWith(background),
-            foregroundColor: WidgetStateProperty.resolveWith((states) {
+        child: FrostTooltip(
+          message: label,
+          child: FrostStateButton(
+            onPressed: () => unawaited(onPressed()),
+            constraints: BoxConstraints.tight(const Size.square(FrostCaptionMetrics.linuxButtonSize)),
+            shape: const CircleBorder(),
+            mouseCursor: SystemMouseCursors.basic,
+            fill: background,
+            ink: (states) {
               if (breeze && (states.contains(WidgetState.hovered) || states.contains(WidgetState.pressed))) {
                 return close ? FrostCaptionColors.onClose : solidLabelTone(ink);
               }
               return ink;
-            }),
-            backgroundBuilder: (context, states, child) => frostButtonFeedbackBackground(context, {
-              if (states.contains(WidgetState.focused)) WidgetState.focused,
-              if (states.contains(WidgetState.disabled)) WidgetState.disabled,
-            }, child),
-            side: const WidgetStatePropertyAll(BorderSide.none),
-          ),
-          icon: ExcludeSemantics(
-            child: Builder(
-              builder: (context) {
-                final color = IconTheme.of(context).color!;
-                return bytes == null
-                    ? fallback(color)
-                    : Image.memory(
-                        bytes,
-                        width: FrostCaptionMetrics.linuxGlyphSize,
-                        height: FrostCaptionMetrics.linuxGlyphSize,
-                        color: color,
-                        colorBlendMode: BlendMode.srcIn,
-                        gaplessPlayback: true,
-                        errorBuilder: (context, error, stackTrace) => fallback(color),
-                      );
-              },
+            },
+            child: ExcludeSemantics(
+              child: Builder(
+                builder: (context) {
+                  final color = IconTheme.of(context).color!;
+                  return bytes == null
+                      ? fallback(color)
+                      : Image.memory(
+                          bytes,
+                          width: FrostCaptionMetrics.linuxGlyphSize,
+                          height: FrostCaptionMetrics.linuxGlyphSize,
+                          color: color,
+                          colorBlendMode: BlendMode.srcIn,
+                          gaplessPlayback: true,
+                          errorBuilder: (context, error, stackTrace) => fallback(color),
+                        );
+                },
+              ),
             ),
           ),
         ),

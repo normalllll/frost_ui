@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../foundation/control_scope.dart';
 import '../foundation/icon_data.dart';

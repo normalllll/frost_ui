@@ -1,6 +1,6 @@
 import 'dart:ui' show lerpDouble;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../feedback/_skeleton_geometry.dart';
 import '../foundation/_control_geometry.dart';
@@ -100,7 +100,7 @@ class FrostNavigationTile extends StatelessWidget {
           child: SizedBox(
             width: _width(constraints, amount),
             height: height,
-            child: TooltipVisibility(
+            child: FrostTooltipVisibility(
               visible: !showsLabel || amount < .5,
               child: FrostTooltip(
                 message: label,

@@ -1,8 +1,9 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show InputBorder, InputDecoration, Material, MaterialLocalizations, MaterialType, TextField, TimeOfDay, TimeOfDayFormat;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 
 import '../feedback/_skeleton_geometry.dart';
 import '../foundation/_key_bindings.dart';

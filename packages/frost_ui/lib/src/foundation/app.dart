@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show MaterialApp, ThemeData, ThemeMode;
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 import '../controls/toast.dart';

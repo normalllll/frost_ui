@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
+import 'package:flutter/widgets.dart';
 import 'package:pull_to_refresh_notification/pull_to_refresh_notification.dart';
 
 import '../foundation/metrics.dart';
@@ -16,9 +16,6 @@ import '../primitives/text.dart';
 import 'refresh_dots.dart';
 
 const frostRefreshPhysics = AlwaysScrollableClampingScrollPhysics();
-const frostRefreshScrollBehavior = _DataRefreshScrollBehavior();
-// Single page viewports own a window-edge bar; coordinated nested bodies do not.
-const frostRefreshPageScrollBehavior = _DataRefreshScrollBehavior(scrollbars: true);
 
 /// A refresh viewport's scrollbar over the surrounding drag devices, so an app
 /// that wants mouse drag configures it in its own [ScrollBehavior].
@@ -27,18 +24,31 @@ Widget frostRefreshScrollConfiguration(BuildContext context, {required Widget ch
   child: child,
 );
 
-class _DataRefreshScrollBehavior extends MaterialScrollBehavior {
-  const _DataRefreshScrollBehavior({this.scrollbars = false, this.parent});
+class _DataRefreshScrollBehavior extends ScrollBehavior {
+  const _DataRefreshScrollBehavior({required this.parent, this.scrollbars = false});
+  final ScrollBehavior parent;
   final bool scrollbars;
-  final ScrollBehavior? parent;
 
   @override
-  Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) {
-    return scrollbars ? frostPageScrollbar(context, super.buildScrollbar(context, child, details)) : child;
-  }
+  Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) =>
+      scrollbars ? frostPageScrollbar(context, parent.buildScrollbar(context, child, details)) : child;
 
   @override
-  Set<PointerDeviceKind> get dragDevices => parent?.dragDevices ?? super.dragDevices;
+  TargetPlatform getPlatform(BuildContext context) => parent.getPlatform(context);
+  @override
+  Set<PointerDeviceKind> get dragDevices => parent.dragDevices;
+  @override
+  Set<LogicalKeyboardKey> get pointerAxisModifiers => parent.pointerAxisModifiers;
+  @override
+  MultitouchDragStrategy getMultitouchDragStrategy(BuildContext context) => parent.getMultitouchDragStrategy(context);
+  @override
+  GestureVelocityTrackerBuilder velocityTrackerBuilder(BuildContext context) => parent.velocityTrackerBuilder(context);
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) => parent.getScrollPhysics(context);
+  @override
+  ScrollViewKeyboardDismissBehavior getKeyboardDismissBehavior(BuildContext context) => parent.getKeyboardDismissBehavior(context);
+  @override
+  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) => parent.buildOverscrollIndicator(context, child, details);
 
   @override
   bool shouldNotify(_DataRefreshScrollBehavior oldDelegate) => scrollbars != oldDelegate.scrollbars || parent != oldDelegate.parent;

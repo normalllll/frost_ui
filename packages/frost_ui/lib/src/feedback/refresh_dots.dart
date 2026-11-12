@@ -1,8 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
-import '../foundation/metrics.dart';
 import '../foundation/scope.dart';
 import '../foundation/sizes.dart';
 import '../foundation/tokens.dart';
@@ -61,45 +60,5 @@ class _RefreshDotsState extends State<FrostRefreshDots> with SingleTickerProvide
         ),
       ),
     ),
-  );
-}
-
-/// Keeps the scroll viewport and existing content in place during refresh.
-class FrostDotsRefreshIndicator extends StatefulWidget {
-  const FrostDotsRefreshIndicator({required this.child, required this.onRefresh, super.key});
-  final Widget child;
-  final RefreshCallback onRefresh;
-  @override
-  State<FrostDotsRefreshIndicator> createState() => _DotsRefreshIndicatorState();
-}
-
-class _DotsRefreshIndicatorState extends State<FrostDotsRefreshIndicator> {
-  bool _visible = false;
-  @override
-  Widget build(BuildContext context) => Stack(
-    children: [
-      RefreshIndicator.noSpinner(
-        onRefresh: widget.onRefresh,
-        onStatusChange: (status) {
-          final visible = status != null && status != RefreshIndicatorStatus.done && status != RefreshIndicatorStatus.canceled;
-          if (mounted && visible != _visible) setState(() => _visible = visible);
-        },
-        child: widget.child,
-      ),
-      Positioned(
-        top: 8,
-        left: 16,
-        right: 16,
-        child: IgnorePointer(
-          child: AnimatedOpacity(
-            opacity: _visible ? 1 : 0,
-            duration: FrostMotion.duration(context, FrostMotion.feedback),
-            child: Center(
-              child: TickerMode(enabled: _visible, child: const FrostRefreshDots()),
-            ),
-          ),
-        ),
-      ),
-    ],
   );
 }

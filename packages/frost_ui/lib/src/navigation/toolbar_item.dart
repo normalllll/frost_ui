@@ -128,7 +128,7 @@ class _Action extends FrostToolbarItem {
       child: MergeSemantics(
         child: Semantics(
           hint: reason,
-          child: TooltipVisibility(visible: false, child: control),
+          child: FrostTooltipVisibility(visible: false, child: control),
         ),
       ),
     );

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
+import 'package:frost_ui/src/primitives/_state_button.dart' show FrostStateButton;
 
 import 'support.dart';
 
@@ -43,10 +44,10 @@ void main() {
       );
       await tester.tap(find.byType(FrostPicker<int>));
       await tester.pumpAndSettle();
-      final idleRow = find.ancestor(of: find.text('Two'), matching: find.byType(TextButton));
-      final material = tester.widget<Material>(find.descendant(of: idleRow, matching: find.byType(Material)));
-      // Assert the actual internal Material, not just the public ButtonStyle.
-      expect(material.color!.a, 0);
+      final idleRow = find.ancestor(of: find.text('Two'), matching: find.byType(FrostStateButton));
+      final material = tester.widget<FrostStateButton>(idleRow);
+      // Assert the resting fill of the actual button.
+      expect(material.fill({}).a, 0);
       final sample = tester.getRect(idleRow).centerRight - const Offset(2, 0);
       Future<Color> paintedPixel() async {
         final boundary = boundaryKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
@@ -59,9 +60,9 @@ void main() {
       }
 
       expect((await tester.runAsync(paintedPixel))!.toARGB32(), tokens.surfaceRaised.toARGB32());
-      final selectedRow = find.ancestor(of: find.text('One').last, matching: find.byType(TextButton));
-      final selectedMaterial = tester.widget<Material>(find.descendant(of: selectedRow, matching: find.byType(Material)));
-      expect(selectedMaterial.color!.a, 0);
+      final selectedRow = find.ancestor(of: find.text('One').last, matching: find.byType(FrostStateButton));
+      final selectedMaterial = tester.widget<FrostStateButton>(selectedRow);
+      expect(selectedMaterial.fill({}).a, 0);
       expect(tester.renderObject<RenderParagraph>(find.text('One').last).text.style!.color, tokens.textPrimary);
       expect(tester.takeException(), isNull);
     });

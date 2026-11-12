@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'package:flutter/material.dart' show TooltipVisibility;
 import 'package:flutter/widgets.dart';
 
 import '../foundation/metrics.dart';
@@ -25,7 +24,7 @@ class FrostTooltip extends StatelessWidget {
   Widget build(BuildContext context) {
     // Report a missing Frost environment here, not when the panel first opens.
     FrostThemeTokens.of(context);
-    if (message.isEmpty || !TooltipVisibility.of(context)) return child;
+    if (message.isEmpty || !FrostTooltipVisibility.showsOf(context)) return child;
     final reduced = MediaQuery.disableAnimationsOf(context);
     return RawTooltip(
       semanticsTooltip: excludeFromSemantics ? null : message,
@@ -97,4 +96,20 @@ class FrostTooltip extends StatelessWidget {
 extension FrostTooltipX on Widget {
   Widget frostTooltip(String message, {bool excludeFromSemantics = false}) =>
       FrostTooltip(message: message, excludeFromSemantics: excludeFromSemantics, child: this);
+}
+
+/// Switches off every [FrostTooltip] below it, for a control that shows its own
+/// name or whose tooltip a parent already provides.
+class FrostTooltipVisibility extends InheritedWidget {
+  const FrostTooltipVisibility({required this.visible, required super.child, super.key});
+  final bool visible;
+
+  /// Tooltips show unless an ancestor hides them.
+  static bool showsOf(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<FrostTooltipVisibility>();
+    return scope == null || scope.visible;
+  }
+
+  @override
+  bool updateShouldNotify(FrostTooltipVisibility oldWidget) => visible != oldWidget.visible;
 }

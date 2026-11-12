@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/layout/window_caption_scope.dart' show FrostCaptionSide;
 import 'package:frost_ui/src/navigation/window_caption.dart' show FrostCaptionButtons;
+import 'package:frost_ui/src/primitives/_state_button.dart' show FrostStateButton;
 
 import '../window_caption_test.dart' show FakeWindow;
 import 'baseline.dart';
@@ -44,7 +45,7 @@ Widget _buttons({
   return FrostWindowCaptionScope(window: window ? fake : null, child: child);
 }
 
-Finder _glyph(int index) => find.byType(IconButton).at(index);
+Finder _glyph(int index) => find.byType(FrostStateButton).at(index);
 
 void main() {
   baselineGroup('FrostCaptionButtons', [

@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show ButtonStyle, Material, NoSplash;
+import 'package:flutter/widgets.dart';
 
 import '../primitives/_focus_outline.dart';
 import '../primitives/_on_media_chrome_scope.dart';
+import '_colors.dart';
 import '_focus_modality.dart';
 import 'color_math.dart';
 import 'metrics.dart';
@@ -17,7 +19,7 @@ final frostClickCursor = WidgetStateProperty.resolveWith<MouseCursor>(
   (states) => states.contains(WidgetState.disabled) ? SystemMouseCursors.basic : SystemMouseCursors.click,
 );
 
-Color frostFeedbackSurface(FrostThemeTokens tokens, Set<WidgetState> states, {Color resting = Colors.transparent}) {
+Color frostFeedbackSurface(FrostThemeTokens tokens, Set<WidgetState> states, {Color resting = frostClear}) {
   // Transparent black interpolates through dark RGB values before compositing.
   // Preserve the surface's RGB at zero alpha so entry/exit only changes opacity.
   final idle = resting.a == 0 ? tokens.fillSubtle.withValues(alpha: 0) : resting;
@@ -29,7 +31,7 @@ Color frostFeedbackSurface(FrostThemeTokens tokens, Set<WidgetState> states, {Co
 
 /// Material does not animate its background color. Keep its base stable and
 /// animate a separate, clipped layer beneath button content instead.
-Color frostButtonRestingSurface(FrostThemeTokens tokens, Set<WidgetState> states, {Color resting = Colors.transparent}) => resting;
+Color frostButtonRestingSurface(FrostThemeTokens tokens, Set<WidgetState> states, {Color resting = frostClear}) => resting;
 
 Color frostButtonStateLayer(FrostThemeTokens tokens, Set<WidgetState> states, FrostFeedbackRole role) {
   final disabled = states.contains(WidgetState.disabled);
@@ -108,18 +110,11 @@ ButtonStyle frostFeedbackStyle(FrostThemeTokens tokens, {BorderSide restingSide 
   mouseCursor: frostClickCursor,
   backgroundBuilder: frostButtonFeedbackBackground,
   splashFactory: NoSplash.splashFactory,
-  overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+  overlayColor: const WidgetStatePropertyAll(frostClear),
   backgroundColor: WidgetStateProperty.resolveWith((states) => frostButtonRestingSurface(tokens, states)),
   side: WidgetStatePropertyAll(restingSide),
 );
 
-ButtonStyle frostSecondaryButtonStyle(FrostThemeTokens tokens) => ButtonStyle(
-  mouseCursor: frostClickCursor,
-  backgroundBuilder: frostSecondaryButtonFeedbackBackground,
-  backgroundColor: WidgetStatePropertyAll(tokens.surfaceInset),
-  overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-  side: const WidgetStatePropertyAll(BorderSide.none),
-);
 
 BorderSide frostFeedbackBorder(FrostThemeTokens tokens, Set<WidgetState> states, {BorderSide restingSide = BorderSide.none}) {
   if (states.contains(WidgetState.disabled)) return restingSide;

@@ -61,8 +61,8 @@ export 'src/feedback/error_content.dart' show FrostErrorContent, FrostErrorDetai
 export 'src/feedback/inline_banner.dart' show FrostInlineBanner, FrostBannerTone, FrostBannerStyle;
 export 'src/feedback/loading_gate.dart' show FrostLoadingGate;
 export 'src/feedback/progress.dart' show FrostProgressBar, FrostProgressRing;
-export 'src/feedback/refresh_dots.dart' hide FrostDotsRefreshIndicator;
-export 'src/feedback/refresh_indicator.dart' hide FrostRefreshSliverHeader, FrostSliverFillBody, frostRefreshPageScrollBehavior, frostRefreshScrollBehavior, frostRefreshScrollConfiguration;
+export 'src/feedback/refresh_dots.dart';
+export 'src/feedback/refresh_indicator.dart' hide FrostRefreshSliverHeader, FrostSliverFillBody, frostRefreshScrollConfiguration;
 export 'src/feedback/refresh_view.dart' hide FrostNestedRefreshBodyBuilder, FrostNestedRefreshContext, FrostNestedRefreshViewBuilder;
 export 'src/feedback/skeleton.dart' show FrostSkeletonX, frostSkeletonEffect;
 export 'src/foundation/app.dart';
@@ -70,7 +70,7 @@ export 'src/foundation/appearance.dart' hide FrostAccentValidation;
 export 'src/foundation/color_math.dart' hide colorContrast, readableOnAccent, solidLabelTone, solidOverlayAlpha, solidWashColor, swatchCheckInk;
 export 'src/foundation/control_scope.dart';
 export 'src/foundation/density.dart';
-export 'src/foundation/feedback.dart' hide frostSecondaryButtonStyle;
+export 'src/foundation/feedback.dart';
 export 'src/foundation/font_warm_up.dart';
 export 'src/foundation/fonts.dart' hide FrostFontChain, detectContentScript;
 export 'src/foundation/input_feedback.dart' show FrostInputCapability, FrostInputFeedback;
@@ -145,7 +145,7 @@ export 'src/overlays/menu_entry.dart' show FrostMenuEntry, FrostMenuAction, Fros
 export 'src/overlays/panel_action.dart' show closeFrostPanelThen;
 export 'src/overlays/popover.dart' show FrostPopover;
 export 'src/overlays/sheet.dart' show FrostSheetDetent, FrostSheetPresentation, showFrostSheet;
-export 'src/overlays/tooltip.dart' hide FrostTooltipX;
+export 'src/overlays/tooltip.dart' hide FrostTooltipVisibility, FrostTooltipX;
 export 'src/primitives/click_surface.dart';
 export 'src/primitives/divider.dart';
 export 'src/primitives/glyph.dart' show FrostLeading, FrostGlyph;

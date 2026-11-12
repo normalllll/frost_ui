@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../feedback/_skeleton_geometry.dart';
 import '../foundation/radius.dart';

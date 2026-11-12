@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show Theme;
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 
 // Modifier names/symbols are fixed platform keyboard notation, not UI copy.
 const _controlMarker = 'Ctrl', _shiftMarker = 'Shift', _altMarker = 'Alt', _keySeparator = '+';

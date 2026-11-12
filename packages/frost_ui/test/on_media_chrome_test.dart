@@ -15,6 +15,7 @@ import 'package:frost_ui/src/navigation/window_caption.dart' show FrostCaptionBu
 import 'package:frost_ui/src/overlays/_menu_item.dart';
 import 'package:frost_ui/src/primitives/_focus_outline.dart';
 import 'package:frost_ui/src/primitives/_on_media_chrome_scope.dart' show FrostOnMediaChromeScope;
+import 'package:frost_ui/src/primitives/_state_button.dart' show FrostStateButton;
 import 'package:frost_ui/src/primitives/caption_glyph.dart' show FrostCaptionGlyph;
 import 'package:frost_ui/src/surface/_window_background.dart';
 
@@ -202,9 +203,8 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await tester.pumpAndSettle();
     final tokens = FrostThemeTokens.of(tester.element(find.byType(FrostSurface)));
-    for (final button in tester.widgetList<IconButton>(find.byType(IconButton))) {
-      expect(button.style!.foregroundColor!.resolve({}), tokens.onMediaInk);
-      expect(button.style!.side!.resolve({WidgetState.focused}), BorderSide.none);
+    for (final button in tester.widgetList<FrostStateButton>(find.byType(FrostStateButton))) {
+      expect(button.ink({}), tokens.onMediaInk);
     }
     for (final glyph in tester.widgetList<FrostCaptionGlyph>(find.byType(FrostCaptionGlyph))) {
       expect(glyph.color, tokens.onMediaInk);
@@ -212,7 +212,7 @@ void main() {
     final rings = tester.widgetList<CustomPaint>(frostFocusRings());
     expect(rings, isNotEmpty);
     expect((rings.first.foregroundPainter! as FrostFocusOutlinePainter).color, tokens.onMediaInk);
-    for (final button in find.byType(IconButton).evaluate()) {
+    for (final button in find.byType(FrostStateButton).evaluate()) {
       expect(tester.getSize(find.byWidget(button.widget)), const Size(FrostCaptionMetrics.buttonWidth, 40));
     }
     expect(tester.takeException(), isNull);

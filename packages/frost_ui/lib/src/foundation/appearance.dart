@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show ThemeMode;
+import 'package:flutter/widgets.dart';
 
 import 'color_math.dart';
 import 'tokens.dart';

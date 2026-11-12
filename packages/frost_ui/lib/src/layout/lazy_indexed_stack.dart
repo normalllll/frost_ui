@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 /// An [IndexedStack] that builds each child when it is first shown. Hidden
 /// children keep their state, take no focus or taps, and their tickers stop.

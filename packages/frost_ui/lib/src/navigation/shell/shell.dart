@@ -3,9 +3,10 @@ import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/gestures.dart' show DragStartBehavior;
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show Scaffold;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:frost_window/frost_window.dart' show FrostCaptionMode, FrostCaptionStyle;
 
 import '../../controls/_button_control.dart';
@@ -17,6 +18,7 @@ import '../../controls/picker_option.dart';
 import '../../display/count_badge.dart';
 import '../../feedback/_skeleton_geometry.dart';
 import '../../foundation/_back_look.dart';
+import '../../foundation/_colors.dart';
 import '../../foundation/_control_geometry.dart';
 import '../../foundation/_page_title_scope.dart';
 import '../../foundation/_touch_targets.dart';
@@ -632,7 +634,7 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
                       enabled: useHorizontalLayout,
                       child: Scaffold(
                         key: _scaffoldKey,
-                        backgroundColor: useHorizontalLayout ? Colors.transparent : FrostThemeTokens.of(context).canvas,
+                        backgroundColor: useHorizontalLayout ? frostClear : FrostThemeTokens.of(context).canvas,
                         // The shell never shrinks for the keyboard: the sidebar
                         // stays put. Destination pages own mobile navigation; pages
                         // keep avoiding it through their own Scaffolds.

@@ -1,12 +1,12 @@
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart' show Colors;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../feedback/_skeleton_geometry.dart';
+import '../foundation/_colors.dart';
 import '../foundation/_control_geometry.dart';
 import '../foundation/_key_bindings.dart';
 import '../foundation/_layout_scope.dart';
@@ -758,7 +758,7 @@ class _TableRowState extends State<_TableRow> {
               child: AnimatedContainer(
                 duration: FrostMotion.duration(context, FrostMotion.hover),
                 curve: FrostMotion.hoverCurve,
-                color: widget.selected == true ? tokens.selectionFill : (_hover || widget.highlighted ? tokens.fillSubtle : Colors.transparent),
+                color: widget.selected == true ? tokens.selectionFill : (_hover || widget.highlighted ? tokens.fillSubtle : frostClear),
                 child: FrostClickFeedbackVisual(
                   states: {if (_pressed) WidgetState.pressed, if (widget.highlighted) WidgetState.focused},
                   scalesOnPress: false,

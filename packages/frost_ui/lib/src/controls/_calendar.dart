@@ -1,8 +1,9 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show MaterialLocalizations;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 
 import '../feedback/_skeleton_geometry.dart';
 import '../foundation/_control_geometry.dart';
@@ -47,10 +48,11 @@ DateTime frostClampDate(DateTime date, DateTime first, DateTime last) => date.is
     : date.isAfter(last)
     ? last
     : date;
+int _daysInMonth(int year, int month) => DateTime(year, month + 1, 0).day;
 DateTime frostDateMonth(DateTime date) => DateTime(date.year, date.month);
 DateTime frostShiftMonth(DateTime date, int months) {
   final month = DateTime(date.year, date.month + months);
-  return DateTime(month.year, month.month, math.min(date.day, DateUtils.getDaysInMonth(month.year, month.month)));
+  return DateTime(month.year, month.month, math.min(date.day, _daysInMonth(month.year, month.month)));
 }
 
 /// A clock boundary for deterministic tests; never exported by frost_ui.dart.
@@ -147,7 +149,7 @@ class _CalendarState extends State<FrostCalendar> {
     final title = DateTime(_month.year, _month.month + index);
     final month = frostDateMonth(frostClampDate(DateTime(year, title.month - index), frostDateMonth(widget.firstDate), frostDateMonth(widget.lastDate)));
     final day = frostClampDate(
-      DateTime(month.year, month.month, math.min(_focused.day, DateUtils.getDaysInMonth(month.year, month.month))),
+      DateTime(month.year, month.month, math.min(_focused.day, _daysInMonth(month.year, month.month))),
       widget.firstDate,
       widget.lastDate,
     );
@@ -275,7 +277,7 @@ class _CalendarState extends State<FrostCalendar> {
         .fold(button, math.max);
     final weekdays = localizations.narrowWeekdays.map((day) => textHeight(day, FrostTextRole.caption, cell)).reduce(math.max);
     final rows = months
-        .map((month) => (((month.weekday % 7 - localizations.firstDayOfWeekIndex + 7) % 7 + DateUtils.getDaysInMonth(month.year, month.month)) / 7).ceil())
+        .map((month) => (((month.weekday % 7 - localizations.firstDayOfWeekIndex + 7) % 7 + _daysInMonth(month.year, month.month)) / 7).ceil())
         .reduce(math.max);
     return header + frostCalendarHeaderGap + weekdays + frostCalendarWeekdayGap + rows * cell;
   }
@@ -297,7 +299,7 @@ class _CalendarState extends State<FrostCalendar> {
         final months = List.generate(count, (index) => DateTime(_month.year, _month.month + index));
         final localizations = MaterialLocalizations.of(context), labels = FrostScope.labelsOf(context);
         final rowCount = months
-            .map((month) => (((month.weekday % 7 - localizations.firstDayOfWeekIndex + 7) % 7 + DateUtils.getDaysInMonth(month.year, month.month)) / 7).ceil())
+            .map((month) => (((month.weekday % 7 - localizations.firstDayOfWeekIndex + 7) % 7 + _daysInMonth(month.year, month.month)) / 7).ceil())
             .reduce(math.max);
         final contentWidth = width * count + (two ? frostCalendarMonthGap : 0);
         Widget content = SizedBox(
@@ -454,7 +456,7 @@ class _CalendarState extends State<FrostCalendar> {
   Widget _grid(DateTime month, double cell, int rows, int count) {
     final localizations = MaterialLocalizations.of(context);
     final offset = (month.weekday % 7 - localizations.firstDayOfWeekIndex + 7) % 7;
-    final days = DateUtils.getDaysInMonth(month.year, month.month);
+    final days = _daysInMonth(month.year, month.month);
     DateTime? end = widget.end;
     if (widget.range && widget.start != null && end == null && _hovered != null) end = _hovered;
     var start = widget.start;

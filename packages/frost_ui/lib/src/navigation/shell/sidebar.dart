@@ -271,7 +271,7 @@ class _EdgeFadeScrollViewState extends State<_EdgeFadeScrollView> {
         return LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [_fadeTop ? Colors.transparent : FrostMask.opaque, FrostMask.opaque, FrostMask.opaque, _fadeBottom ? Colors.transparent : FrostMask.opaque],
+          colors: [_fadeTop ? frostClear : FrostMask.opaque, FrostMask.opaque, FrostMask.opaque, _fadeBottom ? frostClear : FrostMask.opaque],
           stops: [0, edge, 1 - edge, 1],
         ).createShader(bounds);
       },

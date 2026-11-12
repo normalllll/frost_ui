@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' show Colors;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../foundation/_colors.dart';
 import '../foundation/_key_bindings.dart';
 import '../foundation/control_scope.dart';
 import '../foundation/density.dart';
@@ -425,7 +425,7 @@ class _ReorderLift extends StatelessWidget {
         duration: FrostMotion.duration(context, FrostMotion.hover),
         decoration: ShapeDecoration(
           shape: FrostRadius.shape(context, FrostRadius.sm),
-          color: lifted ? tokens.surface : Colors.transparent,
+          color: lifted ? tokens.surface : frostClear,
           shadows: lifted ? tokens.shadowAmbient : const [],
         ),
         child: child,

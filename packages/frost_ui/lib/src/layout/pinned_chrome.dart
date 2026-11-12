@@ -3,9 +3,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show clampDouble;
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/widgets.dart';
 
 import '../foundation/metrics.dart';
 import '../foundation/spacing.dart';

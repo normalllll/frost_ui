@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show Scrollbar;
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 
 /// Page viewports place their automatic vertical scrollbar at physical right,
 /// including standalone pages without an inherited panel/scrollbar channel.
