@@ -72,7 +72,7 @@ class _Sections extends StatefulWidget {
 }
 
 class _SectionsState extends State<_Sections> with SingleTickerProviderStateMixin {
-  late final _tabs = TabController(length: 2, vsync: this);
+  late final _tabs = FrostTabController(length: 2, vsync: this);
   @override
   void dispose() {
     _tabs.dispose();
@@ -97,7 +97,7 @@ class _SectionsState extends State<_Sections> with SingleTickerProviderStateMixi
           ),
         ),
       ],
-      body: TabBarView(
+      body: FrostTabView(
         controller: _tabs,
         children: [
           for (final section in ['a', 'b'])

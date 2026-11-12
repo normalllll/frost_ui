@@ -88,14 +88,14 @@ void main() {
     test('round-trips through its record', () {
       final appearance = FrostAppearance.initial(
         FrostPalettes.pink,
-      ).copyWith(mode: ThemeMode.dark, darkTone: FrostTone.cool, darkAccent: const Color(0xFF4C8DFF), lightCustomAccent: const Color(0xFF00A68C));
+      ).copyWith(mode: FrostThemeMode.dark, darkTone: FrostTone.cool, darkAccent: const Color(0xFF4C8DFF), lightCustomAccent: const Color(0xFF00A68C));
       expect(FrostAppearance.fromRecord(appearance.toRecord(), FrostPalettes.pink), appearance);
     });
 
     test('invalid stored accents fall back to the default', () {
       final record = FrostAppearance.initial(FrostPalettes.pink).toRecord()..['lightAccent'] = 'FFFFFF';
       expect(FrostAppearance.fromRecord(record, FrostPalettes.pink).lightAccent, FrostPalettes.pink.lightDefaultAccent);
-      expect(FrostAppearance.fromRecord(null, FrostPalettes.pink, fallbackMode: ThemeMode.light).mode, ThemeMode.light);
+      expect(FrostAppearance.fromRecord(null, FrostPalettes.pink, fallbackMode: FrostThemeMode.light).mode, FrostThemeMode.light);
     });
   });
 

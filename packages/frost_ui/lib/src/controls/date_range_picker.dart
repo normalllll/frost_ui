@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' show DateTimeRange, MaterialLocalizations;
+import 'package:flutter/material.dart' show MaterialLocalizations;
 import 'package:flutter/widgets.dart';
 
 import '../foundation/_layout_scope.dart';
@@ -15,6 +15,9 @@ import '_button_types.dart';
 import '_calendar.dart';
 import '_field_trigger.dart';
 import 'form.dart';
+
+/// An inclusive range of dates.
+typedef FrostDateRange = ({DateTime start, DateTime end});
 
 // An en dash joins two independently localized medium dates.
 const frostDateRangeSeparator = ' – ';
@@ -35,8 +38,8 @@ class FrostDateRangePicker extends StatefulWidget {
     this.size,
     super.key,
   }) : assert(!frostFirstDate(firstDate).isAfter(frostLastDate(lastDate)));
-  final DateTimeRange? value;
-  final ValueChanged<DateTimeRange?>? onChanged;
+  final FrostDateRange? value;
+  final ValueChanged<FrostDateRange?>? onChanged;
   final String label;
   final DateTime? firstDate, lastDate;
   final String? placeholder, help, error;
@@ -109,11 +112,11 @@ class _RangePanel extends StatefulWidget {
     required this.close,
     required this.onApply,
   });
-  final DateTimeRange? value;
+  final FrostDateRange? value;
   final DateTime firstDate, lastDate, today;
   final bool dual;
   final VoidCallback close;
-  final ValueChanged<DateTimeRange?> onApply;
+  final ValueChanged<FrostDateRange?> onApply;
   @override
   State<_RangePanel> createState() => _RangePanelState();
 }
@@ -178,7 +181,7 @@ class _RangePanelState extends State<_RangePanel> {
               label: labels.apply,
               variant: FrostButtonVariant.prominent,
               wrapsLabel: true,
-              onPressed: _canApply ? () => widget.onApply(_start == null ? null : DateTimeRange(start: _start!, end: _end!)) : null,
+              onPressed: _canApply ? () => widget.onApply(_start == null ? null : (start: _start!, end: _end!)) : null,
             ),
           ],
         ),

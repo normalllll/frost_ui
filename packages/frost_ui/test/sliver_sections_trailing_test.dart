@@ -14,7 +14,7 @@ class _Page extends StatefulWidget {
 }
 
 class _PageState extends State<_Page> with SingleTickerProviderStateMixin {
-  late final tabs = TabController(length: 2, vsync: this);
+  late final tabs = FrostTabController(length: 2, vsync: this);
   var kind = 0, visibility = 0;
 
   @override
@@ -66,7 +66,7 @@ class _PageState extends State<_Page> with SingleTickerProviderStateMixin {
           ),
         ),
       ],
-      body: TabBarView(
+      body: FrostTabView(
         controller: tabs,
         children: [
           for (final section in ['a', 'b'])

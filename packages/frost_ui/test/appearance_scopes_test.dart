@@ -66,7 +66,7 @@ void main() {
   for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
     for (final size in FrostControlSize.values) {
       testWidgets('tab visuals and padding targets $platform $size', (tester) async {
-        final c = TabController(length: 2, vsync: tester);
+        final c = FrostTabController(length: 2, vsync: tester);
         addTearDown(c.dispose);
         await tester.pumpWidget(
           app(
@@ -212,7 +212,7 @@ void main() {
   for (final direction in TextDirection.values) {
     for (final scale in [1.0, 2.0, 3.0]) {
       testWidgets('Frost tabs fit complete secondary labels and follow controller $direction $scale', (tester) async {
-        final c = TabController(length: 3, vsync: tester);
+        final c = FrostTabController(length: 3, vsync: tester);
         addTearDown(c.dispose);
         await tester.pumpWidget(
           app(
@@ -233,7 +233,7 @@ void main() {
                   ),
                   SizedBox(
                     height: 160,
-                    child: TabBarView(controller: c, children: const [Text('Page one'), Text('Page two'), Text('Page three')]),
+                    child: FrostTabView(controller: c, children: const [Text('Page one'), Text('Page two'), Text('Page three')]),
                   ),
                 ],
               ),
@@ -253,7 +253,7 @@ void main() {
         expect(c.index, 2);
         c.index = 0;
         await tester.pumpAndSettle();
-        await tester.drag(find.byType(TabBarView), Offset(direction == TextDirection.ltr ? -280 : 280, 0));
+        await tester.drag(find.byType(FrostTabView), Offset(direction == TextDirection.ltr ? -280 : 280, 0));
         await tester.pumpAndSettle();
         expect(c.index, 1);
         expect(tester.takeException(), isNull);

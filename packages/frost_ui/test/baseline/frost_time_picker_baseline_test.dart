@@ -2,9 +2,9 @@ import 'package:frost_ui/frost_ui.dart';
 
 import 'baseline.dart';
 
-void _changed(TimeOfDay? _) {}
+void _changed(FrostTimeOfDay? _) {}
 
-const _value = TimeOfDay(hour: 15, minute: 45);
+const _value = (hour: 15, minute: 45);
 
 void main() {
   baselineGroup('FrostTimePicker', [
@@ -22,7 +22,7 @@ void main() {
     BaselineCase('FrostTimePicker/value+disabled', (_) => const FrostTimePicker(value: _value, onChanged: null, label: 'Start time')),
     BaselineCase(
       'FrostTimePicker/value=midnight',
-      (_) => const FrostTimePicker(value: TimeOfDay(hour: 0, minute: 5), onChanged: _changed, label: 'Start time'),
+      (_) => const FrostTimePicker(value: (hour: 0, minute: 5), onChanged: _changed, label: 'Start time'),
     ),
     BaselineCase('FrostTimePicker/help', (_) => const FrostTimePicker(value: _value, onChanged: _changed, label: 'Start time', help: 'In your time zone')),
     BaselineCase(

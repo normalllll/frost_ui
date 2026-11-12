@@ -28,6 +28,11 @@ const _timeCursorWidth = 2.0;
 // computing editable width. Mirror that gap only, not a combined allowance.
 const _frameworkCaretGap = 1.0;
 
+/// A time of day on a 24-hour clock, `hour` 0-23 and `minute` 0-59.
+typedef FrostTimeOfDay = ({int hour, int minute});
+
+TimeOfDay? _timeOf(FrostTimeOfDay? value) => value == null ? null : TimeOfDay(hour: value.hour, minute: value.minute);
+
 enum _TimePart { hour, minute, period }
 
 /// Edits independent time segments with the host's locale and hour format.
@@ -37,8 +42,8 @@ enum _TimePart { hour, minute, period }
 class FrostTimePicker extends StatefulWidget {
   const FrostTimePicker({required this.value, required this.onChanged, required this.label, this.help, this.error, this.minuteStep = 1, this.size, super.key})
     : assert(minuteStep >= 1 && minuteStep <= 59);
-  final TimeOfDay? value;
-  final ValueChanged<TimeOfDay?>? onChanged;
+  final FrostTimeOfDay? value;
+  final ValueChanged<FrostTimeOfDay?>? onChanged;
   final String label;
   final String? help, error;
   final int minuteStep;
@@ -125,13 +130,13 @@ class _TimePickerState extends State<FrostTimePicker> {
   @override
   void didUpdateWidget(FrostTimePicker oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final echo = _pendingEcho && widget.value == _lastEmitted;
+    final echo = _pendingEcho && _timeOf(widget.value) == _lastEmitted;
     _pendingEcho = false;
     if (!echo && widget.value != oldWidget.value) _readValue();
   }
 
   void _readValue() {
-    final value = widget.value;
+    final value = _timeOf(widget.value);
     _hour = value == null
         ? null
         : _is24
@@ -190,11 +195,11 @@ class _TimePickerState extends State<FrostTimePicker> {
     _lastEmitted = _value;
     _pendingEcho = true;
     final emission = ++_emission, emitted = _lastEmitted;
-    widget.onChanged?.call(emitted);
+    widget.onChanged?.call(emitted == null ? null : (hour: emitted.hour, minute: emitted.minute));
     // The caller owns the value. Once it has had a frame to answer, segments
     // showing a value it did not take go back to the one it holds.
     SchedulerBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || emission != _emission || widget.value == emitted) return;
+      if (!mounted || emission != _emission || _timeOf(widget.value) == emitted) return;
       _pendingEcho = false;
       setState(_readValue);
     });

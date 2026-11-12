@@ -74,7 +74,7 @@ void main() {
           data: MediaQuery.of(context).copyWith(disableAnimations: reduceMotion),
           child: Directionality(
             textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
-            child: DefaultTabController(
+            child: FrostDefaultTabController(
               length: 3,
               child: onRefresh == null
                   ? layout(const [])
@@ -214,7 +214,7 @@ void main() {
   });
 
   Widget datePage(ValueNotifier<DateTime?> date) => frostTestApp(
-    DefaultTabController(
+    FrostDefaultTabController(
       length: 3,
       child: ValueListenableBuilder(
         valueListenable: date,

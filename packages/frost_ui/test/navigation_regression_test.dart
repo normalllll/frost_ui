@@ -530,7 +530,7 @@ void main() {
     const labels = ['One', 'Two', 'Three', 'Four'];
 
     Widget sections({TargetPlatform platform = TargetPlatform.windows, int count = 2}) => frostTestApp(
-      DefaultTabController(
+      FrostDefaultTabController(
         length: count,
         child: sectionedPage(
           header: const FrostPageHeader(),
@@ -542,7 +542,7 @@ void main() {
       platform: platform,
     );
 
-    TabController controller(WidgetTester tester) => DefaultTabController.of(tester.element(find.byType(FrostTabBar)));
+    FrostTabController controller(WidgetTester tester) => FrostDefaultTabController.of(tester.element(find.byType(FrostTabBar)));
 
     double indicator(WidgetTester tester) {
       final paint = tester.widget<CustomPaint>(find.descendant(of: find.byType(FrostTabBar), matching: find.byType(CustomPaint)).first);

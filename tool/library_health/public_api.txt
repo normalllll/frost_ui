@@ -625,7 +625,6 @@ func	frostButtonRestingSurface	foundation/feedback.dart	-	baseline-20261102
 func	frostButtonStateLayer	foundation/feedback.dart	-	baseline-20261102
 func	frostContentTextStyle	foundation/fonts.dart	-	baseline-20261102
 func	frostFeedbackBorder	foundation/feedback.dart	-	baseline-20261102
-func	frostFeedbackStyle	foundation/feedback.dart	-	baseline-20261102
 func	frostFeedbackSurface	foundation/feedback.dart	-	baseline-20261102
 func	frostPageTransition	motion/page_transition.dart	-	baseline-20261102
 func	frostPrimaryButtonFeedbackBackground	foundation/feedback.dart	-	baseline-20261102
@@ -1122,18 +1121,8 @@ member	FrostWindowTitleRegistry.remove	navigation/window_title.dart	-	baseline-2
 member	FrostWindowTitleRegistry.setPage	navigation/window_title.dart	-	baseline-20261102
 member	FrostWindowTitleRegistry.updateLocation	navigation/window_title.dart	-	baseline-20261102
 member	FrostWindowTitleScope.maybeOf	navigation/window_title.dart	-	baseline-20261102
-reexport	ButtonStyle	../frost_ui.dart	-	baseline-20261102
-reexport	DateTimeRange	../frost_ui.dart	-	baseline-20261102
-reexport	DefaultTabController	../frost_ui.dart	-	baseline-20261102
 reexport	LogicalKeyboardKey	../frost_ui.dart	-	baseline-20261102
-reexport	RefreshCallback	../frost_ui.dart	-	baseline-20261102
-reexport	TabBarView	../frost_ui.dart	-	baseline-20261102
-reexport	TabController	../frost_ui.dart	-	baseline-20261102
 reexport	TextInputAction	../frost_ui.dart	-	baseline-20261102
-reexport	ThemeData	../frost_ui.dart	-	baseline-20261102
-reexport	ThemeExtension	../frost_ui.dart	-	baseline-20261102
-reexport	ThemeMode	../frost_ui.dart	-	baseline-20261102
-reexport	TimeOfDay	../frost_ui.dart	-	baseline-20261102
 reexport	package:frost_window/frost_window.dart	../frost_ui.dart	-	baseline-20261102
 typedef	FrostRefreshAction	feedback/refresh_view.dart	-	baseline-20261102
 typedef	FrostRefreshViewBuilder	feedback/refresh_view.dart	-	baseline-20261102
@@ -1145,3 +1134,17 @@ class	FrostSelectionArea	primitives/selection_area.dart	-	reviewed:20261108:wrap
 ctor	FrostSelectionArea.new	primitives/selection_area.dart	child,key,onSelectionChanged	reviewed:20261108:wrapper over frost chrome; callback and clear needed
 class	FrostSelectionAreaState	primitives/selection_area.dart	-	reviewed:20261108:wrapper bundles frost handles, menu, esc; clearSelection needed
 member	FrostSelectionAreaState.clearSelection	primitives/selection_area.dart	-	reviewed:20261108:wrapper bundles frost handles, menu, esc; clearSelection needed
+class	FrostDefaultTabController	controls/tab_bar.dart	-	reviewed:20261112:DefaultTabController replacement; required by tab apps
+class	FrostTabController	controls/tab_bar.dart	-	reviewed:20261112:thin TabController subtype; Material stays hidden
+class	FrostTabView	controls/tab_bar.dart	-	reviewed:20261112:TabBarView wrapper; keeps only controller,physics
+ctor	FrostDefaultTabController.new	controls/tab_bar.dart	animationDuration,child,initialIndex,key,length	reviewed:20261112:DefaultTabController replacement; required by tab apps
+ctor	FrostTabController.new	controls/tab_bar.dart	animationDuration,initialIndex,length,vsync	reviewed:20261112:thin TabController subtype; Material stays hidden
+ctor	FrostTabView.new	controls/tab_bar.dart	children,controller,key,physics	reviewed:20261112:TabBarView wrapper; keeps only controller,physics
+enum	FrostThemeMode	foundation/appearance.dart	-	reviewed:20261112:name-compatible Frost enum replaces ThemeMode; records unchanged
+member	FrostDefaultTabController.maybeOf	controls/tab_bar.dart	-	reviewed:20261112:parity with DefaultTabController.maybeOf; of builds on it
+member	FrostDefaultTabController.of	controls/tab_bar.dart	-	reviewed:20261112:DefaultTabController replacement; required by tab apps
+member	FrostThemeMode.dark	foundation/appearance.dart	-	reviewed:20261112:name-compatible Frost enum replaces ThemeMode; records unchanged
+member	FrostThemeMode.light	foundation/appearance.dart	-	reviewed:20261112:name-compatible Frost enum replaces ThemeMode; records unchanged
+member	FrostThemeMode.system	foundation/appearance.dart	-	reviewed:20261112:name-compatible Frost enum replaces ThemeMode; records unchanged
+typedef	FrostDateRange	controls/date_range_picker.dart	-	reviewed:20261112:record replaces DateTimeRange; no new widget, only alias
+typedef	FrostTimeOfDay	controls/time_picker.dart	-	reviewed:20261112:record replaces TimeOfDay; no new widget, only alias

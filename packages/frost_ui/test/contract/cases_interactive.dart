@@ -380,7 +380,7 @@ final interactiveCases = <InteractiveCase>[
     'FrostDateRangePicker.new',
     FrostDateRangePicker,
     (go) => FrostDateRangePicker(
-      value: DateTimeRange(start: DateTime(2026, 11, 2), end: DateTime(2026, 11, 5)),
+      value: (start: DateTime(2026, 11, 2), end: DateTime(2026, 11, 5)),
       onChanged: (_) => go(),
       label: longLabel,
     ),
@@ -392,7 +392,7 @@ final interactiveCases = <InteractiveCase>[
   InteractiveCase(
     'FrostTimePicker.new',
     FrostTimePicker,
-    (go) => FrostTimePicker(value: const TimeOfDay(hour: 9, minute: 30), onChanged: (_) => go(), label: longLabel),
+    (go) => FrostTimePicker(value: const (hour: 9, minute: 30), onChanged: (_) => go(), label: longLabel),
     kind: ControlKind.field,
     target: _editable(FrostTimePicker),
   ),
@@ -642,4 +642,4 @@ Widget _videoFrame({VoidCallback? onPlayPause, List<Widget> controls = const []}
   ),
 );
 
-TabController _tabController() => TabController(length: 2, vsync: const TestVSync());
+FrostTabController _tabController() => FrostTabController(length: 2, vsync: const TestVSync());

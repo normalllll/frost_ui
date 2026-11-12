@@ -108,8 +108,8 @@ void main() {
   });
 
   group('time picker', () {
-    Future<List<TimeOfDay?>> pumpPicker(WidgetTester tester, {TimeOfDay? value, bool accepts = true, int minuteStep = 1, bool use24Hours = false}) async {
-      final changes = <TimeOfDay?>[];
+    Future<List<FrostTimeOfDay?>> pumpPicker(WidgetTester tester, {FrostTimeOfDay? value, bool accepts = true, int minuteStep = 1, bool use24Hours = false}) async {
+      final changes = <FrostTimeOfDay?>[];
       var current = value;
       await tester.pumpWidget(
         _app(
@@ -131,17 +131,17 @@ void main() {
     }
 
     testWidgets('a time the caller refuses goes back to the caller value', (tester) async {
-      final changes = await pumpPicker(tester, value: const TimeOfDay(hour: 9, minute: 30), accepts: false, use24Hours: true);
+      final changes = await pumpPicker(tester, value: const (hour: 9, minute: 30), accepts: false, use24Hours: true);
       await tester.tap(find.byType(EditableText).first);
       await tester.pump();
       await tester.enterText(find.byType(EditableText).first, '10');
       await tester.pumpAndSettle();
-      expect(changes, [const TimeOfDay(hour: 10, minute: 30)]);
+      expect(changes, [const (hour: 10, minute: 30)]);
       expect(_segment(tester, 0), '09');
     });
 
     testWidgets('a time the caller takes stays', (tester) async {
-      await pumpPicker(tester, value: const TimeOfDay(hour: 9, minute: 30), use24Hours: true);
+      await pumpPicker(tester, value: const (hour: 9, minute: 30), use24Hours: true);
       await tester.tap(find.byType(EditableText).first);
       await tester.pump();
       await tester.enterText(find.byType(EditableText).first, '10');
@@ -150,7 +150,7 @@ void main() {
     });
 
     testWidgets('an hour outside a 12-hour clock marks the field invalid', (tester) async {
-      final changes = await pumpPicker(tester, value: const TimeOfDay(hour: 9, minute: 30));
+      final changes = await pumpPicker(tester, value: const (hour: 9, minute: 30));
       FrostFieldFrame frame() => tester.widget<FrostFieldFrame>(find.byType(FrostFieldFrame));
       expect(frame().invalid, isFalse);
       await tester.tap(find.byType(EditableText).first);
@@ -163,7 +163,7 @@ void main() {
       await tester.enterText(find.byType(EditableText).first, '10');
       await tester.pumpAndSettle();
       expect(frame().invalid, isFalse);
-      expect(changes, [const TimeOfDay(hour: 10, minute: 30)]);
+      expect(changes, [const (hour: 10, minute: 30)]);
     });
 
     for (final (key, expected) in [
@@ -186,7 +186,7 @@ void main() {
   });
 
   testWidgets('a second date before the first ends the range and enables Apply', (tester) async {
-    DateTimeRange? applied;
+    FrostDateRange? applied;
     await tester.pumpWidget(
       FrostDateClock(
         today: DateTime(2026, 11, 20),
@@ -213,7 +213,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('L.apply'));
     await tester.pumpAndSettle();
-    expect(applied, DateTimeRange(start: DateTime(2026, 11, 10), end: DateTime(2026, 11, 15)));
+    expect(applied, (start: DateTime(2026, 11, 10), end: DateTime(2026, 11, 15)));
   });
 
   testWidgets('the date picker clear button grows in like the shared button', (tester) async {

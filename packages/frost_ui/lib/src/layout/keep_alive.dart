@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-/// Keeps a [TabBarView] page built after it has been shown, so swiping away
+/// Keeps a [FrostTabView] page built after it has been shown, so swiping away
 /// and back preserves its scroll position and loaded content.
 class FrostKeepAlive extends StatefulWidget {
   const FrostKeepAlive({required this.child, super.key});

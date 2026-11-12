@@ -21,7 +21,7 @@ void main() {
   }
 
   Widget page({bool refresh = false}) => frostTestApp(
-    DefaultTabController(
+    FrostDefaultTabController(
       length: _labels.length,
       child: sectionedPage(
         header: FrostPageHeader(

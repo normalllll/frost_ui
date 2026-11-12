@@ -35,7 +35,7 @@ void main() {
   }
 
   Widget page({bool suggestions = true}) => frostTestApp(
-    DefaultTabController(
+    FrostDefaultTabController(
       length: 2,
       child: pinnedPage(
         header: FrostPageHeader(

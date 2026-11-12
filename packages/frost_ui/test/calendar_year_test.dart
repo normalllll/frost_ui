@@ -78,7 +78,7 @@ void main() {
         frostTestApp(
           FrostDateRangePicker(
             label: 'Period',
-            value: DateTimeRange(start: DateTime(1997, 12, 18), end: DateTime(1998, 1, 3)),
+            value: (start: DateTime(1997, 12, 18), end: DateTime(1998, 1, 3)),
             showsYear: true,
             onChanged: (_) {},
           ),
@@ -286,7 +286,7 @@ void main() {
         tester,
         FrostDateRangePicker(
           label: 'Period',
-          value: DateTimeRange(start: DateTime(2010, 12, 30), end: DateTime(2011, 1, 2)),
+          value: (start: DateTime(2010, 12, 30), end: DateTime(2011, 1, 2)),
           onChanged: (_) {},
           firstDate: DateTime(1950),
           lastDate: DateTime(2030, 12, 31),

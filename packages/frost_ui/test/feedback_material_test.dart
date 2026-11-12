@@ -303,7 +303,7 @@ void main() {
               child: Column(
                 children: [
                   const FrostTextField(label: 'Input'),
-                  FrostTimePicker(value: const TimeOfDay(hour: 14, minute: 20), onChanged: (_) {}, label: 'Time'),
+                  FrostTimePicker(value: const (hour: 14, minute: 20), onChanged: (_) {}, label: 'Time'),
                   FrostPicker<int>.menu(
                     label: 'Value',
                     value: 1,

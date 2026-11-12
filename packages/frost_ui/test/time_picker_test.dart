@@ -48,14 +48,14 @@ void main() {
 
       await app(
         tester,
-        FrostTimePicker(value: const TimeOfDay(hour: 2, minute: 20), onChanged: (_) {}, label: 'Time'),
+        FrostTimePicker(value: const (hour: 2, minute: 20), onChanged: (_) {}, label: 'Time'),
         rtl: rtl,
       );
       expect(text(tester, 'hour'), '2');
       final one = edge();
       await app(
         tester,
-        FrostTimePicker(value: const TimeOfDay(hour: 11, minute: 20), onChanged: (_) {}, label: 'Time'),
+        FrostTimePicker(value: const (hour: 11, minute: 20), onChanged: (_) {}, label: 'Time'),
         rtl: rtl,
       );
       expect(edge(), closeTo(one, .01));
@@ -80,7 +80,7 @@ void main() {
     );
     await app(tester, page(const SizedBox()));
     bucket.writeState(pageContext, 600.0);
-    await app(tester, page(FrostTimePicker(value: const TimeOfDay(hour: 14, minute: 20), onChanged: (_) {}, label: 'Time')));
+    await app(tester, page(FrostTimePicker(value: const (hour: 14, minute: 20), onChanged: (_) {}, label: 'Time')));
     for (final name in ['hour', 'minute']) {
       final state = tester.state<EditableTextState>(find.descendant(of: segment(name), matching: find.byType(EditableText)));
       expect(state.renderEditable.offset.pixels, 0);
@@ -97,7 +97,7 @@ void main() {
           tester,
           SizedBox(
             width: 400,
-            child: FrostTimePicker(value: const TimeOfDay(hour: 14, minute: 20), onChanged: (_) {}, label: 'Time'),
+            child: FrostTimePicker(value: const (hour: 14, minute: 20), onChanged: (_) {}, label: 'Time'),
           ),
           density: density,
           scale: scale,
@@ -128,7 +128,7 @@ void main() {
               data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
               child: SizedBox(
                 width: 400,
-                child: FrostTimePicker(value: const TimeOfDay(hour: 14, minute: 20), onChanged: (_) {}, label: 'Time'),
+                child: FrostTimePicker(value: const (hour: 14, minute: 20), onChanged: (_) {}, label: 'Time'),
               ),
             ),
           ),
@@ -171,7 +171,7 @@ void main() {
       for (final twentyFour in [false, true]) {
         await app(
           tester,
-          FrostTimePicker(value: const TimeOfDay(hour: 14, minute: 15), onChanged: (_) {}, label: 'Time'),
+          FrostTimePicker(value: const (hour: 14, minute: 15), onChanged: (_) {}, label: 'Time'),
           locale: locale,
           twentyFour: twentyFour,
         );
@@ -191,7 +191,7 @@ void main() {
           builder: (context) => Localizations.override(
             context: context,
             delegates: [_FormatDelegate(format)],
-            child: FrostTimePicker(value: const TimeOfDay(hour: 14, minute: 15), onChanged: (_) {}, label: 'Time'),
+            child: FrostTimePicker(value: const (hour: 14, minute: 15), onChanged: (_) {}, label: 'Time'),
           ),
         ),
       );
@@ -212,7 +212,7 @@ void main() {
           tester,
           SizedBox(
             width: 400,
-            child: FrostTimePicker(value: const TimeOfDay(hour: 14, minute: 15), onChanged: (_) {}, label: 'Time'),
+            child: FrostTimePicker(value: const (hour: 14, minute: 15), onChanged: (_) {}, label: 'Time'),
           ),
           density: density,
           scale: scale,
@@ -225,7 +225,7 @@ void main() {
     }
   });
   // A caller that takes every value it is offered.
-  Widget accepting(TimeOfDay? initial, List<TimeOfDay?> changes, {int minuteStep = 1}) {
+  Widget accepting(FrostTimeOfDay? initial, List<FrostTimeOfDay?> changes, {int minuteStep = 1}) {
     var value = initial;
     return StatefulBuilder(
       builder: (context, setState) => FrostTimePicker(
@@ -241,7 +241,7 @@ void main() {
   }
 
   testWidgets('Native numeric input auto-advances, keeps last focus, and is not step snapped', (tester) async {
-    final changes = <TimeOfDay?>[];
+    final changes = <FrostTimeOfDay?>[];
     await app(tester, accepting(null, changes, minuteStep: 15), twentyFour: true);
     expect(find.text('--'), findsNWidgets(2));
     await tester.enterText(editor('hour'), '2');
@@ -252,7 +252,7 @@ void main() {
     expect(focus(tester, 'minute').hasPrimaryFocus, isTrue);
     await tester.enterText(editor('minute'), '17');
     await tester.pump();
-    expect(changes.last, const TimeOfDay(hour: 23, minute: 17));
+    expect(changes.last, const (hour: 23, minute: 17));
     expect(focus(tester, 'minute').hasPrimaryFocus, isTrue);
     await tester.enterText(editor('hour'), '3');
     await tester.pump();
@@ -263,21 +263,21 @@ void main() {
     expect(changes.last!.minute, 6);
   });
   testWidgets('Each segment wraps independently; minuteStep has no hour carry', (tester) async {
-    final changes = <TimeOfDay?>[];
-    await app(tester, accepting(const TimeOfDay(hour: 23, minute: 50), changes, minuteStep: 15), twentyFour: true);
+    final changes = <FrostTimeOfDay?>[];
+    await app(tester, accepting(const (hour: 23, minute: 50), changes, minuteStep: 15), twentyFour: true);
     focus(tester, 'minute').requestFocus();
     await tester.pump();
     await key(tester, LogicalKeyboardKey.arrowUp);
-    expect(changes.last, const TimeOfDay(hour: 23, minute: 5));
+    expect(changes.last, const (hour: 23, minute: 5));
     await key(tester, LogicalKeyboardKey.arrowDown);
-    expect(changes.last, const TimeOfDay(hour: 23, minute: 50));
+    expect(changes.last, const (hour: 23, minute: 50));
     focus(tester, 'hour').requestFocus();
     await tester.pump();
     await key(tester, LogicalKeyboardKey.arrowUp);
     expect(changes.last!.hour, 0);
     await key(tester, LogicalKeyboardKey.arrowDown);
     expect(changes.last!.hour, 23);
-    await app(tester, accepting(const TimeOfDay(hour: 11, minute: 0), changes));
+    await app(tester, accepting(const (hour: 11, minute: 0), changes));
     focus(tester, 'hour').requestFocus();
     await tester.pump();
     await key(tester, LogicalKeyboardKey.arrowUp);
@@ -285,8 +285,8 @@ void main() {
     expect(changes.last!.hour, 0);
   });
   testWidgets('Empty segments use min/max; clearing returns null and own null echo preserves partial editing', (tester) async {
-    TimeOfDay? value = const TimeOfDay(hour: 14, minute: 15);
-    final changes = <TimeOfDay?>[];
+    FrostTimeOfDay? value = const (hour: 14, minute: 15);
+    final changes = <FrostTimeOfDay?>[];
     await app(
       tester,
       StatefulBuilder(
@@ -308,13 +308,13 @@ void main() {
     expect(text(tester, 'hour'), '14');
     expect(text(tester, 'minute'), '');
     await key(tester, LogicalKeyboardKey.arrowDown);
-    expect(changes.last, const TimeOfDay(hour: 14, minute: 59));
+    expect(changes.last, const (hour: 14, minute: 59));
     await key(tester, LogicalKeyboardKey.backspace);
     await key(tester, LogicalKeyboardKey.arrowUp);
-    expect(changes.last, const TimeOfDay(hour: 14, minute: 0));
+    expect(changes.last, const (hour: 14, minute: 0));
   });
   testWidgets('Period toggles with three keys, null defaults AM/PM and digits do not edit it', (tester) async {
-    final changes = <TimeOfDay?>[];
+    final changes = <FrostTimeOfDay?>[];
     await app(tester, FrostTimePicker(value: null, onChanged: changes.add, label: 'Time'));
     focus(tester, 'period').requestFocus();
     await tester.pump();
@@ -338,7 +338,7 @@ void main() {
     for (final rtl in [false, true]) {
       await app(
         tester,
-        FrostTimePicker(value: const TimeOfDay(hour: 14, minute: 15), onChanged: (_) {}, label: 'Time'),
+        FrostTimePicker(value: const (hour: 14, minute: 15), onChanged: (_) {}, label: 'Time'),
         locale: const Locale('zh', 'CN'),
         rtl: rtl,
       );
@@ -354,8 +354,8 @@ void main() {
   });
   testWidgets('Time field is one semantic node with localized value and active-segment actions', (tester) async {
     final semantics = tester.ensureSemantics();
-    final changes = <TimeOfDay?>[];
-    await app(tester, FrostTimePicker(value: const TimeOfDay(hour: 14, minute: 15), onChanged: changes.add, label: 'Time'), twentyFour: true);
+    final changes = <FrostTimeOfDay?>[];
+    await app(tester, FrostTimePicker(value: const (hour: 14, minute: 15), onChanged: changes.add, label: 'Time'), twentyFour: true);
     focus(tester, 'minute').requestFocus();
     await tester.pumpAndSettle();
     final finder = find.bySemanticsLabel('Time');
@@ -364,7 +364,7 @@ void main() {
     expect(node.getSemanticsData().value, '14:15');
     node.owner!.performAction(node.id, SemanticsAction.increase);
     await tester.pump();
-    expect(changes.last, const TimeOfDay(hour: 14, minute: 16));
+    expect(changes.last, const (hour: 14, minute: 16));
     final tokens = FrostThemeTokens.of(tester.element(segment('minute')));
     final decoration =
         tester.widget<DecoratedBox>(find.descendant(of: segment('minute'), matching: find.byType(DecoratedBox)).first).decoration as ShapeDecoration;
@@ -374,15 +374,15 @@ void main() {
     semantics.dispose();
   });
   testWidgets('Narrow big-text time wraps on its first frame without clipping or scrolling', (tester) async {
-    await app(tester, FrostTimePicker(value: const TimeOfDay(hour: 14, minute: 15), onChanged: (_) {}, label: 'Time'), width: 95, scale: 2);
+    await app(tester, FrostTimePicker(value: const (hour: 14, minute: 15), onChanged: (_) {}, label: 'Time'), width: 95, scale: 2);
     expect(tester.getTopLeft(segment('minute')).dy, greaterThan(tester.getTopLeft(segment('hour')).dy));
     expect(tester.getSize(find.byType(FrostFieldFrame)).height, greaterThan(44));
     expect(find.byWidgetPredicate((w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal), findsNothing);
     expect(tester.takeException(), isNull);
   });
   testWidgets('Composing numeric input is preserved and only commits after composition', (tester) async {
-    final changes = <TimeOfDay?>[];
-    await app(tester, FrostTimePicker(value: const TimeOfDay(hour: 14, minute: 15), onChanged: changes.add, label: 'Time'), twentyFour: true);
+    final changes = <FrostTimeOfDay?>[];
+    await app(tester, FrostTimePicker(value: const (hour: 14, minute: 15), onChanged: changes.add, label: 'Time'), twentyFour: true);
     await tester.showKeyboard(editor('minute'));
     tester.testTextInput.updateEditingValue(
       const TextEditingValue(text: '37', selection: TextSelection.collapsed(offset: 2), composing: TextRange(start: 0, end: 2)),
@@ -392,7 +392,7 @@ void main() {
     expect(tester.widget<TextField>(editor('minute')).controller!.value.composing, const TextRange(start: 0, end: 2));
     tester.testTextInput.updateEditingValue(const TextEditingValue(text: '37', selection: TextSelection.collapsed(offset: 2)));
     await tester.pump();
-    expect(changes, [const TimeOfDay(hour: 14, minute: 37)]);
+    expect(changes, [const (hour: 14, minute: 37)]);
   });
   testWidgets('Form targets localized visual first segment; error shares supporting text', (tester) async {
     final controller = FrostFormController();
@@ -413,7 +413,7 @@ void main() {
     expect(find.text('Invalid'), findsOneWidget);
   });
   testWidgets('External value reset replaces segments, disabled editors stay inert and minuteStep asserts', (tester) async {
-    var value = const TimeOfDay(hour: 14, minute: 15);
+    var value = const (hour: 14, minute: 15);
     var enabled = true;
     late StateSetter update;
     var calls = 0;
@@ -426,7 +426,7 @@ void main() {
         },
       ),
     );
-    update(() => value = const TimeOfDay(hour: 7, minute: 40));
+    update(() => value = const (hour: 7, minute: 40));
     await tester.pump();
     expect(text(tester, 'hour'), '7');
     expect(text(tester, 'minute'), '40');
@@ -449,7 +449,7 @@ void main() {
               label: 'Text',
               controller: TextEditingController(text: 'hello'),
             ),
-            FrostTimePicker(value: const TimeOfDay(hour: 9, minute: 30), onChanged: (_) {}, label: 'Time'),
+            FrostTimePicker(value: const (hour: 9, minute: 30), onChanged: (_) {}, label: 'Time'),
           ],
         ),
         twentyFour: true,
@@ -467,8 +467,8 @@ void main() {
 
   for (final (part, entry) in [('hour', '27'), ('minute', '75')]) {
     testWidgets('typing $entry in the $part shows the invalid state and reports nothing until valid', (tester) async {
-      final changes = <TimeOfDay?>[];
-      await app(tester, FrostTimePicker(value: const TimeOfDay(hour: 9, minute: 30), onChanged: changes.add, label: 'Time'), twentyFour: true);
+      final changes = <FrostTimeOfDay?>[];
+      await app(tester, FrostTimePicker(value: const (hour: 9, minute: 30), onChanged: changes.add, label: 'Time'), twentyFour: true);
       bool invalid() => tester.widget<FrostFieldFrame>(find.byType(FrostFieldFrame)).invalid;
       expect(invalid(), isFalse);
       await tester.enterText(editor(part), entry);
@@ -479,7 +479,7 @@ void main() {
       await tester.enterText(editor(part), part == 'hour' ? '7' : '45');
       await tester.pump();
       expect(invalid(), isFalse);
-      expect(changes, [part == 'hour' ? const TimeOfDay(hour: 7, minute: 30) : const TimeOfDay(hour: 9, minute: 45)]);
+      expect(changes, [part == 'hour' ? const (hour: 7, minute: 30) : const (hour: 9, minute: 45)]);
     });
   }
 
@@ -495,7 +495,7 @@ void main() {
           submits++;
           return true;
         },
-        children: [FrostTimePicker(value: const TimeOfDay(hour: 9, minute: 30), onChanged: (_) {}, label: 'Time')],
+        children: [FrostTimePicker(value: const (hour: 9, minute: 30), onChanged: (_) {}, label: 'Time')],
       ),
     );
     await tester.enterText(editor('hour'), '0');
@@ -516,8 +516,8 @@ void main() {
   });
 
   group('completing the last segment in a form', () {
-    Future<List<TimeOfDay?>> form(WidgetTester tester, {required bool twentyFour, required void Function() onSubmit, List<Widget> after = const []}) async {
-      final changes = <TimeOfDay?>[];
+    Future<List<FrostTimeOfDay?>> form(WidgetTester tester, {required bool twentyFour, required void Function() onSubmit, List<Widget> after = const []}) async {
+      final changes = <FrostTimeOfDay?>[];
       await app(
         tester,
         FrostForm(
@@ -526,7 +526,7 @@ void main() {
             return true;
           },
           children: [
-            FrostTimePicker(label: 'Time', value: const TimeOfDay(hour: 9, minute: 30), onChanged: changes.add),
+            FrostTimePicker(label: 'Time', value: const (hour: 9, minute: 30), onChanged: changes.add),
             ...after,
           ],
         ),
@@ -575,7 +575,7 @@ void main() {
       expect(changes, isEmpty);
       await key(tester, LogicalKeyboardKey.space);
       expect(submits, 1);
-      expect(changes, [const TimeOfDay(hour: 21, minute: 30)]);
+      expect(changes, [const (hour: 21, minute: 30)]);
     });
   });
 }

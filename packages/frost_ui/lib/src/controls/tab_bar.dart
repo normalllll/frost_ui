@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show listEquals;
-import 'package:flutter/material.dart' show DefaultTabController, TabController;
+import 'package:flutter/material.dart' show TabBarView, TabController;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -29,11 +29,13 @@ class FrostTab {
   final String? secondaryLabel;
 }
 
-/// Frost-painted tabs. The content controller still owns selection and dragging.
+/// Frost-painted tabs. The [FrostTabController], given or inherited from a
+/// [FrostDefaultTabController], owns selection and dragging; a [FrostTabView]
+/// shows the pages.
 class FrostTabBar extends StatefulWidget {
   const FrostTabBar({required this.tabs, this.controller, this.scrollable = false, this.onTap, this.size, this.showDivider = false, super.key});
   final List<FrostTab> tabs;
-  final TabController? controller;
+  final FrostTabController? controller;
 
   /// False shares the bar's own width equally between the tabs. When a tab does
   /// not fit its share, the tabs keep their natural widths and scroll sideways.
@@ -55,8 +57,8 @@ class _AppTabBarState extends State<FrostTabBar> with TickerProviderStateMixin {
   int _lastIndex = 0;
 
   void _bindController() {
-    final source = widget.controller ?? DefaultTabController.of(context);
-    assert(source.length == widget.tabs.length, 'TabController length must match FrostTabBar.tabs.');
+    final source = widget.controller ?? FrostDefaultTabController.of(context);
+    assert(source.length == widget.tabs.length, 'FrostTabController length must match FrostTabBar.tabs.');
     if (_visual?.source != source) {
       _visual?.source.removeListener(_selectionChanged);
       _visual?.dispose();
@@ -458,4 +460,84 @@ class _IndicatorTabController extends TabController {
     _motion.dispose();
     super.dispose();
   }
+}
+
+/// Selection and page position shared by a [FrostTabBar] and a [FrostTabView].
+/// Its members are those of a Flutter `TabController`.
+class FrostTabController extends TabController {
+  FrostTabController({required super.length, super.initialIndex, super.animationDuration, required super.vsync});
+}
+
+/// Owns a [FrostTabController] for the [FrostTabBar] and [FrostTabView] below it
+/// that are not given one.
+class FrostDefaultTabController extends StatefulWidget {
+  const FrostDefaultTabController({required this.length, required this.child, this.initialIndex = 0, this.animationDuration, super.key})
+    : assert(length >= 0),
+      assert(length == 0 || (initialIndex >= 0 && initialIndex < length));
+  final int length;
+  /// The tab selected when the controller is created. Later changes do not
+  /// move the selection; only a changed [length] or [animationDuration] creates
+  /// a controller again, which keeps the current index within the new length.
+  final int initialIndex;
+  final Duration? animationDuration;
+  final Widget child;
+
+  /// The nearest controller; fails when there is none.
+  static FrostTabController of(BuildContext context) {
+    final controller = maybeOf(context);
+    assert(controller != null, 'FrostDefaultTabController.of() was called with a context that has no FrostDefaultTabController above it.');
+    return controller!;
+  }
+
+  /// The nearest controller, or null.
+  static FrostTabController? maybeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<_FrostTabScope>()?.controller;
+
+  @override
+  State<FrostDefaultTabController> createState() => _FrostDefaultTabControllerState();
+}
+
+class _FrostDefaultTabControllerState extends State<FrostDefaultTabController> with TickerProviderStateMixin {
+  late FrostTabController _controller = _create(widget.initialIndex);
+
+  FrostTabController _create(int initialIndex) =>
+      FrostTabController(length: widget.length, initialIndex: initialIndex, animationDuration: widget.animationDuration, vsync: this);
+
+  @override
+  void didUpdateWidget(FrostDefaultTabController oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.length == widget.length && oldWidget.animationDuration == widget.animationDuration) return;
+    final old = _controller;
+    final index = widget.length == 0 ? 0 : math.min(old.index, widget.length - 1);
+    _controller = _create(index);
+    // The bars and views below still listen to the old controller during this
+    // build; dispose it once they have moved to the new one.
+    WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => _FrostTabScope(controller: _controller, child: widget.child);
+}
+
+class _FrostTabScope extends InheritedWidget {
+  const _FrostTabScope({required this.controller, required super.child});
+  final FrostTabController controller;
+  @override
+  bool updateShouldNotify(_FrostTabScope oldWidget) => controller != oldWidget.controller;
+}
+
+/// The pages of a [FrostTabBar], swiped in step with its selection.
+class FrostTabView extends StatelessWidget {
+  const FrostTabView({required this.children, this.controller, this.physics, super.key});
+  final FrostTabController? controller;
+  final List<Widget> children;
+  final ScrollPhysics? physics;
+
+  @override
+  Widget build(BuildContext context) => TabBarView(controller: controller ?? FrostDefaultTabController.of(context), physics: physics, children: children);
 }

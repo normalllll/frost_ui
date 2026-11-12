@@ -25,8 +25,44 @@ RRect mark(WidgetTester tester) {
 }
 
 void main() {
+
+  testWidgets('a default controller rebuilt with fewer tabs clamps the selection and both widgets follow it', (tester) async {
+    Widget app(int length) => frostTestApp(
+      Material(
+        child: FrostDefaultTabController(
+          length: length,
+          initialIndex: length - 1,
+          child: Column(
+            children: [
+              FrostTabBar(tabs: [for (var i = 0; i < length; i++) FrostTab(label: 'Tab $i')]),
+              Expanded(child: FrostTabView(children: [for (var i = 0; i < length; i++) Text('Page $i')])),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpWidget(app(3));
+    await tester.pumpAndSettle();
+    final first = FrostDefaultTabController.of(tester.element(find.byType(FrostTabView)));
+    expect(first.index, 2);
+    expect(find.text('Page 2'), findsOneWidget);
+    await tester.pumpWidget(app(2));
+    await tester.pumpAndSettle();
+    final second = FrostDefaultTabController.of(tester.element(find.byType(FrostTabView)));
+    expect(second, isNot(same(first)));
+    expect(second.length, 2);
+    expect(second.index, 1);
+    expect(tester.widget<TabBarView>(find.byType(TabBarView)).controller, same(second));
+    expect(find.text('Page 1'), findsOneWidget);
+    expect(find.text('Tab 2'), findsNothing);
+    await tester.tap(find.text('Tab 0'));
+    await tester.pumpAndSettle();
+    expect(second.index, 0);
+    expect(find.text('Page 0'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('tab hover includes its label padding and keyboard focus uses shared ring', (tester) async {
-    final controller = TabController(length: 2, vsync: tester);
+    final controller = FrostTabController(length: 2, vsync: tester);
     addTearDown(controller.dispose);
     await tester.pumpWidget(
       frostTestApp(
@@ -95,7 +131,7 @@ void main() {
   for (final density in FrostDensity.values) {
     for (final scale in [1.0, 2.0]) {
       testWidgets('tab bar actual height, fixed mark and reserved labels $density $scale', (tester) async {
-        final controller = TabController(length: 3, vsync: tester);
+        final controller = FrostTabController(length: 3, vsync: tester);
         addTearDown(controller.dispose);
         await tester.pumpWidget(
           frostTestApp(
@@ -158,7 +194,7 @@ void main() {
     }
   }
   testWidgets('mark springs without changing width; ink uses 140ms and reduced motion snaps', (tester) async {
-    final controller = TabController(length: 2, vsync: tester);
+    final controller = FrostTabController(length: 2, vsync: tester);
     addTearDown(controller.dispose);
     Widget app(bool reduced) => frostTestApp(
       Material(
@@ -197,7 +233,7 @@ void main() {
     expect(tester.renderObject<RenderParagraph>(find.text('First')).text.style!.color, tokens.textPrimary);
   });
   testWidgets('RTL and horizontal scrolling keep mark below icon tab text', (tester) async {
-    final controller = TabController(length: 8, vsync: tester);
+    final controller = FrostTabController(length: 8, vsync: tester);
     addTearDown(controller.dispose);
     await tester.pumpWidget(
       frostTestApp(
@@ -226,7 +262,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
   testWidgets('selection scrolls only the bar, not the page that holds it', (tester) async {
-    final controller = TabController(length: 8, vsync: tester);
+    final controller = FrostTabController(length: 8, vsync: tester);
     addTearDown(controller.dispose);
     final page = ScrollController();
     addTearDown(page.dispose);

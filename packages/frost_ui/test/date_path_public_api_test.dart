@@ -5,8 +5,8 @@ import 'package:frost_ui/frost_ui.dart';
 
 void main() {
   test('6C value types and all four fields need no Material import', () {
-    const time = TimeOfDay(hour: 14, minute: 15);
-    final range = DateTimeRange(start: DateTime(2026, 10, 1), end: DateTime(2026, 10, 16));
+    const time = (hour: 14, minute: 15);
+    final range = (start: DateTime(2026, 10, 1), end: DateTime(2026, 10, 16));
     final widgets = <Widget>[
       FrostDateRangePicker(value: range, onChanged: (_) {}, label: 'Range'),
       FrostTimePicker(value: time, onChanged: (_) {}, label: 'Time', minuteStep: 15),

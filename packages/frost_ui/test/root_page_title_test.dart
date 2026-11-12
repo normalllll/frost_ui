@@ -83,7 +83,7 @@ class _SectionedPage extends StatefulWidget {
 }
 
 class _SectionedPageState extends State<_SectionedPage> with SingleTickerProviderStateMixin {
-  late final _tabs = TabController(length: 6, vsync: this);
+  late final _tabs = FrostTabController(length: 6, vsync: this);
   @override
   void dispose() {
     _tabs.dispose();

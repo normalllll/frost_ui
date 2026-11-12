@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter/widgets.dart';
 
 import 'color_math.dart';
@@ -53,6 +52,9 @@ FrostAccentValidation validateAccent(Color candidate, Brightness brightness, Fro
   return FrostAccentValidation(minimum < 2 ? FrostAccentSeverity.warning : FrostAccentSeverity.allowed, minimum);
 }
 
+/// Which brightness an app shows: the system setting, or always light or dark.
+enum FrostThemeMode { system, light, dark }
+
 /// The user's appearance choice: display mode, and a tone and accent saved
 /// separately for each brightness. Follow-system mode uses the neutral tone
 /// without erasing the saved manual tones. Persistence belongs to the app;
@@ -62,7 +64,7 @@ class FrostAppearance {
   const FrostAppearance({
     required this.lightAccent,
     required this.darkAccent,
-    this.mode = ThemeMode.system,
+    this.mode = FrostThemeMode.system,
     this.lightTone = FrostTone.neutral,
     this.darkTone = FrostTone.neutral,
     this.lightCustomAccent,
@@ -72,7 +74,7 @@ class FrostAppearance {
   /// The initial appearance of an app with [palettes].
   FrostAppearance.initial(FrostPalettes palettes) : this(lightAccent: palettes.lightDefaultAccent, darkAccent: palettes.darkDefaultAccent);
 
-  final ThemeMode mode;
+  final FrostThemeMode mode;
   final FrostTone lightTone, darkTone;
   final Color lightAccent, darkAccent;
 
@@ -95,12 +97,12 @@ class FrostAppearance {
   int get hashCode => Object.hash(mode, lightTone, darkTone, lightAccent, darkAccent, lightCustomAccent, darkCustomAccent);
 
   FrostTone toneFor(Brightness brightness) => brightness == Brightness.light ? lightTone : darkTone;
-  FrostTone effectiveToneFor(Brightness brightness) => mode == ThemeMode.system ? FrostTone.neutral : toneFor(brightness);
+  FrostTone effectiveToneFor(Brightness brightness) => mode == FrostThemeMode.system ? FrostTone.neutral : toneFor(brightness);
   Color accentFor(Brightness brightness) => brightness == Brightness.light ? lightAccent : darkAccent;
   Color? customAccentFor(Brightness brightness) => brightness == Brightness.light ? lightCustomAccent : darkCustomAccent;
 
   FrostAppearance copyWith({
-    ThemeMode? mode,
+    FrostThemeMode? mode,
     FrostTone? lightTone,
     FrostTone? darkTone,
     Color? lightAccent,
@@ -131,7 +133,7 @@ class FrostAppearance {
   /// Reads a [toRecord] map. Unknown or invalid fields fall back one by one;
   /// a stored accent that no longer passes [validateAccent] returns to the
   /// palettes' default. An unreadable record uses [fallbackMode].
-  static FrostAppearance fromRecord(Object? input, FrostPalettes palettes, {ThemeMode fallbackMode = ThemeMode.system}) {
+  static FrostAppearance fromRecord(Object? input, FrostPalettes palettes, {FrostThemeMode fallbackMode = FrostThemeMode.system}) {
     if (input is! Map || input['version'] != 1) return FrostAppearance.initial(palettes).copyWith(mode: fallbackMode);
     T pickEnum<T extends Enum>(Object? value, List<T> values, T fallback) {
       for (final item in values) {
@@ -146,7 +148,7 @@ class FrostAppearance {
     }
 
     return FrostAppearance(
-      mode: pickEnum(input['mode'], ThemeMode.values, ThemeMode.system),
+      mode: pickEnum(input['mode'], FrostThemeMode.values, FrostThemeMode.system),
       lightTone: pickEnum(input['lightTone'], FrostTone.values, FrostTone.neutral),
       darkTone: pickEnum(input['darkTone'], FrostTone.values, FrostTone.neutral),
       lightAccent: safeColor(input['lightAccent'], Brightness.light) ?? palettes.lightDefaultAccent,

@@ -134,6 +134,7 @@ const _controller = [
   'FrostPageHeaderSearchController',
   'FrostPagerController',
   'FrostSelectionAreaState',
+  'FrostTabController',
   'FrostTabsController',
   'FrostToast',
   'FrostTokenEditingController',
@@ -165,6 +166,7 @@ const _scope = [
   'FrostChromeActiveBody',
   'FrostAmbientBackdropHost',
   'FrostControlScope',
+  'FrostDefaultTabController',
   'FrostFieldScope',
   'FrostFontWarmUp',
   'FrostInputFeedback',
@@ -190,6 +192,7 @@ const _layoutHelper = [
   'FrostRowLeadingExtent',
   'FrostShellDestination',
   'FrostSliverSectionsHeader',
+  'FrostTabView',
   'FrostToolbarTitle',
 ];
 

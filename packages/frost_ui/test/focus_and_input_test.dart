@@ -278,7 +278,7 @@ void main() {
           child: SizedBox(
             width: 400,
             child: FrostDateRangePicker(
-              value: DateTimeRange(start: DateTime(2026, 10, 12), end: DateTime(2026, 10, 14)),
+              value: (start: DateTime(2026, 10, 12), end: DateTime(2026, 10, 14)),
               onChanged: (_) {},
               label: 'Range',
               placeholder: 'Pick',

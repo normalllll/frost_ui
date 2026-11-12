@@ -38,7 +38,7 @@ void main() {
             'token' => FrostTokenField(controller: controller, focusNode: focus),
             'search' => FrostSearchInput(controller: controller, focusNode: focus, placeholder: 'Search', onSubmitted: (_) {}),
             'number' => FrostNumberField(value: 5, onChanged: (_) {}),
-            'time' => FrostTimePicker(value: const TimeOfDay(hour: 12, minute: 34), label: 'Time', onChanged: (_) {}),
+            'time' => FrostTimePicker(value: const (hour: 12, minute: 34), label: 'Time', onChanged: (_) {}),
             'path' => const FrostPathField(path: '/fixture/image.png', label: 'Path'),
             _ => FrostPicker.menu(
               label: 'Value',

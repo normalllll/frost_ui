@@ -1,11 +1,6 @@
 /// Shared UI foundation: design tokens, materials, motion and components.
 library;
 
-// Framework types used by the public Frost API stay available without importing
-// Material widgets into an app. Keep this list explicit rather than exporting
-// the entire Material library.
-export 'package:flutter/material.dart'
-    show ButtonStyle, DateTimeRange, DefaultTabController, RefreshCallback, TabBarView, TabController, ThemeData, ThemeExtension, ThemeMode, TimeOfDay;
 export 'package:flutter/services.dart' show LogicalKeyboardKey, TextInputAction;
 // Apps select one UI revision; the native plugin follows that same checkout.
 export 'package:frost_window/frost_window.dart';
@@ -16,7 +11,7 @@ export 'src/controls/checkbox.dart' show FrostCheckbox;
 export 'src/controls/checkbox_row.dart' show FrostCheckboxRow;
 export 'src/controls/color_swatch.dart' show FrostColorSwatch;
 export 'src/controls/date_picker.dart' show FrostDatePicker;
-export 'src/controls/date_range_picker.dart' show FrostDateRangePicker;
+export 'src/controls/date_range_picker.dart' show FrostDateRange, FrostDateRangePicker;
 export 'src/controls/field_appearance.dart';
 export 'src/controls/floating_action.dart' show FrostFloatingActionLayer;
 export 'src/controls/form.dart' show FrostForm, FrostFormController, FrostFormSection;
@@ -32,7 +27,7 @@ export 'src/controls/slider.dart' show FrostSlider;
 export 'src/controls/stepper.dart' show FrostStepper;
 export 'src/controls/tab_bar.dart';
 export 'src/controls/text_field.dart';
-export 'src/controls/time_picker.dart' show FrostTimePicker;
+export 'src/controls/time_picker.dart' show FrostTimeOfDay, FrostTimePicker;
 export 'src/controls/toast.dart' hide FrostToastKind;
 export 'src/controls/token_field.dart';
 export 'src/display/avatar.dart' show FrostAvatar, FrostAvatarSize;
@@ -70,7 +65,7 @@ export 'src/foundation/appearance.dart' hide FrostAccentValidation;
 export 'src/foundation/color_math.dart' hide colorContrast, readableOnAccent, solidLabelTone, solidOverlayAlpha, solidWashColor, swatchCheckInk;
 export 'src/foundation/control_scope.dart';
 export 'src/foundation/density.dart';
-export 'src/foundation/feedback.dart';
+export 'src/foundation/feedback.dart' hide frostFeedbackStyle;
 export 'src/foundation/font_warm_up.dart';
 export 'src/foundation/fonts.dart' hide FrostFontChain, detectContentScript;
 export 'src/foundation/input_feedback.dart' show FrostInputCapability, FrostInputFeedback;

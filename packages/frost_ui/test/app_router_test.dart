@@ -35,7 +35,7 @@ void main() {
           appearance: FrostAppearance(
             lightAccent: FrostPalettes.pink.accentPresets[1],
             darkAccent: FrostPalettes.pink.accentPresets[1],
-            mode: ThemeMode.light,
+            mode: FrostThemeMode.light,
             lightTone: FrostTone.warm,
           ),
           density: FrostDensity.compact,
@@ -113,7 +113,7 @@ void main() {
         title: 'Test',
         routerConfig: RouterConfig<Object>(routerDelegate: delegate),
         appearance: FrostAppearance(
-          mode: ThemeMode.dark,
+          mode: FrostThemeMode.dark,
           lightAccent: FrostPalettes.pink.accentPresets[0],
           darkAccent: FrostPalettes.pink.accentPresets[1],
           lightTone: FrostTone.cool,

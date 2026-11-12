@@ -29,7 +29,7 @@ FrostToolbarItem _date(DateTime? value, List<DateTime?> changes, {bool clearable
     );
 
 Widget _page({required FrostToolbarItem date, List<FrostToolbarItem> more = const [], bool tabs = false}) => frostTestApp(
-  DefaultTabController(
+  FrostDefaultTabController(
     length: 3,
     child: pinnedPage(
       header: FrostPageHeader(

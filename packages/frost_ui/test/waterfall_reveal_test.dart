@@ -165,7 +165,7 @@ void main() {
       final controller = FrostWaterfallController();
       await tester.pumpWidget(
         frostTestApp(
-          DefaultTabController(
+          FrostDefaultTabController(
             length: 3,
             child: pinnedPage(
               header: FrostPageHeader(

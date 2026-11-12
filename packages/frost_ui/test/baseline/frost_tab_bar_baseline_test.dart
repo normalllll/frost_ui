@@ -23,19 +23,19 @@ const _manyTabs = [
   FrostTab(label: 'Billing'),
 ];
 
-/// Owns a [TabController] for the tab bar's `controller` argument.
+/// Owns a [FrostTabController] for the tab bar's `controller` argument.
 class _Controller extends StatefulWidget {
   const _Controller({required this.length, required this.builder, this.index = 0});
 
   final int length, index;
-  final Widget Function(TabController controller) builder;
+  final Widget Function(FrostTabController controller) builder;
 
   @override
   State<_Controller> createState() => _ControllerState();
 }
 
 class _ControllerState extends State<_Controller> with SingleTickerProviderStateMixin {
-  late final _controller = TabController(length: widget.length, vsync: this, initialIndex: widget.index);
+  late final _controller = FrostTabController(length: widget.length, vsync: this, initialIndex: widget.index);
 
   @override
   void dispose() {
@@ -47,9 +47,9 @@ class _ControllerState extends State<_Controller> with SingleTickerProviderState
   Widget build(BuildContext context) => widget.builder(_controller);
 }
 
-// The bar reads DefaultTabController when it is given no controller.
+// The bar reads FrostDefaultTabController when it is given no controller.
 Widget _bar(List<FrostTab> tabs, {int index = 0, bool scrollable = false, ValueChanged<int>? onTap, FrostControlSize? size, bool showDivider = false}) =>
-    DefaultTabController(
+    FrostDefaultTabController(
       length: tabs.length,
       initialIndex: index,
       child: FrostTabBar(tabs: tabs, scrollable: scrollable, onTap: onTap, size: size, showDivider: showDivider),

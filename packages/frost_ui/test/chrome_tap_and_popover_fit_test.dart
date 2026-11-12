@@ -11,7 +11,7 @@ void main() {
     tester.view.physicalSize = Size(width, 844);
     addTearDown(tester.view.reset);
     var taps = 0;
-    final tabs = TabController(length: 2, vsync: const TestVSync());
+    final tabs = FrostTabController(length: 2, vsync: const TestVSync());
     addTearDown(tabs.dispose);
     await tester.pumpWidget(
       frostTestApp(

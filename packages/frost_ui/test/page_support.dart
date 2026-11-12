@@ -38,7 +38,7 @@ Widget sectionedPage({
   required List<Widget> Function(BuildContext context, int section) slivers,
   Widget? trailing,
   double maxWidth = double.infinity,
-  TabController? controller,
+  FrostTabController? controller,
   FrostRefreshAction? Function(int section)? onRefresh,
 }) => FrostPinnedChrome(
   chrome: FrostContentColumn(
@@ -47,10 +47,10 @@ Widget sectionedPage({
   ),
   body: Builder(
     builder: (context) {
-      final tabController = controller ?? DefaultTabController.of(context);
+      final tabController = controller ?? FrostDefaultTabController.of(context);
       return ListenableBuilder(
         listenable: tabController,
-        builder: (context, _) => TabBarView(
+        builder: (context, _) => FrostTabView(
           controller: tabController,
           children: [
             for (var section = 0; section < sections; section++)

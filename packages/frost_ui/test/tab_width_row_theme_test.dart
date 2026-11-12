@@ -9,7 +9,7 @@ void main() {
   for (final width in [590.0, 600.0, 900.0, 1200.0]) {
     for (final rtl in [false, true]) {
       testWidgets('tab actual widths at $width start direction rtl=$rtl', (tester) async {
-        final controller = TabController(length: 2, vsync: tester);
+        final controller = FrostTabController(length: 2, vsync: tester);
         addTearDown(controller.dispose);
         await tester.pumpWidget(
           frostTestApp(

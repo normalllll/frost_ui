@@ -4,15 +4,15 @@ import 'package:frost_ui/src/controls/_calendar.dart' show FrostDateClock;
 
 import 'baseline.dart';
 
-void _changed(DateTimeRange? _) {}
+void _changed(FrostDateRange? _) {}
 
 final _today = DateTime(2026, 3, 15);
-final _value = DateTimeRange(start: DateTime(2026, 3, 10), end: DateTime(2026, 3, 18));
+final _value = (start: DateTime(2026, 3, 10), end: DateTime(2026, 3, 18));
 
 // The calendar marks today; a fixed clock keeps the open states reproducible.
 Widget _picker({
-  DateTimeRange? value,
-  ValueChanged<DateTimeRange?>? onChanged,
+  FrostDateRange? value,
+  ValueChanged<FrostDateRange?>? onChanged,
   DateTime? firstDate,
   DateTime? lastDate,
   String? placeholder,

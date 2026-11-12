@@ -11,8 +11,8 @@ FrostButtonControl action(WidgetTester tester, String label) =>
     tester.widget<FrostButtonControl>(find.byWidgetPredicate((w) => w is FrostButtonControl && w.label == 'L.$label'));
 Future<void> open(
   WidgetTester tester, {
-  DateTimeRange? value,
-  ValueChanged<DateTimeRange?>? onChanged,
+  FrostDateRange? value,
+  ValueChanged<FrostDateRange?>? onChanged,
   DateTime? first,
   DateTime? last,
   Size viewport = const Size(1100, 850),
@@ -57,7 +57,7 @@ void main() {
     }
   });
   testWidgets('Range drafts two clicks in either order and complete-range restart until Apply', (tester) async {
-    final changes = <DateTimeRange?>[];
+    final changes = <FrostDateRange?>[];
     await open(tester, onChanged: changes.add);
     await tester.tap(day(DateTime(2026, 10, 15)));
     await tester.pump();
@@ -81,12 +81,12 @@ void main() {
     await tester.tap(day(DateTime(2026, 10, 25)));
     await tester.pump();
     await tap(tester, 'apply');
-    expect(changes, [DateTimeRange(start: DateTime(2026, 10, 22), end: DateTime(2026, 10, 25))]);
+    expect(changes, [(start: DateTime(2026, 10, 22), end: DateTime(2026, 10, 25))]);
     expect(find.byType(FrostCalendar), findsNothing);
   });
   testWidgets('Range Cancel, Esc and outside click discard draft; Clear only applies on Apply', (tester) async {
-    final changes = <DateTimeRange?>[];
-    final value = DateTimeRange(start: DateTime(2026, 10, 10), end: DateTime(2026, 10, 15));
+    final changes = <FrostDateRange?>[];
+    final value = (start: DateTime(2026, 10, 10), end: DateTime(2026, 10, 15));
     for (final how in ['cancel', 'escape', 'outside']) {
       await open(tester, value: value, onChanged: changes.add);
       await tester.tap(day(DateTime(2026, 10, 20)));
@@ -116,8 +116,8 @@ void main() {
     expect(changes, [null]);
   });
   testWidgets('Legacy out-of-bounds range displays, retains invalid draft and can clear or replace safely', (tester) async {
-    final changes = <DateTimeRange?>[];
-    final old = DateTimeRange(start: DateTime.utc(2025, 1, 1, 18), end: DateTime.utc(2025, 2, 2, 19));
+    final changes = <FrostDateRange?>[];
+    final old = (start: DateTime.utc(2025, 1, 1, 18), end: DateTime.utc(2025, 2, 2, 19));
     await open(tester, value: old, first: DateTime(2026, 10, 10, 18), last: DateTime(2026, 10, 20, 1), onChanged: changes.add);
     const localizations = DefaultMaterialLocalizations();
     expect(find.text('${localizations.formatMediumDate(old.start)} – ${localizations.formatMediumDate(old.end)}'), findsOneWidget);
@@ -136,7 +136,7 @@ void main() {
     await tester.tap(day(DateTime(2026, 10, 20)));
     await tester.pump();
     await tap(tester, 'apply');
-    expect(changes, [DateTimeRange(start: DateTime(2026, 10, 10), end: DateTime(2026, 10, 20))]);
+    expect(changes, [(start: DateTime(2026, 10, 10), end: DateTime(2026, 10, 20))]);
     await open(tester, value: old, first: DateTime(2026), last: DateTime(2026, 12, 31), onChanged: changes.add);
     expect(action(tester, 'apply').onPressed, isNull);
     await tap(tester, 'clear');
@@ -145,7 +145,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
   testWidgets('Range hover previews actual band but never commits; responsive width falls back on cold layout', (tester) async {
-    final changes = <DateTimeRange?>[];
+    final changes = <FrostDateRange?>[];
     await open(tester, onChanged: changes.add, viewport: const Size(650, 800));
     expect(find.text('November 2026'), findsOneWidget);
     await tester.tap(day(DateTime(2026, 10, 10)));

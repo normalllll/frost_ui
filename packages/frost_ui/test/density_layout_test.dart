@@ -76,7 +76,7 @@ void main() {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             FrostPathField(path: 'C:/media', label: 'Path', onChoose: () async {}),
-                            FrostTimePicker(value: const TimeOfDay(hour: 12, minute: 30), onChanged: (_) {}, label: 'Time'),
+                            FrostTimePicker(value: const (hour: 12, minute: 30), onChanged: (_) {}, label: 'Time'),
                             FrostPicker<int>.menu(
                               value: 1,
                               options: const [FrostPickerOption(value: 1, label: 'Current')],

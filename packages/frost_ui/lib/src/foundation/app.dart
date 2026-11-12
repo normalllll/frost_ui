@@ -70,7 +70,11 @@ class FrostApp extends StatelessWidget {
         debugShowCheckedModeBanner: debugShowCheckedModeBanner,
         theme: theme(Brightness.light),
         darkTheme: theme(Brightness.dark),
-        themeMode: selected.mode,
+        themeMode: switch (selected.mode) {
+          FrostThemeMode.system => ThemeMode.system,
+          FrostThemeMode.light => ThemeMode.light,
+          FrostThemeMode.dark => ThemeMode.dark,
+        },
         themeAnimationDuration: reduced ? Duration.zero : FrostMotion.layoutFade,
         themeAnimationCurve: Curves.easeInOutCubic,
         locale: locale,
@@ -79,9 +83,9 @@ class FrostApp extends StatelessWidget {
         builder: (context, child) {
           final data = MediaQuery.of(context);
           final targetBrightness = switch (selected.mode) {
-            ThemeMode.light => Brightness.light,
-            ThemeMode.dark => Brightness.dark,
-            ThemeMode.system => data.platformBrightness,
+            FrostThemeMode.light => Brightness.light,
+            FrostThemeMode.dark => Brightness.dark,
+            FrostThemeMode.system => data.platformBrightness,
           };
           return MediaQuery(
             data: data.copyWith(disableAnimations: reduced, textScaler: inheritedMedia?.textScaler ?? data.textScaler),

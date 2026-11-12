@@ -5,9 +5,9 @@ import 'baseline.dart';
 
 Widget _item(BuildContext context, int index) => SizedBox(height: 48, child: FrostText('Item $index', tone: FrostTextTone.primary));
 
-Widget _pages(BuildContext context) => DefaultTabController(
+Widget _pages(BuildContext context) => FrostDefaultTabController(
   length: 2,
-  child: TabBarView(
+  child: FrostTabView(
     children: [
       FrostKeepAlive(child: Column(children: [for (var i = 0; i < 6; i++) _item(context, i)])),
       const FrostKeepAlive(

@@ -19,7 +19,7 @@ void main() {
         alignment: Alignment.topLeft,
         child: SizedBox(
           width: width,
-          child: DefaultTabController(
+          child: FrostDefaultTabController(
             length: tabs?.length ?? 3,
             child: FrostTabBar(
               scrollable: scrollable,
