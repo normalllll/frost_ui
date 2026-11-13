@@ -62,7 +62,7 @@ void main() {
     await tester.pump();
     expect(position.extentBefore, greaterThan(0));
     expect(position.extentAfter, greaterThan(0));
-    expect(find.descendant(of: find.byType(FrostScrollEdgeFade), matching: find.byType(ShaderMask)), findsOneWidget);
+    expect(tester.widget<FrostEdgeFadeMask>(find.descendant(of: find.byType(FrostScrollEdgeFade), matching: find.byType(FrostEdgeFadeMask))).fades, isTrue);
     await tester.tap(find.text('L.clearAll'));
     expect(clear, 1);
     expect(chipClear, 0);

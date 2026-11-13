@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/media.dart';
 import 'package:frost_ui/src/primitives/_media_selection.dart';
+import 'package:frost_ui/src/primitives/_scroll_edge_fade.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'media_frame_test.dart' show ControlledImage;
@@ -48,7 +49,7 @@ void main() {
     expect(_position(tester).pixels, greaterThan(30000));
     expect(built.length, lessThan(30));
     expect(_position(tester).isScrollingNotifier.value, isFalse);
-    expect(find.byType(ShaderMask), findsOneWidget);
+    expect(find.byType(FrostEdgeFadeMask), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
   testWidgets('strip keyboard is one stop, mirrors arrows and supports Home End', (tester) async {
@@ -141,7 +142,7 @@ void main() {
       }
       final selectedThumb = find.byWidgetPredicate((w) => w is FrostThumbnail && w.selected);
       expect(tester.getRect(selectedThumb).right, closeTo(295, .001));
-      final mask = tester.renderObject<RenderShaderMask>(find.byType(ShaderMask));
+      final mask = tester.renderObject<RenderShaderMask>(find.byType(FrostEdgeFadeMask));
       expect(mask.blendMode, BlendMode.dstIn);
       await tester.pumpWidget(const SizedBox());
     }

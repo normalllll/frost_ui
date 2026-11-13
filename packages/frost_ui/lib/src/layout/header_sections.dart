@@ -218,6 +218,9 @@ class _RenderSectionedHeader extends RenderBox with SlottedContainerRenderObject
   /// Whether the tabs sit in the header row.
   bool _merged = false;
   bool _laying = false, _relayoutScheduled = false;
+
+  /// The tabs at their natural width, the width the header row must hold.
+  Size _tabsNatural = Size.zero;
   double _headerHeight = 0;
   final _clip = LayerHandle<ClipRectLayer>();
 
@@ -275,7 +278,7 @@ class _RenderSectionedHeader extends RenderBox with SlottedContainerRenderObject
 
   double get _sectionsWidth {
     final trailing = _trailing;
-    return _tabs!.size.width + (trailing == null ? 0 : _trailingGap + trailing.size.width);
+    return _tabsNatural.width + (trailing == null ? 0 : _trailingGap + trailing.size.width);
   }
 
   bool _fits() {
@@ -294,11 +297,15 @@ class _RenderSectionedHeader extends RenderBox with SlottedContainerRenderObject
     _headerHeight = header.size.height;
     trailing?.layout(BoxConstraints(maxWidth: width, maxHeight: constraints.maxHeight), parentUsesSize: true);
     // Natural width first: whether the header row's free stretch holds it.
-    tabs.layout(BoxConstraints(maxHeight: constraints.maxHeight), parentUsesSize: true);
+    // Measured, not laid out: a layout without a width bound would let an
+    // overflowing tab strip fit, which clamps its scroll offset to the start
+    // before the real layout narrows it again.
+    _tabsNatural = tabs.getDryLayout(BoxConstraints(maxHeight: constraints.maxHeight));
     _merged = _fits();
     final ltr = _direction == TextDirection.ltr;
     (header.parentData! as BoxParentData).offset = Offset.zero;
     if (_merged) {
+      tabs.layout(BoxConstraints(maxWidth: _tabsNatural.width, maxHeight: constraints.maxHeight), parentUsesSize: true);
       size = constraints.constrain(Size(width, _headerHeight));
     } else {
       // The first label starts on the side inset; tab labels carry their own.

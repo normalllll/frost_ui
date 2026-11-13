@@ -264,7 +264,7 @@ class _EdgeFadeScrollViewState extends State<_EdgeFadeScrollView> {
         ),
       ),
     );
-    return _EdgeFadeMask(
+    return FrostEdgeFadeMask(
       fades: _fadeTop || _fadeBottom,
       shader: (bounds) {
         final edge = (_fadeExtent / math.max(1.0, bounds.height)).clamp(0.0, .5);
@@ -277,43 +277,6 @@ class _EdgeFadeScrollViewState extends State<_EdgeFadeScrollView> {
       },
       child: list,
     );
-  }
-}
-
-/// A mask that is in the tree whether or not it fades, so the list under it keeps
-/// its state and focus as the fades come and go. It takes a layer only to fade.
-class _EdgeFadeMask extends SingleChildRenderObjectWidget {
-  const _EdgeFadeMask({required this.fades, required this.shader, required super.child});
-  final bool fades;
-  final ShaderCallback shader;
-
-  @override
-  RenderObject createRenderObject(BuildContext context) => _RenderEdgeFadeMask(shader, fades);
-
-  @override
-  void updateRenderObject(BuildContext context, _RenderEdgeFadeMask renderObject) => renderObject
-    ..shaderCallback = shader
-    ..fades = fades;
-}
-
-class _RenderEdgeFadeMask extends RenderShaderMask {
-  _RenderEdgeFadeMask(ShaderCallback shader, this._fades) : super(shaderCallback: shader, blendMode: BlendMode.dstIn);
-  bool _fades;
-  set fades(bool value) {
-    if (value == _fades) return;
-    _fades = value;
-    markNeedsCompositingBitsUpdate();
-    markNeedsPaint();
-  }
-
-  @override
-  bool get alwaysNeedsCompositing => _fades && super.alwaysNeedsCompositing;
-
-  @override
-  void paint(PaintingContext context, Offset offset) {
-    if (_fades) return super.paint(context, offset);
-    layer = null;
-    if (child case final child?) context.paintChild(child, offset);
   }
 }
 

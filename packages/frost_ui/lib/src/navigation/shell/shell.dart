@@ -49,6 +49,7 @@ import '../../overlays/popover.dart';
 import '../../overlays/sheet.dart';
 import '../../primitives/_directional_icon.dart';
 import '../../primitives/_page_outline.dart';
+import '../../primitives/_scroll_edge_fade.dart';
 import '../../primitives/click_surface.dart';
 import '../../primitives/divider.dart';
 import '../../primitives/glyph.dart';

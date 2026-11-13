@@ -135,13 +135,15 @@ class _RenderTabsWithTrailing extends RenderBox with SlottedContainerRenderObjec
       size = tabs.size;
       return;
     }
-    // Natural widths first: whether one row holds both. The controls are
-    // asked rather than laid out twice, so a toolbar fits itself only once.
-    tabs.layout(BoxConstraints(maxHeight: height), parentUsesSize: true);
+    // Natural widths first: whether one row holds both. Both are asked rather
+    // than laid out twice, so a toolbar fits itself only once, and an
+    // overflowing tab strip never sees a width that lets it fit, which would
+    // clamp its scroll offset to the start.
+    final tabsNatural = tabs.getDryLayout(BoxConstraints(maxHeight: height)).width;
     final natural = trailing.getMaxIntrinsicWidth(height);
     final ltr = _direction == TextDirection.ltr;
     final room = natural == 0 ? 0.0 : natural + _gap;
-    if (tabs.size.width + room <= width + .5) {
+    if (tabsNatural + room <= width + .5) {
       trailing.layout(BoxConstraints(maxWidth: natural, maxHeight: height), parentUsesSize: true);
       tabs.layout(BoxConstraints(maxWidth: math.max(0, width - room), maxHeight: height), parentUsesSize: true);
       final row = math.max(tabs.size.height, trailing.size.height);

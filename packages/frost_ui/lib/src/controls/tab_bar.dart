@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show listEquals, precisionErrorTolerance;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:material_ui/material_ui.dart' show TabBarView, TabController;
@@ -10,17 +10,22 @@ import '../foundation/_control_geometry.dart';
 import '../foundation/_key_bindings.dart';
 import '../foundation/_tab_metrics.dart';
 import '../foundation/density.dart';
+import '../foundation/input_feedback.dart';
 import '../foundation/metrics.dart';
 import '../foundation/radius.dart';
+import '../foundation/scope.dart';
 import '../foundation/sizes.dart';
 import '../foundation/tokens.dart';
 import '../foundation/typography.dart';
 import '../primitives/_click_feedback.dart';
 import '../primitives/_click_surface_visuals.dart';
+import '../primitives/_directional_icon.dart';
 import '../primitives/_measured_layout_builder.dart';
+import '../primitives/_scroll_edge_fade.dart';
 import '../primitives/click_surface.dart';
 import '../primitives/icon.dart';
 import '../primitives/keyline.dart';
+import 'buttons.dart';
 
 class FrostTab {
   const FrostTab({required this.label, this.icon, this.secondaryLabel});
@@ -52,7 +57,9 @@ class FrostTabBar extends StatefulWidget {
 
 class _AppTabBarState extends State<FrostTabBar> with TickerProviderStateMixin {
   _IndicatorTabController? _visual;
-  final _scroll = ScrollController();
+  late final ScrollController _scroll = ScrollController()..addListener(() => _updateEdges(_scroll.position));
+  // Whether tabs lie before and after the visible part of an overflowing strip.
+  final _edges = ValueNotifier((back: false, forward: true));
   final _nodes = <FocusNode>[];
   int _lastIndex = 0;
 
@@ -133,6 +140,7 @@ class _AppTabBarState extends State<FrostTabBar> with TickerProviderStateMixin {
     _visual?.source.removeListener(_selectionChanged);
     _visual?.dispose();
     _scroll.dispose();
+    _edges.dispose();
     for (final node in _nodes) {
       node.dispose();
     }
@@ -182,31 +190,35 @@ class _AppTabBarState extends State<FrostTabBar> with TickerProviderStateMixin {
                         child: SizedBox(height: 1 / MediaQuery.devicePixelRatioOf(context)),
                       ),
                     ),
-                  SingleChildScrollView(
-                    controller: _scroll,
-                    scrollDirection: Axis.horizontal,
-                    child: SizedBox(
-                      width: contentWidth,
-                      height: hitHeight,
-                      child: CustomPaint(
-                        foregroundPainter: _IndicatorPainter(tokens.keyGraphicOn(tokens.surface), _visual!.animation, centers, visualInset),
-                        child: Row(
-                          children: [
-                            for (var i = 0; i < widget.tabs.length; i++)
-                              SizedBox(
-                                width: widths[i],
-                                height: hitHeight,
-                                child: _TabLabel(
-                                  tab: widget.tabs[i],
-                                  index: i,
-                                  controller: _visual!.source,
-                                  height: geometry.height,
-                                  size: widget.size ?? FrostControlSize.regular,
-                                  focusNode: _nodes[i],
-                                  onTap: () => _activate(i),
+                  _overflowCue(
+                    bounded: constraints.hasBoundedWidth,
+                    overflows: contentWidth > available + precisionErrorTolerance,
+                    child: SingleChildScrollView(
+                      controller: _scroll,
+                      scrollDirection: Axis.horizontal,
+                      child: SizedBox(
+                        width: contentWidth,
+                        height: hitHeight,
+                        child: CustomPaint(
+                          foregroundPainter: _IndicatorPainter(tokens.keyGraphicOn(tokens.surface), _visual!.animation, centers, visualInset),
+                          child: Row(
+                            children: [
+                              for (var i = 0; i < widget.tabs.length; i++)
+                                SizedBox(
+                                  width: widths[i],
+                                  height: hitHeight,
+                                  child: _TabLabel(
+                                    tab: widget.tabs[i],
+                                    index: i,
+                                    controller: _visual!.source,
+                                    height: geometry.height,
+                                    size: widget.size ?? FrostControlSize.regular,
+                                    focusNode: _nodes[i],
+                                    onTap: () => _activate(i),
+                                  ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -218,6 +230,67 @@ class _AppTabBarState extends State<FrostTabBar> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  /// Tabs past an edge fade out towards it. With a mouse, step buttons at the
+  /// bar's end page the strip, so the hidden tabs need no wheel, touchpad or
+  /// key.
+  /// The strip keeps its place in the tree as the cue comes and goes, so its
+  /// tabs keep their state and focus.
+  Widget _overflowCue({required bool bounded, required bool overflows, required Widget child}) {
+    final faded = NotificationListener<ScrollMetricsNotification>(
+      onNotification: (notification) {
+        _updateEdges(notification.metrics);
+        return false;
+      },
+      child: FrostScrollEdgeFade(controller: _scroll, active: overflows, child: child),
+    );
+    return FrostInputBuilder(
+      builder: (context, input) => ValueListenableBuilder(
+        valueListenable: _edges,
+        builder: (context, edges, _) {
+          final steps = overflows && input.hoverAvailable;
+          return Row(
+            children: [
+              // Measured without a width bound, the strip takes its natural width.
+              Flexible(key: const ValueKey('strip'), flex: bounded ? 1 : 0, fit: FlexFit.tight, child: faded),
+              // Both steps sit at the end, so the first tab stays on the content edge.
+              if (steps) ...[_step(previous: true, enabled: edges.back), _step(previous: false, enabled: edges.forward)],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // Keyboard users move between tabs with the arrow keys, which also scroll.
+  Widget _step({required bool previous, required bool enabled}) => ExcludeFocus(
+    child: FrostButton.icon(
+      label: previous ? FrostScope.labelsOf(context).previous : FrostScope.labelsOf(context).next,
+      size: FrostControlSize.compact,
+      icon: frostStepChevron(context, previous: previous),
+      onPressed: enabled ? () => _page(previous ? -1 : 1) : null,
+    ),
+  );
+
+  void _updateEdges(ScrollMetrics metrics) {
+    if (metrics.axis != Axis.horizontal) return;
+    _edges.value = (
+      back: metrics.pixels > metrics.minScrollExtent + precisionErrorTolerance,
+      forward: metrics.pixels < metrics.maxScrollExtent - precisionErrorTolerance,
+    );
+  }
+
+  void _page(int direction) {
+    if (!_scroll.hasClients) return;
+    final position = _scroll.position;
+    final target = (position.pixels + position.viewportDimension * .8 * direction).clamp(position.minScrollExtent, position.maxScrollExtent);
+    final duration = FrostMotion.duration(context, FrostMotion.expand);
+    if (duration == Duration.zero) {
+      _scroll.jumpTo(target);
+    } else {
+      _scroll.animateTo(target, duration: duration, curve: Curves.easeOutCubic);
+    }
   }
 
   double _labelWidth(BuildContext context, FrostTab tab) {
@@ -475,6 +548,7 @@ class FrostDefaultTabController extends StatefulWidget {
     : assert(length >= 0),
       assert(length == 0 || (initialIndex >= 0 && initialIndex < length));
   final int length;
+
   /// The tab selected when the controller is created. Later changes do not
   /// move the selection; only a changed [length] or [animationDuration] creates
   /// a controller again, which keeps the current index within the new length.

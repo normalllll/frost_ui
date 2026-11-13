@@ -3,11 +3,12 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
+import 'package:frost_ui/src/primitives/_scroll_edge_fade.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'support.dart';
 
-Finder get shelfMask => find.descendant(of: find.byType(FrostShelf), matching: find.byType(ShaderMask));
+Finder get shelfMask => find.descendant(of: find.byType(FrostShelf), matching: find.byType(FrostEdgeFadeMask));
 ScrollPosition position(WidgetTester tester) =>
     tester.stateList<ScrollableState>(find.byType(Scrollable)).singleWhere((s) => s.position.axis == Axis.horizontal).position;
 FrostButton button(WidgetTester tester, String label) => tester.widget<FrostButton>(find.byWidgetPredicate((w) => w is FrostButton && w.label == 'L.$label'));
