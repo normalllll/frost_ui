@@ -1,13 +1,13 @@
 import 'dart:ui' show Tristate;
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/display/_rich_text_parser.dart';
 import 'package:frost_ui/src/display/expandable_text.dart' show frostExpandableTextFadeWidth, FrostExpandableTextPainter;
 import 'package:frost_ui/src/display/rich_text.dart' show FrostRichTextState;
+import 'package:material_ui/material_ui.dart';
 
 import 'support.dart';
 

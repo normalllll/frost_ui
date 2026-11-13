@@ -1,6 +1,6 @@
-import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
-import 'package:flutter/material.dart' show FadeForwardsPageTransitionsBuilder, PredictiveBackPageTransitionsBuilder, Theme;
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show FadeForwardsPageTransitionsBuilder, PredictiveBackPageTransitionsBuilder, Theme;
 
 import '../foundation/_layout_scope.dart';
 import '../foundation/density.dart';

@@ -1,7 +1,6 @@
 import 'dart:ui' show Tristate;
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,6 +17,7 @@ import 'package:frost_ui/src/primitives/_on_media_chrome_scope.dart' show FrostO
 import 'package:frost_ui/src/primitives/_state_button.dart' show FrostStateButton;
 import 'package:frost_ui/src/primitives/caption_glyph.dart' show FrostCaptionGlyph;
 import 'package:frost_ui/src/surface/_window_background.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'material_reveal_test.dart' show expectSafeLayers, parameters, filter;
 import 'support.dart';

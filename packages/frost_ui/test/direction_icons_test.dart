@@ -1,12 +1,12 @@
 // Arrows and chevrons point the way the text reads under icon sets whose
 // glyphs mirror themselves in right-to-left text and sets whose glyphs do not.
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/media.dart';
 import 'package:frost_ui/src/controls/_calendar.dart';
 import 'package:frost_ui/src/foundation/icon_data.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'support.dart';
 import 'window_caption_test.dart' show FakeWindow;

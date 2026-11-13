@@ -1,6 +1,5 @@
 import 'dart:ui' show Tristate, ImageByteFormat;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +8,7 @@ import 'package:frost_ui/src/controls/_field_chrome.dart';
 import 'package:frost_ui/src/controls/_field_frame.dart';
 import 'package:frost_ui/src/foundation/color_math.dart' show colorContrast;
 import 'package:frost_ui/src/primitives/_text_selection_chrome.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'support.dart';
 

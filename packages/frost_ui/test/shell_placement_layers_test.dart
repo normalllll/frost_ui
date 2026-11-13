@@ -1,5 +1,4 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/desktop.dart';
@@ -9,6 +8,7 @@ import 'package:frost_ui/src/navigation/back_to_first_button.dart' show FrostBac
 import 'package:frost_ui/src/navigation/window_caption.dart' show FrostCaptionButtons;
 import 'package:frost_ui/src/overlays/_menu_panel.dart';
 import 'package:frost_ui/src/primitives/_on_media_chrome_scope.dart' show FrostOnMediaChromeScope;
+import 'package:material_ui/material_ui.dart';
 
 import 'support.dart';
 import 'window_caption_test.dart' show FakeWindow;

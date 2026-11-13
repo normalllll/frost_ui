@@ -1,12 +1,12 @@
 // One case per public constructor of an interactive component: buttons,
 // toggles, inputs, pickers, and rows or cards that can be clicked.
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/desktop.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/media.dart';
 import 'package:frost_ui/social.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../support.dart' show testFonts, testIcons, testLabels;
 import 'harness.dart';

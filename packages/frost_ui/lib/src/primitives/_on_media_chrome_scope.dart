@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart' show Theme, ThemeData;
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show Theme, ThemeData;
 
 import '../foundation/field_appearance.dart';
 import '../foundation/tokens.dart';

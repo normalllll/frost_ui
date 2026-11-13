@@ -1,7 +1,7 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart' show Theme;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show Theme;
 
 import '_focus_modality.dart';
 import 'density.dart';

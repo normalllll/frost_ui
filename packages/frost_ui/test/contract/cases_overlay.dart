@@ -1,9 +1,9 @@
 // Dialogs, sheets, confirmations, form dialogs, menus and popovers. Every case
 // opens an overlay that shows `overlayMarker`; cases whose content cannot hold
 // a caller's PopScope skip the PopScope checks.
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'harness.dart';
 

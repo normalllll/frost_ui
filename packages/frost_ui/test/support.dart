@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
@@ -6,6 +5,7 @@ import 'package:frost_ui/src/controls/_button_control.dart';
 import 'package:frost_ui/src/controls/_button_types.dart';
 import 'package:frost_ui/src/overlays/overlay_region.dart';
 import 'package:frost_ui/src/primitives/_focus_outline.dart';
+import 'package:material_ui/material_ui.dart';
 
 export 'package:frost_ui/src/controls/_button_types.dart' show FrostButtonVariant, FrostIconButtonStyle;
 

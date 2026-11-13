@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Controlled fixtures, not a substitute for App GlobalMaterialLocalizations.
 /// Non-English samples deliberately live only in test/.

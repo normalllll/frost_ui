@@ -4,7 +4,7 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:frost_ui/frost_ui.dart';
 
 final _window = FrostWindowController(minimumSize: const Size(640, 480));

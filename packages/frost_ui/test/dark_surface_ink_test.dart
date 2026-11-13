@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +11,7 @@ import 'package:frost_ui/src/controls/_field_options.dart';
 import 'package:frost_ui/src/controls/_field_trigger.dart';
 import 'package:frost_ui/src/foundation/color_math.dart' show colorContrast;
 import 'package:frost_ui/src/overlays/_menu_item.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'support.dart';
 

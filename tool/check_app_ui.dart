@@ -205,7 +205,8 @@ List<Finding> scanSource(String source, String relativePath) {
     final declared = parsed.comments.any(
       (c) =>
           (firstCode < 0 || c.start < firstCode) &&
-          RegExp(r'^//\s*(?:app-owned|frost-escape):\s*\S[^\r\n]*$').hasMatch(c.value.trim()),
+          RegExp(r'^//\s*(?:app-owned|frost-escape):\s*\S[^\r\n]*$')
+              .hasMatch(c.value.trim()),
     );
     if (!declared) add(Rule.r9, 0);
   }
@@ -220,7 +221,9 @@ List<Finding> scanSource(String source, String relativePath) {
         if (literal.start >= statement.start &&
             literal.end <= statement.end &&
             (literal.value == 'package:flutter/material.dart' ||
-                literal.value == 'package:flutter/cupertino.dart')) {
+                literal.value == 'package:flutter/cupertino.dart' ||
+                literal.value.startsWith('package:material_ui/') ||
+                literal.value.startsWith('package:cupertino_ui/'))) {
           add(Rule.r1, literal.start);
         }
       }

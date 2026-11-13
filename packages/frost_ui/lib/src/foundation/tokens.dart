@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart' show listEquals;
-import 'package:flutter/material.dart' show Theme, ThemeExtension;
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show Theme, ThemeExtension;
 
 import '_glass_material.dart';
 import '_missing_theme.dart';

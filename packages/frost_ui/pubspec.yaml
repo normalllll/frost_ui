@@ -4,7 +4,7 @@ publish_to: none
 version: 0.3.0
 
 environment:
-  sdk: ^3.12.1
+  sdk: ^3.13.0
   flutter: ">=3.47.0"
 
 dependencies:
@@ -12,6 +12,8 @@ dependencies:
     path: ../frost_window
   flutter:
     sdk: flutter
+  material_ui: ^1.11.0
+  cupertino_ui: ^1.1.6
   skeletonizer: ^3.0.0
   waterfall_flow: ^3.1.1
 

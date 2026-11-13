@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/controls/_field_frame.dart';
 import 'package:frost_ui/src/layout/_caption_search_scope.dart';
 import 'package:frost_ui/src/navigation/window_caption.dart' show FrostCaptionButtons;
 import 'package:frost_ui/src/overlays/_popover_surface.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'support.dart';
 import 'window_caption_test.dart' show FakeWindow;

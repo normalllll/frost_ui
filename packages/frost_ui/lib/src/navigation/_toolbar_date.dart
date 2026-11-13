@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart' show MaterialLocalizations;
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show MaterialLocalizations;
 
 import '../controls/_calendar.dart';
 import '../controls/buttons.dart';

@@ -1,6 +1,6 @@
 // Helpers shared by the controls baseline files: owned controllers and focus
 // nodes, so a case builder can stay a plain expression.
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Builds [builder] with a [TextEditingController] (starting at [text]) and a
 /// [FocusNode] that live and are disposed with this widget.

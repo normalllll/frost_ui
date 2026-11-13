@@ -1,10 +1,10 @@
 // Non-interactive display and layout components. Constructors that differ get
 // their own case; slivers are placed in a scroll view.
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/media.dart';
 import 'package:frost_ui/social.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../support.dart' show testIcons;
 import 'harness.dart';

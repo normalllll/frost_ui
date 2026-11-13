@@ -1,7 +1,7 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart' show AdaptiveTextSelectionToolbar, MaterialTextSelectionControls, desktopTextSelectionControls;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show AdaptiveTextSelectionToolbar, MaterialTextSelectionControls, desktopTextSelectionControls;
 
 import '../controls/buttons.dart';
 import '../foundation/input_feedback.dart';

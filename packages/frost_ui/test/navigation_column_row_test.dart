@@ -1,5 +1,4 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
@@ -7,6 +6,8 @@ import 'package:frost_ui/src/layout/_column_split.dart';
 import 'package:frost_ui/src/layout/_content_padding.dart';
 import 'package:frost_ui/src/layout/navigation_column_row.dart' show FrostNavigationColumnFocus, frostNavigationRowTextStart;
 import 'package:frost_ui/src/navigation/_navigation_tile.dart';
+import 'package:material_ui/material_ui.dart';
+
 import 'support.dart';
 
 const _labels = ['Alpha', 'Bravo', 'Charlie'];

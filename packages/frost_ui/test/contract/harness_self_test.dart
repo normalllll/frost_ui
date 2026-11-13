@@ -1,10 +1,10 @@
 // Proves that every check can fail: each one runs against a deliberately
 // violating widget (which must be judged a failure) and a compliant one (which
 // must pass). A check that cannot fail would let a whole family go green.
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'harness.dart';
 

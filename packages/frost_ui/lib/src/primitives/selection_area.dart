@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart' show SelectionArea, SelectionAreaState;
 import 'package:flutter/rendering.dart' show SelectedContent;
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show SelectionArea, SelectionAreaState;
 
 import '../foundation/_key_bindings.dart';
 import '_text_selection_chrome.dart';

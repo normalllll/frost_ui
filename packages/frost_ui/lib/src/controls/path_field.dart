@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart' show SelectionArea;
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show SelectionArea;
 
 import '../feedback/_skeleton_geometry.dart';
 import '../foundation/control_scope.dart';

@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/controls/_button_control.dart';
@@ -8,6 +7,7 @@ import 'package:frost_ui/src/display/_avatar_seed.dart';
 import 'package:frost_ui/src/foundation/color_math.dart' show colorContrast;
 import 'package:frost_ui/src/overlays/_menu_item.dart';
 import 'package:frost_ui/src/primitives/_icon_slot.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'display_badges_test.dart' show display;
 import 'support.dart';

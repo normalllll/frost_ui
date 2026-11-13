@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/display/_data_track.dart';
+import 'package:material_ui/material_ui.dart';
+
 import 'display_badges_test.dart' show display;
 
 Finder get trackPaint => find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FrostDataTrackPainter);

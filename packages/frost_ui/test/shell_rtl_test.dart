@@ -1,9 +1,10 @@
 // The sidebar sits on the reading start: the left edge in left-to-right text
 // and the right edge in right-to-left text, with the page inset from it.
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/navigation/window_caption.dart' show FrostCaptionButtons;
+import 'package:material_ui/material_ui.dart';
+
 import 'support.dart';
 import 'window_caption_test.dart' show FakeWindow;
 

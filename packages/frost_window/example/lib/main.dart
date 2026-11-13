@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:frost_ui/frost_ui.dart';
 
 // Manual test bench for the native window: caption drag and double-click,
@@ -168,7 +168,7 @@ class ExampleApp extends StatefulWidget {
 }
 
 class _ExampleAppState extends State<ExampleApp> {
-  ThemeMode _mode = ThemeMode.light;
+  FrostThemeMode _mode = FrostThemeMode.light;
   bool _mica = true;
   int _selected = 0;
   final _homeKey = GlobalKey<_HomePageState>();
@@ -197,7 +197,7 @@ class _ExampleAppState extends State<ExampleApp> {
       FrostButton(
         label: 'Toggle light and dark',
         size: FrostControlSize.compact,
-        onPressed: () => _change(() => _mode = _mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark),
+        onPressed: () => _change(() => _mode = _mode == FrostThemeMode.dark ? FrostThemeMode.light : FrostThemeMode.dark),
       ),
       FrostButton(label: _mica ? 'Mica: on' : 'Mica: off', size: FrostControlSize.compact, onPressed: () => _change(() => _mica = !_mica)),
     ],

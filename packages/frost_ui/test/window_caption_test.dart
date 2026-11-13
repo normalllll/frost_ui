@@ -1,5 +1,4 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +8,7 @@ import 'package:frost_ui/src/navigation/window_caption.dart' show FrostCaptionBu
 import 'package:frost_ui/src/primitives/_focus_outline.dart';
 import 'package:frost_ui/src/primitives/_state_button.dart';
 import 'package:frost_ui/src/primitives/caption_glyph.dart' show FrostCaptionGlyph, FrostCaptionGlyphKind;
+import 'package:material_ui/material_ui.dart';
 
 import 'support.dart';
 

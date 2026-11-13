@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
-import 'package:flutter/material.dart' show MaterialApp, ThemeData, ThemeMode;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show GlobalMaterialLocalizations, MaterialApp, ThemeData, ThemeMode;
 import 'package:skeletonizer/skeletonizer.dart';
 
 import '../controls/toast.dart';
@@ -39,6 +39,10 @@ class FrostApp extends StatelessWidget {
   final FrostDensity density;
   final Locale? locale;
   final Iterable<Locale> supportedLocales;
+  /// Delegates of the app. Frost adds the Material, Cupertino and Widgets
+  /// delegates after them, so an app delegate of the same type wins; apps need
+  /// not pass flutter_localizations' legacy Material delegate, which the Material
+  /// widgets under Frost cannot read.
   final Iterable<LocalizationsDelegate<dynamic>>? localizationsDelegates;
   final TransitionBuilder? builder;
   final bool debugShowCheckedModeBanner;
@@ -79,7 +83,7 @@ class FrostApp extends StatelessWidget {
         themeAnimationCurve: Curves.easeInOutCubic,
         locale: locale,
         supportedLocales: supportedLocales,
-        localizationsDelegates: localizationsDelegates,
+        localizationsDelegates: [...?localizationsDelegates, ...GlobalMaterialLocalizations.delegates],
         builder: (context, child) {
           final data = MediaQuery.of(context);
           final targetBrightness = switch (selected.mode) {

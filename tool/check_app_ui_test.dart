@@ -137,7 +137,7 @@ void main() {
       audit
           .scanSource(
             '// app-owned: reader body\n'
-            'CustomPaint(); TextStyle(fontSize: 22, height: 2); Text(x); BoxDecoration();',
+                'CustomPaint(); TextStyle(fontSize: 22, height: 2); Text(x); BoxDecoration();',
             'ui/custom/reader.dart',
           )
           .isEmpty,
@@ -147,12 +147,17 @@ void main() {
       audit
           .scanSource(
             '// app-owned: reader body\n'
-            "import 'package:flutter/material.dart'; Icons.add; Colors.red; BorderRadius.circular(4);",
+                "import 'package:flutter/material.dart'; Icons.add; Colors.red; BorderRadius.circular(4);",
             'ui/custom/reader.dart',
           )
           .map((f) => f.rule)
           .toSet()
-          .containsAll([audit.Rule.r1, audit.Rule.r3, audit.Rule.r4, audit.Rule.r7]),
+          .containsAll([
+            audit.Rule.r1,
+            audit.Rule.r3,
+            audit.Rule.r4,
+            audit.Rule.r7,
+          ]),
       'app-owned widgets take no Material, icons, literal colours or numeric radii',
     );
     check(
@@ -166,6 +171,16 @@ void main() {
           audit.Rule.r1,
       'conditional import',
     );
+    for (final uri in [
+      'package:material_ui/material_ui.dart',
+      'package:material_ui/widgets.dart',
+      'package:cupertino_ui/cupertino_ui.dart',
+    ])
+      check(
+        audit.scanSource("import '$uri';", 'a.dart').single.rule ==
+            audit.Rule.r1,
+        'import of ' + uri,
+      );
     check(
       audit
           .scanSource('Container(child: Foo(decoration: x));', 'a.dart')

@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart' show MaterialLocalizations;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show MaterialLocalizations;
 
 import '../feedback/_skeleton_geometry.dart';
 import '../foundation/_key_bindings.dart';

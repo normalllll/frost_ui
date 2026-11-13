@@ -1,6 +1,7 @@
 import 'dart:math' as math;
-import 'package:flutter/material.dart' show Theme, ThemeExtension;
+
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show Theme, ThemeExtension;
 
 import '_missing_theme.dart';
 import 'sizes.dart';

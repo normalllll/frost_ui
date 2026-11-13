@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart' show ButtonStyle, Material, NoSplash;
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show ButtonStyle, Material, NoSplash;
 
 import '../primitives/_focus_outline.dart';
 import '../primitives/_on_media_chrome_scope.dart';

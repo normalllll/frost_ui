@@ -1,10 +1,10 @@
 import 'dart:ui' show PointerDeviceKind;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/foundation/_touch_targets.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'app_router_test.dart' show TestRouter;
 import 'support.dart';

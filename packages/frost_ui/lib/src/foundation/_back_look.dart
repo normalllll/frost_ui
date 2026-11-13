@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart' show Theme;
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show Theme;
 
 /// Library-only: how the shell's Back is drawn on the platform. Where Back
 /// sits is shared; its glyph and hover shape follow the platform's own.

@@ -1,12 +1,12 @@
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/display/_rich_text_parser.dart';
 import 'package:frost_ui/src/motion/_material_reveal.dart';
 import 'package:frost_ui/src/primitives/_measured_keyline.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'material_reveal_test.dart' show expectSafeLayers;
 import 'support.dart';

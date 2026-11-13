@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/layout/window_caption_scope.dart' show FrostHitKind;
 import 'package:frost_ui/src/navigation/window_caption.dart' show FrostCaptionButtons;
+import 'package:material_ui/material_ui.dart';
 
 import 'app_router_test.dart' show TestRouter;
 import 'support.dart';

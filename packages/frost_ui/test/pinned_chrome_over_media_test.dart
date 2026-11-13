@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/navigation/back_to_first_button.dart';
 import 'package:frost_ui/src/navigation/toolbar_menu_button.dart' show FrostToolbarControl;
 import 'package:frost_ui/src/primitives/_click_feedback.dart' show FrostInteractionDecoration;
 import 'package:frost_ui/src/primitives/_on_media_chrome_scope.dart' show FrostChromeOverMedia;
+import 'package:material_ui/material_ui.dart';
 
 import 'support.dart';
 

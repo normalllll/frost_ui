@@ -1,7 +1,7 @@
 // The frost_data components, checked by frost_ui's contract harness. Ids carry
 // the frost_data: prefix, as the file field of this package's gate rows does.
-import 'package:flutter/material.dart';
 import 'package:frost_data/frost_data.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../frost_ui/test/contract/harness.dart';
 

@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:frost_ui/src/feedback/refresh_indicator.dart' show FrostSliverFillBody;
+import 'package:material_ui/material_ui.dart';
 
 import 'baseline.dart';
 

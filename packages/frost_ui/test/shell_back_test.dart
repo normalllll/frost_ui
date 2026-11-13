@@ -1,5 +1,4 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
@@ -9,6 +8,8 @@ import 'package:frost_ui/src/navigation/window_caption.dart' show FrostCaptionBu
 import 'package:frost_ui/src/primitives/_click_feedback.dart';
 import 'package:frost_ui/src/primitives/_on_media_chrome_scope.dart' show FrostOnMediaChromeScope;
 import 'package:frost_ui/src/primitives/_state_button.dart' show FrostStateButton;
+import 'package:material_ui/material_ui.dart';
+
 import 'support.dart';
 import 'window_caption_test.dart' show FakeWindow;
 
@@ -104,9 +105,7 @@ void main() {
         final native = tester.widgetList<FrostStateButton>(find.descendant(of: find.byType(FrostCaptionButtons), matching: find.byType(FrostStateButton)));
         expect(native, hasLength(3));
         for (final button in native) {
-          for (final state in [WidgetState.hovered, WidgetState.pressed]) {
-            expect(button.shape, const RoundedRectangleBorder());
-          }
+          expect(button.shape, const RoundedRectangleBorder());
         }
       }
       expect(tester.takeException(), isNull);

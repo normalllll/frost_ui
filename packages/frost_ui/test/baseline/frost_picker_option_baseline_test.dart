@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart' show Color;
 import 'package:flutter/widgets.dart' show Widget;
 import 'package:frost_ui/frost_ui.dart';
+import 'package:material_ui/material_ui.dart' show Color;
 
 import 'baseline.dart';
 

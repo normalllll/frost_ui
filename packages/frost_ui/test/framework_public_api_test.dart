@@ -82,8 +82,9 @@ void main() {
 
   test('the barrel exports no Material library', () {
     final source = File('lib/frost_ui.dart').readAsStringSync();
-    expect(source, isNot(contains('package:flutter/material.dart')));
-    expect(source, isNot(contains('package:flutter/cupertino.dart')));
+    expect(source, isNot(contains('package:material_ui/')));
+    expect(source, isNot(contains('package:cupertino_ui/')));
+    expect(source, isNot(contains(RegExp(r'package:flutter/(material|cupertino)\.dart'))));
     expect(source, contains('package:flutter/services.dart'));
   });
 }

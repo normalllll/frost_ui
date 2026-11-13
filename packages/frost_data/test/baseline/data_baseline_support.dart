@@ -1,8 +1,8 @@
 // Fixtures shared by the frost_data baseline files.
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:frost_data/frost_data.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../frost_ui/test/baseline/feedback_baseline_support.dart';
 

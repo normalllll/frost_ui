@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+
 import 'support.dart';
 
 class TestRouter extends RouterDelegate<Object> with ChangeNotifier, PopNavigatorRouterDelegateMixin<Object> {
@@ -141,7 +142,7 @@ void main() {
         routerConfig: RouterConfig<Object>(routerDelegate: delegate),
         builder: (context, child) {
           expect(Theme.of(context).textTheme.bodyMedium!.fontFamily, testFonts.simplifiedChinese);
-          expect(MaterialLocalizations.of(context), isA<DefaultMaterialLocalizations>());
+          expect(MaterialLocalizations.of(context), isA<MaterialLocalizationEn>());
           return child!;
         },
       ),

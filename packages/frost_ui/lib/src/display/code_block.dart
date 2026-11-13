@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart' show SelectableText;
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show SelectableText;
 
 import '../controls/_copy_feedback.dart';
 import '../feedback/_skeleton_geometry.dart';

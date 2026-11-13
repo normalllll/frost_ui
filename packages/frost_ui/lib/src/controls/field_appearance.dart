@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart' show Theme;
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show Theme;
 
 import '../foundation/control_scope.dart';
 import '../foundation/field_appearance.dart';

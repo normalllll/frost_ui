@@ -1,12 +1,12 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/foundation/_ambient_material.dart';
 import 'package:frost_ui/src/foundation/_media_contrast.dart';
 import 'package:frost_ui/src/foundation/color_math.dart' show colorContrast;
+import 'package:material_ui/material_ui.dart';
 
 FrostAmbientSample image(int width, int height, Color Function(int x, int y) pixel) => FrostAmbientSample(width, height, [
   for (var y = 0; y < height; y++)

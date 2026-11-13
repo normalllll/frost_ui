@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart' show MaterialLocalizations;
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show MaterialLocalizations;
 
 import '../foundation/_layout_scope.dart';
 import '../foundation/control_scope.dart';

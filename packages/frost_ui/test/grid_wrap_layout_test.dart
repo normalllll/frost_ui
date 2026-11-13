@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/layout/content_viewport.dart';
 import 'package:frost_ui/src/motion/_material_reveal.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'support.dart';
 

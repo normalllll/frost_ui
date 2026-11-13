@@ -1,10 +1,10 @@
 // IntrinsicHeight and IntrinsicWidth must agree with the real layout at the
 // widths a shrink-wrapped parent can actually give, with real content.
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/media.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'support.dart';
 

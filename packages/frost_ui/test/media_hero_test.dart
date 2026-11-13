@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/media/media_stage.dart' show FrostMediaStagePresentation;
+import 'package:material_ui/material_ui.dart';
 
 import 'media_test_image.dart';
 import 'support.dart';

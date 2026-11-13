@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/desktop.dart';
@@ -8,6 +7,7 @@ import 'package:frost_ui/src/controls/_close_control.dart';
 import 'package:frost_ui/src/controls/_control_surfaces.dart';
 import 'package:frost_ui/src/controls/_field_frame.dart';
 import 'package:frost_ui/src/primitives/_click_feedback.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'support.dart';
 

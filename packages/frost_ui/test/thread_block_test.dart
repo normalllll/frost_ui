@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/social.dart';
 import 'package:frost_ui/src/social/thread.dart' show FrostThreadRender;
+import 'package:material_ui/material_ui.dart';
 
 import 'support.dart';
 

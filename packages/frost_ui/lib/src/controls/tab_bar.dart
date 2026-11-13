@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show listEquals;
-import 'package:flutter/material.dart' show TabBarView, TabController;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show TabBarView, TabController;
 
 import '../feedback/_skeleton_geometry.dart';
 import '../foundation/_control_geometry.dart';

@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:frost_ui/frost_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A page of a pinned header over one scrolling body, composed from the public
 /// pieces: the header in a content column and the slivers in a sliver column
