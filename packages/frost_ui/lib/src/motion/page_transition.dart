@@ -68,11 +68,19 @@ Widget frostOwnedPageTransition(
             ),
           )
         : builder.buildTransitions(route, context, animation, secondaryAnimation, page);
+    // A page moves while it enters and while a page above it moves, as the
+    // pointer transition counts it: its nested glass starts blurring once it
+    // settles, not in the first frame a closing page above uncovers it.
     final guarded = AnimatedBuilder(
-      animation: animation,
+      animation: Listenable.merge([animation, secondaryAnimation]),
       child: native,
-      builder: (context, child) =>
-          FrostMaterialReveal(opacity: 1, contentOnly: true, deferNestedBlur: animation.value < 1, handle: revealHandle, child: child!),
+      builder: (context, child) => FrostMaterialReveal(
+        opacity: 1,
+        contentOnly: true,
+        deferNestedBlur: animation.value < 1 || secondaryAnimation.status != AnimationStatus.dismissed,
+        handle: revealHandle,
+        child: child!,
+      ),
     );
     return guarded;
   }
@@ -91,7 +99,7 @@ class FrostPageTransitionsBuilder extends PageTransitionsBuilder {
   @override
   Widget buildTransitions<T>(PageRoute<T> route, BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) =>
       (reducedMotion || route.isFirst) && !FrostDensity.of(context).usesPointer
-      ? child
+      ? FrostSettledGlass(secondary: secondaryAnimation, child: child)
       : frostOwnedPageTransition(context, animation, secondaryAnimation, child, route: route, media: false);
 }
 

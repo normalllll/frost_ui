@@ -497,3 +497,47 @@ class _FrostAnimatedMaterialRevealState extends State<FrostAnimatedMaterialRevea
         FrostMaterialReveal(opacity: _opacity.value, handle: _handle, materialOnly: widget.materialOnly, contentOnly: widget.contentOnly, child: child!),
   );
 }
+
+/// Defers the nested glass of a page that has no entrance of its own while a
+/// page above it moves, as the pointer transition counts it: its glass, such
+/// as the bottom navigation of a destination root, starts blurring once the
+/// page above has settled, not in the first frame a closing page uncovers it.
+class FrostSettledGlass extends StatefulWidget {
+  const FrostSettledGlass({required this.secondary, required this.child, super.key});
+
+  /// The route's secondary animation: the page above it moving.
+  final Animation<double> secondary;
+  final Widget child;
+
+  @override
+  State<FrostSettledGlass> createState() => _FrostSettledGlassState();
+}
+
+class _FrostSettledGlassState extends State<FrostSettledGlass> {
+  @override
+  void initState() {
+    super.initState();
+    widget.secondary.addStatusListener(_statusChanged);
+  }
+
+  @override
+  void didUpdateWidget(FrostSettledGlass oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.secondary != widget.secondary) {
+      oldWidget.secondary.removeStatusListener(_statusChanged);
+      widget.secondary.addStatusListener(_statusChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.secondary.removeStatusListener(_statusChanged);
+    super.dispose();
+  }
+
+  void _statusChanged(AnimationStatus _) => setState(() {});
+
+  @override
+  Widget build(BuildContext context) =>
+      FrostMaterialReveal(opacity: 1, contentOnly: true, deferNestedBlur: widget.secondary.status != AnimationStatus.dismissed, child: widget.child);
+}

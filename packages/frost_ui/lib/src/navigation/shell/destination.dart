@@ -17,21 +17,27 @@ class FrostShellDestination extends StatelessWidget {
     final navigation = context.dependOnInheritedWidgetOfExactType<_FrostDestinationNavigation>();
     assert(navigation != null, 'FrostShellDestination must be below FrostShell.');
     if (navigation == null) return child;
-    navigation.route?.value = ModalRoute.of(context);
-    return Column(
-      children: [
-        Expanded(
-          child: FrostToastViewport(
-            key: const ValueKey('frost-destination-toast-viewport'),
-            child: MediaQuery.removePadding(
-              context: context,
-              removeBottom: navigation.enabled,
-              child: FrostDestinationRoot(route: ModalRoute.of(context), child: child),
+    final route = ModalRoute.of(context);
+    navigation.route?.value = route;
+    // The root page, its navigation bar included, may have no transition of
+    // its own; its glass still waits for a page above it to settle.
+    return FrostSettledGlass(
+      secondary: route?.secondaryAnimation ?? kAlwaysDismissedAnimation,
+      child: Column(
+        children: [
+          Expanded(
+            child: FrostToastViewport(
+              key: const ValueKey('frost-destination-toast-viewport'),
+              child: MediaQuery.removePadding(
+                context: context,
+                removeBottom: navigation.enabled,
+                child: FrostDestinationRoot(route: route, child: child),
+              ),
             ),
           ),
-        ),
-        if (navigation.enabled) navigation.navigation,
-      ],
+          if (navigation.enabled) navigation.navigation,
+        ],
+      ),
     );
   }
 }
