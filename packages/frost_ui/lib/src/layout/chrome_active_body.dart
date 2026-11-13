@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import '_chrome_body_scope.dart';
+
 /// Marks one of several bodies kept under a [FrostPinnedChrome], such as the
 /// sections of a tab view, as the one on screen. The chrome's glass and its
 /// sliding header row follow only that body's scrolling, and catch up with its
@@ -11,7 +13,7 @@ class FrostChromeActiveBody extends StatefulWidget {
 
   /// Whether scrolling at [context] belongs to the body on screen. Bodies
   /// outside any marked group always do.
-  static bool isActive(BuildContext? context) => context?.getInheritedWidgetOfExactType<_ActiveBodyScope>()?.active ?? true;
+  static bool isActive(BuildContext? context) => context?.getInheritedWidgetOfExactType<FrostChromeBodyScope>()?.active ?? true;
 
   @override
   State<FrostChromeActiveBody> createState() => _ChromeActiveBodyState();
@@ -32,12 +34,5 @@ class _ChromeActiveBodyState extends State<FrostChromeActiveBody> {
   }
 
   @override
-  Widget build(BuildContext context) => _ActiveBodyScope(active: widget.active, child: widget.child);
-}
-
-class _ActiveBodyScope extends InheritedWidget {
-  const _ActiveBodyScope({required this.active, required super.child});
-  final bool active;
-  @override
-  bool updateShouldNotify(_ActiveBodyScope oldWidget) => active != oldWidget.active;
+  Widget build(BuildContext context) => FrostChromeBodyScope(active: widget.active, child: widget.child);
 }

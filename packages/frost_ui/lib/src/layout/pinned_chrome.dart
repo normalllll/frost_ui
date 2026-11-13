@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart' show clampDouble;
+import 'package:flutter/foundation.dart' show clampDouble, listEquals;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
@@ -14,6 +14,7 @@ import '../motion/_material_reveal.dart';
 import '../primitives/_on_media_chrome_scope.dart';
 import '../primitives/_page_outline.dart';
 import '../primitives/surface.dart';
+import '_chrome_body_scope.dart';
 import '_chrome_scroll_away.dart';
 import '_header_search_body.dart';
 import 'chrome_active_body.dart';
@@ -98,8 +99,48 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
 
   static const _revealDistance = 24.0;
 
+  /// The grouped bodies with content under the bar, each with the glass its
+  /// own scrolling shows; null while no scroll view belongs to a group.
+  List<(RenderBox, double)>? _bodies;
+  final _bodiesMoved = _BodiesMoved();
+  bool _bodiesUpdateScheduled = false;
+
+  void _refreshBodies() {
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+      if (_bodiesUpdateScheduled) return;
+      _bodiesUpdateScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _bodiesUpdateScheduled = false;
+        if (mounted) _refreshBodies();
+      });
+      return;
+    }
+    _scrollables.removeWhere((scrollable) => !scrollable.mounted);
+    final grouped = <RenderBox, double>{};
+    var loose = 0.0;
+    for (final scrollable in _scrollables) {
+      final position = scrollable.position;
+      final amount = position.hasContentDimensions ? (position.extentBefore / _revealDistance).clamp(0.0, 1.0) : 0.0;
+      final body = FrostChromeBodyScope.boxOf(scrollable.context);
+      if (body == null) {
+        // A pane outside the group shares the band with every body.
+        if (FrostChromeActiveBody.isActive(scrollable.context)) loose = math.max(loose, amount);
+      } else {
+        grouped[body] = math.max(grouped[body] ?? 0, amount);
+      }
+    }
+    final bodies = grouped.isEmpty
+        ? null
+        : [
+            for (final MapEntry(key: body, value: amount) in grouped.entries)
+              if (math.max(amount, loose) > 0) (body, math.max(amount, loose)),
+          ];
+    if (!listEquals(bodies, _bodies)) setState(() => _bodies = bodies);
+  }
+
   bool _handleMetrics(ScrollMetricsNotification notification) {
     _track(notification.context);
+    _refreshBodies();
     if (!FrostChromeActiveBody.isActive(notification.context)) return false;
     _refreshCoverage(notification.metrics);
     // A list that appears or changes near its top (another section's list,
@@ -205,6 +246,7 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
   void dispose() {
     _drag?.cancel();
     _band.dispose();
+    _bodiesMoved.dispose();
     _away.dispose();
     _hidden.dispose();
     _search.dispose();
@@ -213,6 +255,11 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
 
   bool _handleScroll(ScrollNotification notification) {
     _track(notification.context);
+    if (notification.metrics.axis == Axis.horizontal) {
+      _bodiesMoved.notify();
+    } else {
+      _refreshBodies();
+    }
     // A section kept off screen scrolls (or settles) without moving the bar.
     if (!FrostChromeActiveBody.isActive(notification.context)) return false;
     _refreshCoverage(notification.metrics);
@@ -249,6 +296,7 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
     _pendingMetrics = null;
     _travelled = 0;
     _applyCoverage(null);
+    _refreshBodies();
     _scrollables.removeWhere((scrollable) => !scrollable.mounted);
     final near = _scrollables.where((scrollable) => FrostChromeActiveBody.isActive(scrollable.context) && scrollable.position.hasContentDimensions);
     if (near.isEmpty || near.any((scrollable) => scrollable.position.extentBefore < _away.extent)) _setHidden(false);
@@ -383,6 +431,8 @@ class _FpPinnedChromeState extends State<FrostPinnedChrome> with SingleTickerPro
                     // The header sits on the suggestions page, not over scrolled
                     // content. A sections header draws one glass for both bars.
                     opacity: _search.showing || _band.reveal != null ? 0 : _coverage,
+                    bodies: _search.showing || _band.reveal != null ? null : _bodies,
+                    bodiesMoved: _bodiesMoved,
                     // The value already follows the scroll position frame by frame.
                     animate: false,
                     // The glass ends where the visible rows end once the top
@@ -464,6 +514,10 @@ class _PinnedLayoutDelegate extends MultiChildLayoutDelegate {
 
   @override
   bool shouldRelayout(_PinnedLayoutDelegate oldDelegate) => extent != oldDelegate.extent;
+}
+
+class _BodiesMoved extends ChangeNotifier {
+  void notify() => notifyListeners();
 }
 
 /// First sliver of a scroll view under [FrostPinnedChrome].
