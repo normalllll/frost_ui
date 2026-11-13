@@ -97,6 +97,7 @@ class FrostWaterfallGrid<T> extends StatelessWidget {
     this.preferredTileWidth = FrostMetrics.gridExtent,
     this.columns,
     this.maxColumns,
+    this.minTileWidth,
     this.crossAxisSpacing = FrostGap.grid,
     this.mainAxisSpacing = FrostGap.grid,
     this.padding,
@@ -105,7 +106,8 @@ class FrostWaterfallGrid<T> extends StatelessWidget {
     this.sliverHeader,
     this.controller,
     super.key,
-  });
+  }) : assert(minTileWidth == null || minTileWidth > 0 && minTileWidth < double.infinity),
+       assert(columns == null || minTileWidth == null, 'A waterfall takes either a fixed column count or a minimum tile width.');
 
   final List<T> items;
   final FrostWaterfallGridItemBuilder<T> itemBuilder;
@@ -114,6 +116,12 @@ class FrostWaterfallGrid<T> extends StatelessWidget {
   /// Optional page-owned column preference and upper limit; layout, density
   /// and large-text adaptation remain shared with the paged waterfall.
   final int? columns, maxColumns;
+
+  /// Columns for cards rather than media: as many as keep a tile at least this
+  /// wide (scaled with the text), down to one column on a phone. [maxColumns]
+  /// still caps the count; [preferredTileWidth] is not used. Not combined
+  /// with [columns].
+  final double? minTileWidth;
   final double crossAxisSpacing;
   final double mainAxisSpacing;
 
@@ -139,6 +147,7 @@ class FrostWaterfallGrid<T> extends StatelessWidget {
           preferredTileWidth: preferredTileWidth,
           columns: columns,
           maxColumns: maxColumns,
+          minTileWidth: minTileWidth,
           crossAxisSpacing: crossAxisSpacing,
           mainAxisSpacing: mainAxisSpacing,
           padding: padding,
@@ -156,12 +165,14 @@ class FrostSliverWaterfallGrid<T> extends StatefulWidget {
     this.preferredTileWidth = FrostMetrics.gridExtent,
     this.columns,
     this.maxColumns,
+    this.minTileWidth,
     this.crossAxisSpacing = FrostGap.grid,
     this.mainAxisSpacing = FrostGap.grid,
     this.padding,
     this.controller,
     super.key,
-  });
+  }) : assert(minTileWidth == null || minTileWidth > 0 && minTileWidth < double.infinity),
+       assert(columns == null || minTileWidth == null, 'A waterfall takes either a fixed column count or a minimum tile width.');
 
   final List<T> items;
   final FrostWaterfallGridItemBuilder<T> itemBuilder;
@@ -170,6 +181,12 @@ class FrostSliverWaterfallGrid<T> extends StatefulWidget {
   /// Optional page-owned column preference and upper limit; layout, density
   /// and large-text adaptation remain shared with the paged waterfall.
   final int? columns, maxColumns;
+
+  /// Columns for cards rather than media: as many as keep a tile at least this
+  /// wide (scaled with the text), down to one column on a phone. [maxColumns]
+  /// still caps the count; [preferredTileWidth] is not used. Not combined
+  /// with [columns].
+  final double? minTileWidth;
   final double crossAxisSpacing;
   final double mainAxisSpacing;
 
@@ -229,20 +246,24 @@ class _FrostSliverWaterfallGridState<T> extends State<FrostSliverWaterfallGrid<T
     final preferredTileWidth = widget.preferredTileWidth, crossAxisSpacing = widget.crossAxisSpacing, mainAxisSpacing = widget.mainAxisSpacing;
     // Paged and plain waterfalls share this renderer: padding is subtracted
     // once from the full width, so skeletons and results share column counts.
-    return SliverLayoutBuilder(
-      builder: (context, constraints) {
-        final padding = widget.padding ?? frostBrowseGridPadding(constraints.crossAxisExtent);
+    return FrostCrossAxisSliverBuilder(
+      builder: (context, crossAxisExtent) {
+        final padding = widget.padding ?? frostBrowseGridPadding(crossAxisExtent);
         final inset = padding.resolve(Directionality.of(context)).horizontal;
-        final width = FrostContentColumnBudget.columnWidth(context, constraints.crossAxisExtent - inset);
+        final width = FrostContentColumnBudget.columnWidth(context, crossAxisExtent - inset);
         final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
-        final readableCount = frostWaterfallColumnCount(
-          width: width,
-          preferredTileWidth: preferredTileWidth,
-          gap: crossAxisSpacing,
-          textScale: textScale,
-          columns: widget.columns,
-          maxColumns: widget.maxColumns,
-        );
+        final cardWidth = widget.minTileWidth, maxColumns = widget.maxColumns;
+        final fitted = cardWidth == null ? null : frostFittedColumnCount(width: width, minTileWidth: cardWidth, gap: crossAxisSpacing, textScale: textScale);
+        final readableCount = fitted != null
+            ? math.min(fitted, maxColumns ?? fitted)
+            : frostWaterfallColumnCount(
+                width: width,
+                preferredTileWidth: preferredTileWidth,
+                gap: crossAxisSpacing,
+                textScale: textScale,
+                columns: widget.columns,
+                maxColumns: maxColumns,
+              );
         // Chrome pinned over the scroll view reserves its height as padding.
         final chrome = MediaQuery.paddingOf(context);
         return SliverPadding(
@@ -422,3 +443,52 @@ EdgeInsets frostBrowseGridPadding(double width) {
 
 // Below this text scale a phone still shows two media columns.
 const _mediaFloorTextScale = 1.5;
+
+/// Library-only: a sliver laid out from its cross-axis extent alone.
+///
+/// A SliverLayoutBuilder runs its builder again whenever its constraints
+/// change, and the scroll offset changes them in every scroll frame. A
+/// multi-child sliver built anew there builds every live child again. This
+/// builder runs only when the cross-axis extent changes, when this widget is
+/// rebuilt, or when an inherited widget the builder read changes, and returns
+/// the same sliver otherwise, so scrolling builds only the children that come
+/// into view.
+///
+/// The builder's context is this widget's, so inherited widgets it reads are
+/// dependencies of this widget.
+class FrostCrossAxisSliverBuilder extends StatefulWidget {
+  const FrostCrossAxisSliverBuilder({required this.builder, super.key});
+  final Widget Function(BuildContext context, double crossAxisExtent) builder;
+
+  @override
+  State<FrostCrossAxisSliverBuilder> createState() => _FrostCrossAxisSliverBuilderState();
+}
+
+class _FrostCrossAxisSliverBuilderState extends State<FrostCrossAxisSliverBuilder> {
+  Widget? _sliver;
+  double? _extent;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sliver = null;
+  }
+
+  @override
+  void didUpdateWidget(FrostCrossAxisSliverBuilder oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _sliver = null;
+  }
+
+  @override
+  Widget build(BuildContext context) => SliverLayoutBuilder(
+    builder: (_, constraints) {
+      final extent = constraints.crossAxisExtent;
+      if (_sliver == null || extent != _extent) {
+        _extent = extent;
+        _sliver = widget.builder(context, extent);
+      }
+      return _sliver!;
+    },
+  );
+}

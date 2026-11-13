@@ -129,11 +129,11 @@ class _FrostSliverListState extends State<FrostSliverList> {
   Widget build(BuildContext context) {
     final minimum = widget.minColumnWidth;
     if (minimum == null) return _rows();
-    return SliverLayoutBuilder(
-      builder: (context, constraints) {
+    return FrostCrossAxisSliverBuilder(
+      builder: (context, crossAxisExtent) {
         final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
         final fitted = frostFittedColumnCount(
-          width: FrostContentColumnBudget.columnWidth(context, constraints.crossAxisExtent),
+          width: FrostContentColumnBudget.columnWidth(context, crossAxisExtent),
           minTileWidth: minimum,
           // Scaled up, counts follow the grids so every list of tiles agrees.
           gap: textScale > 1 ? FrostGap.of(context).grid : FrostGap.of(context).section,

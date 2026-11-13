@@ -41,14 +41,14 @@ class FrostSliverGrid extends StatelessWidget {
   final IndexedWidgetBuilder itemBuilder;
   final double? aspectRatio;
   @override
-  Widget build(BuildContext context) => SliverLayoutBuilder(
-    builder: (context, constraints) {
+  Widget build(BuildContext context) => FrostCrossAxisSliverBuilder(
+    builder: (context, crossAxisExtent) {
       final gap = FrostGap.of(context).grid;
       return SliverGrid(
         delegate: SliverChildBuilderDelegate(itemBuilder, childCount: itemCount),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: _columns(
-            FrostContentColumnBudget.columnWidth(context, constraints.crossAxisExtent),
+            FrostContentColumnBudget.columnWidth(context, crossAxisExtent),
             minItemWidth * math.max(1.0, _textScale(context)),
             gap,
           ),

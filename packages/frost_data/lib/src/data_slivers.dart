@@ -5,7 +5,7 @@ import 'package:frost_ui/frost_ui.dart';
 // ignore: implementation_imports -- same checkout; each such import is a layers row of the health gate.
 import 'package:frost_ui/src/layout/content_viewport.dart' show FrostContentColumnBudget;
 // ignore: implementation_imports -- same checkout; each such import is a layers row of the health gate.
-import 'package:frost_ui/src/layout/waterfall_grid.dart' show frostBrowseGridPadding, frostFittedColumnCount;
+import 'package:frost_ui/src/layout/waterfall_grid.dart' show FrostCrossAxisSliverBuilder, frostBrowseGridPadding, frostFittedColumnCount;
 
 import 'list_source.dart';
 import 'loading_more_indicator.dart';
@@ -66,13 +66,21 @@ class FrostSliverDataWaterfallGrid<T> extends StatelessWidget {
     this.padding,
     this.columns,
     this.maxColumns,
+    this.minTileWidth,
     this.autoLoadMore = true,
     this.controller,
     super.key,
-  });
+  }) : assert(minTileWidth == null || minTileWidth > 0 && minTileWidth < double.infinity),
+       assert(columns == null || minTileWidth == null, 'A waterfall takes either a fixed column count or a minimum tile width.');
   final FrostListSource<T> source;
   final FrostLoadingItemBuilder<T> itemBuilder;
   final Widget firstLoadSkeleton;
+
+  /// Columns for cards rather than media: as many as keep a tile at least this
+  /// wide, down to one; [maxColumns] still caps the count and
+  /// [preferredTileWidth] is not used. See
+  /// [FrostSliverWaterfallGrid.minTileWidth].
+  final double? minTileWidth;
 
   /// Brings a loaded item into view by its index; see
   /// [FrostWaterfallController]. Unbound while the first page loads or the
@@ -101,6 +109,7 @@ class FrostSliverDataWaterfallGrid<T> extends StatelessWidget {
       padding: padding,
       columns: columns,
       maxColumns: maxColumns,
+      minTileWidth: minTileWidth,
       controller: controller,
     ),
   );
@@ -150,9 +159,9 @@ class FrostSliverDataGrid<T> extends StatelessWidget {
     firstLoadSkeleton: firstLoadSkeleton,
     empty: empty,
     autoLoadMore: true,
-    contentBuilder: (_) => SliverLayoutBuilder(
-      builder: (context, constraints) {
-        final layout = geometry(context, constraints.crossAxisExtent, minTileWidth: minTileWidth, spacing: spacing);
+    contentBuilder: (_) => FrostCrossAxisSliverBuilder(
+      builder: (context, crossAxisExtent) {
+        final layout = geometry(context, crossAxisExtent, minTileWidth: minTileWidth, spacing: spacing);
         return SliverPadding(
           padding: layout.padding,
           sliver: SliverGrid(

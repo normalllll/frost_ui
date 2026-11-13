@@ -488,13 +488,13 @@ ctor	FrostSlider.new	controls/slider.dart	divisions,key,max,min,onChangeEnd,onCh
 ctor	FrostSliverContentColumn.new	layout/content_viewport.dart	key,maxWidth,sliver	baseline-20261102
 ctor	FrostSliverDataGrid.new	frost_data:data_slivers.dart	empty,firstLoadSkeleton,itemBuilder,key,minTileWidth,source,spacing,tileHeight	reviewed:20261103:moved to frost_data unchanged
 ctor	FrostSliverDataList.new	frost_data:data_slivers.dart	autoLoadMore,empty,firstLoadSkeleton,itemBuilder,itemExtent,key,padding,source	reviewed:20261103:moved to frost_data unchanged
-ctor	FrostSliverDataWaterfallGrid.new	frost_data:data_slivers.dart	autoLoadMore,columns,controller,crossAxisSpacing,empty,firstLoadSkeleton,itemBuilder,key,mainAxisSpacing,maxColumns,padding,preferredTileWidth,source	reviewed:20261103:moved to frost_data unchanged
+ctor	FrostSliverDataWaterfallGrid.new	frost_data:data_slivers.dart	autoLoadMore,columns,controller,crossAxisSpacing,empty,firstLoadSkeleton,itemBuilder,key,mainAxisSpacing,maxColumns,minTileWidth,padding,preferredTileWidth,source	reviewed:20261114:adds the card column rule (as many columns as fit at a minimum width, down to one) to a variable-height waterfall, which no public component gives without an app-side SliverLayoutBuilder rebuilding every scroll frame; consistent with FrostSliverDataGrid.minTileWidth and FrostSliverList.columns
 ctor	FrostSliverExpand.new	layout/sliver_expand.dart	expanded,key,sliver	baseline-20261102
 ctor	FrostSliverGrid.new	layout/grid.dart	aspectRatio,itemBuilder,itemCount,key,minItemWidth	baseline-20261102
 ctor	FrostSliverList.columns	lists/sliver_list.dart	dividers,itemBuilder,itemCount,itemKey,key,maxColumns,minColumnWidth	baseline-20261102
 ctor	FrostSliverList.new	lists/sliver_list.dart	dividers,itemBuilder,itemCount,itemKey,key	baseline-20261102
 ctor	FrostSliverSectionsHeader.new	layout/pinned_sections_sliver.dart	key,lead,tabs,trailing	reviewed:20261112:pass: the choice between one row and two depends on the tabs' natural width, which an app cannot measure without duplicating the tabs and the toolbar
-ctor	FrostSliverWaterfallGrid.new	layout/waterfall_grid.dart	columns,controller,crossAxisSpacing,itemBuilder,items,key,mainAxisSpacing,maxColumns,padding,preferredTileWidth	baseline-20261102
+ctor	FrostSliverWaterfallGrid.new	layout/waterfall_grid.dart	columns,controller,crossAxisSpacing,itemBuilder,items,key,mainAxisSpacing,maxColumns,minTileWidth,padding,preferredTileWidth	reviewed:20261114:adds the card column rule (as many columns as fit at a minimum width, down to one) to a variable-height waterfall, which no public component gives without an app-side SliverLayoutBuilder rebuilding every scroll frame; consistent with FrostSliverDataGrid.minTileWidth and FrostSliverList.columns
 ctor	FrostSplitView.new	navigation/split_view.dart	header,initialPrimaryWidth,key,onCloseSecondary,onPrimaryWidthChanged,primary,resizable,secondary	baseline-20261102
 ctor	FrostSpringBuilder.new	motion/spring.dart	builder,child,key,spring,value	baseline-20261102
 ctor	FrostSpringCurve.new	motion/spring.dart	duration,spring	baseline-20261102
@@ -552,7 +552,7 @@ ctor	FrostTooltip.new	overlays/tooltip.dart	child,excludeFromSemantics,key,messa
 ctor	FrostTypography.new	foundation/typography.dart	base,monospace,numeric,platform	baseline-20261102
 ctor	FrostVideoFrame.new	media/video_frame.dart	actions,controls,key,moreActions,onFullscreenToggle,onLoopToggle,onMuteToggle,onPlayPause,onSeek,state,topLeading,video	baseline-20261102
 ctor	FrostVideoState.new	media/video_state.dart	buffered,buffering,duration,fullscreen,looping,muted,playing,position	baseline-20261102
-ctor	FrostWaterfallGrid.new	layout/waterfall_grid.dart	columns,controller,crossAxisSpacing,itemBuilder,items,key,mainAxisSpacing,maxColumns,padding,physics,preferredTileWidth,shrinkWrap,sliverHeader	baseline-20261102
+ctor	FrostWaterfallGrid.new	layout/waterfall_grid.dart	columns,controller,crossAxisSpacing,itemBuilder,items,key,mainAxisSpacing,maxColumns,minTileWidth,padding,physics,preferredTileWidth,shrinkWrap,sliverHeader	reviewed:20261114:adds the card column rule (as many columns as fit at a minimum width, down to one) to a variable-height waterfall, which no public component gives without an app-side SliverLayoutBuilder rebuilding every scroll frame; consistent with FrostSliverDataGrid.minTileWidth and FrostSliverList.columns
 ctor	FrostWindowCaptionScope.new	layout/window_caption_scope.dart	child,key,systemBackdropActive,systemBackdropAvailable,window	baseline-20261102
 ctor	FrostWindowHost.new	layout/window_host.dart	backdrop,child,controller,key,resizeBorderWidth,title	baseline-20261102
 ctor	FrostWindowTitleContribution.new	navigation/window_title.dart	child,key,page,path	baseline-20261102

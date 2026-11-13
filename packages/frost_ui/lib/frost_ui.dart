@@ -93,7 +93,7 @@ export 'src/layout/settings_sections.dart';
 export 'src/layout/settings_select_tile.dart';
 export 'src/layout/shelf.dart';
 export 'src/layout/sliver_expand.dart';
-export 'src/layout/waterfall_grid.dart' hide FrostWaterfallGridItemBuilder, frostBrowseGridPadding, frostFittedColumnCount;
+export 'src/layout/waterfall_grid.dart' hide FrostCrossAxisSliverBuilder, FrostWaterfallGridItemBuilder, frostBrowseGridPadding, frostFittedColumnCount;
 export 'src/layout/window_caption_scope.dart' hide FrostCaptionRegion, FrostCaptionSide, FrostHitKind;
 export 'src/layout/window_host.dart';
 export 'src/layout/wrap.dart' show FrostWrap;
