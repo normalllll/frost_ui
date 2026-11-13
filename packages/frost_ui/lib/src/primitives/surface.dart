@@ -380,7 +380,7 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
         fillAlpha: alpha * materialProgress,
         safeAlpha: mediaSafe * materialProgress,
         onCovered: _scheduleMediaCheck,
-        child: inner,
+        child: RepaintBoundary(child: inner),
       );
     }
     final targetFill = color.withValues(alpha: solid ? 1 : alpha);

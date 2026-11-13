@@ -92,6 +92,23 @@ class _MeshPainter extends CustomPainter {
   bool shouldRepaint(_MeshPainter old) => tokens != old.tokens || pixelRatio != old.pixelRatio;
 }
 
+// Frames drawn so far, counted once each frame's build, layout and paint are
+// done. Frame timestamps cannot tell frames apart: a warm-up frame reuses the
+// previous one's.
+int _framesDrawn = 0;
+bool _countingFrames = false;
+
+// The frame being drawn, or after its paint, the latest one drawn.
+int _frostFrame() {
+  final scheduler = SchedulerBinding.instance;
+  if (!_countingFrames) {
+    _countingFrames = true;
+    // Registered after the binding's own, so it runs after the paint.
+    scheduler.addPersistentFrameCallback((_) => _framesDrawn++);
+  }
+  return scheduler.schedulerPhase == SchedulerPhase.persistentCallbacks ? _framesDrawn : _framesDrawn - 1;
+}
+
 /// The window's registered cards, which keep the lower glow peak.
 ///
 /// Opaque, raised [FrostSurface]s register their render boxes while they are
@@ -100,53 +117,67 @@ class _MeshPainter extends CustomPainter {
 class FrostAmbientCardRegistry {
   FrostAmbientCardRegistry(this.onChange);
   final VoidCallback onChange;
-  final _boxes = <RenderBox>{};
+  final _boxes = <FrostRenderAmbientCard>{};
   List<Rect> _last = const [];
 
   /// The rects seen after the latest frame.
   List<Rect> get current => _last;
   bool _watching = false, _disposed = false;
 
-  void _add(RenderBox box) {
+  /// How many registered boxes have had their window rect computed, across
+  /// all registries. Boxes that do not paint on screen are not counted.
+  @visibleForTesting
+  static int debugRectEvaluations = 0;
+
+  void _add(FrostRenderAmbientCard box) {
     _boxes.add(box);
+    _evaluated = null;
     _watch(schedule: true);
   }
 
-  void _remove(RenderBox box) {
+  void _remove(FrostRenderAmbientCard box) {
     _boxes.remove(box);
+    _evaluated = null;
     _watch(schedule: true);
   }
 
-  /// The part of [box] that paints, in window coordinates: nothing on a hidden
-  /// page, or in a scroll view's cache, where it is laid out and clipped away.
-  static Rect? _painted(RenderBox box) {
-    if (!box.attached || !box.hasSize) return null;
-    var bounds = MatrixUtils.transformRect(box.getTransformTo(null), Offset.zero & box.size);
-    RenderObject child = box;
-    for (var parent = box.parent; parent != null; child = parent, parent = parent.parent) {
-      if (!parent.paintsChild(child)) return null;
-      // An indexed stack paints one child without saying so through paintsChild.
-      if (parent is RenderIndexedStack && parent.getChildrenAsList().indexOf(child as RenderBox) != parent.index) return null;
-      if (parent.describeApproximatePaintClip(child) case final clip?) {
-        bounds = bounds.intersect(MatrixUtils.transformRect(parent.getTransformTo(null), clip));
-      }
+  // Every chrome guard of a frame and the check after it share one reading
+  // per phase of that frame: the paint phase, then the post-frame callbacks.
+  List<Rect>? _evaluated;
+  (int, SchedulerPhase)? _evaluatedIn;
+
+  /// The painted window rects of the registered boxes, read live. Call after
+  /// layout.
+  List<Rect> _painted() {
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    final key = (_frostFrame(), phase);
+    // Outside a frame, nothing marks a change, so read afresh.
+    final cacheable = phase == SchedulerPhase.persistentCallbacks || phase == SchedulerPhase.postFrameCallbacks;
+    if (cacheable && _evaluatedIn == key && _evaluated != null) return _evaluated!;
+    final placements = <RenderObject, _Placement>{};
+    final result = <Rect>[];
+    for (final box in _boxes) {
+      if (box._paintedWindowRect(placements) case final rect?) result.add(rect);
     }
-    return bounds.width > 0 && bounds.height > 0 ? bounds : null;
+    if (cacheable) {
+      _evaluated = result;
+      _evaluatedIn = key;
+    }
+    return result;
   }
 
   /// Whether a registered box overlaps [rect] now, read live. Call after
-  /// layout; a box whose ancestors are not laid out is skipped.
+  /// layout; while some box's ancestors are not laid out, nothing overlaps.
   bool overlaps(Rect rect) {
-    for (final box in _boxes) {
-      final Rect? bounds;
-      try {
-        bounds = _painted(box);
-      } on FlutterError {
-        continue;
-      } on AssertionError {
-        continue;
-      }
-      if (bounds == null) continue;
+    final List<Rect> painted;
+    try {
+      painted = _painted();
+    } on FlutterError {
+      return false;
+    } on AssertionError {
+      return false;
+    }
+    for (final bounds in painted) {
       final overlap = bounds.intersect(rect);
       if (overlap.width > 0 && overlap.height > 0) return true;
     }
@@ -157,9 +188,8 @@ class FrostAmbientCardRegistry {
   List<Rect> rects(Size window) {
     final bounds = Offset.zero & window;
     final result = <Rect>[];
-    for (final box in _boxes) {
-      final rect = _painted(box);
-      if (rect == null || !rect.overlaps(bounds)) continue;
+    for (final rect in _painted()) {
+      if (!rect.overlaps(bounds)) continue;
       final clipped = rect.intersect(bounds);
       result.add(Rect.fromLTRB(clipped.left.roundToDouble(), clipped.top.roundToDouble(), clipped.right.roundToDouble(), clipped.bottom.roundToDouble()));
     }
@@ -261,6 +291,77 @@ class FrostRenderAmbientCard extends RenderProxyBox {
     _registry._remove(this);
     super.detach();
   }
+
+  int? _paintedIn;
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    _paintedIn = _frostFrame();
+    super.paint(context, offset);
+  }
+
+  // Whether this box is in the picture of the latest frame. Parents up to the
+  // nearest repaint boundary say whether they paint it. Above that, the
+  // boundary's layer is in the composited tree only while every ancestor
+  // paints it: a page covered by another, an offstage subtree, or a scroll
+  // view's cache leaves it out without saying so through paintsChild. A box
+  // painted in this frame counts while its new layers are still on their way
+  // into the tree.
+  bool get _onScreen {
+    RenderObject child = this;
+    RenderObject? boundary = isRepaintBoundary ? this : null;
+    for (var parent = this.parent; boundary == null && parent != null; child = parent, parent = parent.parent) {
+      if (!parent.paintsChild(child)) return false;
+      // An indexed stack paints one child without saying so through paintsChild.
+      if (parent is RenderIndexedStack && parent.getChildrenAsList().indexOf(child as RenderBox) != parent.index) return false;
+      if (parent.isRepaintBoundary) boundary = parent;
+    }
+    if (_paintedIn == _frostFrame()) return true;
+    return boundary?.layer?.attached ?? false;
+  }
+
+  /// The part of this box that paints, in window coordinates: nothing on a
+  /// hidden page, or in a scroll view's cache, where it is laid out and clipped
+  /// away. [placements] keeps the ancestors' placements for the other boxes.
+  Rect? _paintedWindowRect(Map<RenderObject, _Placement> placements) {
+    if (!attached || !hasSize || !_onScreen) return null;
+    FrostAmbientCardRegistry.debugRectEvaluations++;
+    final placement = _Placement.of(this, placements);
+    final bounds = MatrixUtils.transformRect(placement.transform, Offset.zero & size);
+    final painted = placement.clip == null ? bounds : bounds.intersect(placement.clip!);
+    return painted.width > 0 && painted.height > 0 ? painted : null;
+  }
+}
+
+/// A render object's paint transform to the window and the clip its ancestors
+/// apply to it there.
+class _Placement {
+  const _Placement(this.transform, this.clip);
+  final Matrix4 transform;
+  final Rect? clip;
+
+  // Ancestors shared by several boxes are placed once.
+  static _Placement of(RenderObject object, Map<RenderObject, _Placement> placements) {
+    if (placements[object] case final known?) return known;
+    final parent = object.parent;
+    final _Placement placement;
+    if (parent == null) {
+      placement = _Placement(Matrix4.identity(), null);
+    } else {
+      final above = of(parent, placements);
+      final transform = above.transform.clone();
+      // Window coordinates are the root's own, as for getTransformTo(null):
+      // the root's transform to the device is not applied.
+      if (parent.parent != null) parent.applyPaintTransform(object, transform);
+      var clip = above.clip;
+      if (parent.describeApproximatePaintClip(object) case final local?) {
+        final window = MatrixUtils.transformRect(above.transform, local);
+        clip = clip == null ? window : clip.intersect(window);
+      }
+      placement = _Placement(transform, clip);
+    }
+    return placements[object] = placement;
+  }
 }
 
 /// Chrome over media. Runs at paint time, after layout, so it sees
@@ -268,7 +369,8 @@ class FrostRenderAmbientCard extends RenderProxyBox {
 /// it, it paints the extra fill that brings the chrome from [fillAlpha] to
 /// [safeAlpha] at once, then [onCovered] lets the surface take that alpha
 /// itself. It repaints with every frame while media is registered, without
-/// asking for frames of its own.
+/// asking for frames of its own; give it a child that is a repaint boundary,
+/// so that repaint stays within the guard.
 class FrostChromeMediaGuard extends SingleChildRenderObjectWidget {
   const FrostChromeMediaGuard({
     required this.registry,
@@ -324,6 +426,11 @@ class FrostRenderChromeMediaGuard extends RenderProxyBox {
 
   bool _covered = false;
   int? _tick;
+
+  // The per-frame repaint below records the extra fill and nothing else: the
+  // chrome's content sits behind a boundary of its own (see FrostSurface).
+  @override
+  bool get isRepaintBoundary => true;
 
   /// The chrome's composed fill alpha in the latest paint.
   @visibleForTesting
