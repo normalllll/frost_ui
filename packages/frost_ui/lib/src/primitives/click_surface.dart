@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../foundation/_focus_modality.dart';
+import '../foundation/_ticker_mode_watch.dart';
 import '../foundation/_touch_targets.dart';
 import '../foundation/control_scope.dart';
 import '../foundation/density.dart';
@@ -129,22 +130,33 @@ class _AppClickSurfaceState extends State<FrostClickSurface> {
 
   bool _scopeEnabled = true;
   bool get _enabled => _scopeEnabled && (widget.onTap != null || widget.onLongPress != null);
+  late final _tickers = FrostTickerModeWatch(_tickersChanged);
+
+  // A covered route owns no active pointer/activation gesture. Cancel
+  // silently, as on deactivate; callbacks here could mutate an ancestor
+  // while the framework is rebuilding the route's ticker scope.
+  bool _cancelWithoutTickers() {
+    if (_tickers.enabled) return false;
+    final shown = _hovered || _pressed;
+    _hovered = false;
+    _pressed = false;
+    _invalidPress = true;
+    _disabledDuringPress = true;
+    _activationKey = null;
+    return shown;
+  }
+
+  void _tickersChanged() {
+    if (_cancelWithoutTickers()) setState(() {});
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _scopeEnabled = FrostControlScope.enabledOf(context);
     _cancelIfDisabled();
-    if (!TickerMode.valuesOf(context).enabled) {
-      // A covered route owns no active pointer/activation gesture. Cancel
-      // silently, as on deactivate; callbacks here could mutate an ancestor
-      // while the framework is rebuilding the route's ticker scope.
-      _hovered = false;
-      _pressed = false;
-      _invalidPress = true;
-      _disabledDuringPress = true;
-      _activationKey = null;
-    }
+    _tickers.attach(context);
+    _cancelWithoutTickers();
   }
 
   @override
@@ -273,6 +285,7 @@ class _AppClickSurfaceState extends State<FrostClickSurface> {
 
   @override
   void dispose() {
+    _tickers.dispose();
     FrostInputModality.instance.removeListener(_modalityChanged);
     FrostInputModality.instance.detach();
     FocusManager.instance.removeHighlightModeListener(_highlightModeChanged);

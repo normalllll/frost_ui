@@ -90,7 +90,6 @@ layers	primitives/status_glyph.dart	-	feedback/loading_gate.dart	1	baseline-2026
 layers	primitives/text.dart	-	feedback/_skeleton_geometry.dart	1	baseline-20261102
 layers	surface/_window_background.dart	-	layout/window_caption_scope.dart	1	baseline-20261102
 layers	surface/ambient_backdrop.dart	-	layout/window_caption_scope.dart	1	baseline-20261102
-silent	controls/_button_parts.dart	FrostButtonFrame._readable	maybeOf-fallback	1	baseline-20261102
 silent	controls/_calendar.dart	FrostDateClock.todayOf	maybeOf-fallback	1	baseline-20261102
 silent	controls/_field_chrome.dart	FrostFieldChrome.resolve	maybeOf-fallback	2	baseline-20261102
 silent	controls/_field_frame.dart	_FrostFieldFrameState.build	maybeOf-fallback	1	baseline-20261102
@@ -139,7 +138,6 @@ silent	overlays/_modal_frame.dart	FrostModalSurface.build	maybeOf-fallback	1	bas
 silent	overlays/_modal_route.dart	pushFrostModal	maybeOf-fallback	1	baseline-20261102
 silent	overlays/adaptive_panel.dart	frostPanelUsesSheet	maybeOf-fallback	1	baseline-20261102
 silent	overlays/context_menu.dart	_ContextMenuSession	maybeOf-fallback	1	baseline-20261102
-silent	primitives/_click_feedback.dart	FrostClickFeedbackVisual.build	maybeOf-fallback	1	baseline-20261102
 silent	primitives/_click_surface_visuals.dart	FrostClickHighlight.of	maybeOf-fallback	1	baseline-20261102
 silent	primitives/_click_surface_visuals.dart	FrostClickKeyboardScope.passes	maybeOf-fallback	1	baseline-20261102
 silent	primitives/_click_surface_visuals.dart	FrostClickSurfaceVisuals.clipsContentOf	maybeOf-fallback	1	baseline-20261102

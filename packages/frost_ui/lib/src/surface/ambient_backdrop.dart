@@ -903,9 +903,8 @@ class _FrostAmbientBackdropHostState extends State<FrostAmbientBackdropHost> wit
       child: widget.child,
       builder: (context, child) => FrostWindowBackgroundScope(
         hasAmbient: _controller._material.value != null,
-        ambientWeight: _controller._material.value?.weight ?? 0,
         forceSolidBase: widget.intensity == 0,
-        background: _controller._material.value?.background,
+        fade: _controller._material,
         child: _AmbientScope(
           controller: _controller,
           forceSolid: widget.intensity == 0,

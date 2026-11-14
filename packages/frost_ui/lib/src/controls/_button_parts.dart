@@ -9,6 +9,7 @@ import '../foundation/_ambient_material.dart';
 import '../foundation/_control_dimming.dart';
 import '../foundation/_focus_modality.dart';
 import '../foundation/_premultiplied_lerp.dart';
+import '../foundation/_ticker_mode_watch.dart';
 import '../foundation/color_math.dart';
 import '../foundation/control_scope.dart';
 import '../foundation/density.dart';
@@ -240,12 +241,24 @@ class FrostButtonHitArea extends StatefulWidget {
 
 class _FrostButtonHitAreaState extends State<FrostButtonHitArea> {
   bool _paddingPressValid = false;
+  late final _tickers = FrostTickerModeWatch(_tickersChanged);
+
+  // Lifecycle cancellation must not let a later padding tap fire.
+  void _tickersChanged() {
+    if (!_tickers.enabled) _paddingPressValid = false;
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Lifecycle cancellation must not let a later padding tap fire.
-    if (!TickerMode.valuesOf(context).enabled) _paddingPressValid = false;
+    _tickers.attach(context);
+    _tickersChanged();
+  }
+
+  @override
+  void dispose() {
+    _tickers.dispose();
+    super.dispose();
   }
 
   @override
@@ -324,6 +337,17 @@ abstract interface class FrostButtonInteraction {
 /// lives above the tooltip and the hit area, so it survives their changes.
 mixin FrostButtonInteractionState<T extends StatefulWidget> on State<T> implements FrostButtonInteraction {
   bool _hovered = false, _pressed = false, _focused = false;
+  late final _tickers = FrostTickerModeWatch(_tickersChanged);
+
+  // The click surface owns input but this state owns the fill. Lifecycle
+  // cancellation resets both without firing input callbacks.
+  void _tickersChanged() {
+    if (_tickers.enabled || !(_hovered || _pressed)) return;
+    setState(() {
+      _hovered = false;
+      _pressed = false;
+    });
+  }
 
   @override
   bool get hovered => _hovered;
@@ -379,9 +403,8 @@ mixin FrostButtonInteractionState<T extends StatefulWidget> on State<T> implemen
       _hovered = false;
       _pressed = false;
     }
-    if (!TickerMode.valuesOf(context).enabled) {
-      // The click surface owns input but this state owns the fill. Lifecycle
-      // cancellation resets both without firing input callbacks.
+    _tickers.attach(context);
+    if (!_tickers.enabled) {
       _hovered = false;
       _pressed = false;
     }
@@ -395,6 +418,7 @@ mixin FrostButtonInteractionState<T extends StatefulWidget> on State<T> implemen
 
   @override
   void dispose() {
+    _tickers.dispose();
     FrostInputModality.instance.removeListener(_modalityChanged);
     FrostInputModality.instance.detach();
     FocusManager.instance.removeHighlightModeListener(_highlightModeChanged);
@@ -413,7 +437,8 @@ class FrostButtonMedia {
   /// [bare] asks for bare media paint, [chrome] for the on-media icon style;
   /// [iconContent] lets an ambient on-media scope turn an icon into chrome.
   factory FrostButtonMedia.of(BuildContext context, {bool bare = false, bool chrome = false, bool iconContent = false}) {
-    final ink = FrostOnMediaChromeScope.inkOf(context) ?? (iconContent && FrostChromeOverMedia.activeOf(context) ? FrostThemeTokens.of(context).onMediaInk : null);
+    final ink =
+        FrostOnMediaChromeScope.inkOf(context) ?? (iconContent && FrostChromeOverMedia.activeOf(context) ? FrostThemeTokens.of(context).onMediaInk : null);
     final isBare = bare || ink != null && FrostMediaControlsScope.of(context);
     return FrostButtonMedia._(ink, isBare || chrome || ink != null && iconContent, isBare);
   }
@@ -461,8 +486,20 @@ final class FrostTagFrameStyle extends FrostButtonFrameStyle {
 }
 
 class _FramePaint {
-  const _FramePaint({required this.fill, required this.layer, required this.ink, required this.shape, this.edge, this.focusRing = true});
+  const _FramePaint({
+    required this.fill,
+    required this.layer,
+    required this.ink,
+    required this.shape,
+    this.edge,
+    this.focusRing = true,
+    this.followsWindow = false,
+  });
   final Color fill, layer, ink;
+
+  /// Whether a window background behind the button may ask for a more opaque
+  /// fill, which then follows that background as it fades.
+  final bool followsWindow;
   final ShapeBorder shape;
   final Decoration? edge;
 
@@ -523,6 +560,7 @@ class FrostButtonFrame extends StatelessWidget {
     );
     content = AnimatedOpacity(opacity: disabled && !FrostControlDimming.ownsOpacityOf(context) ? _disabledOpacity : 1, duration: duration, child: content);
     final interactive = interaction.interactive;
+    final surfaceBackground = paint.followsWindow ? FrostSurfaceScope.maybeOf(context)?.background : null;
     // The fill is one shape and the edge one inset stroke, neither clipped, so
     // neither squares the other's antialiased coverage. Only the content is clipped.
     return CustomPaint(
@@ -542,26 +580,37 @@ class FrostButtonFrame extends StatelessWidget {
           onHover: (value) => interaction.hover(value),
           onPressedChange: (value) => interaction.press(value),
           onFocusChange: (value) => interaction.focus(value),
-          child: FrostSkeletonShape(
-            shape: shape,
-            active: paint.fill.a > 0,
-            child: FrostInteractionDecoration(
-              duration: duration,
-              curve: FrostMotion.hoverCurve,
-              // The state layer is folded into the fill so the shape is
-              // painted once; a second antialiased shape would fringe its edge.
-              decoration: ShapeDecoration(shape: shape, color: Color.alphaBlend(paint.layer, paint.fill)),
-              foregroundDecoration: paint.edge,
-              // Only the content is clipped to the shape; the fill and edge above
-              // are painted unclipped.
-              child: ClipPath(
-                clipper: ShapeBorderClipper(shape: shape),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: metrics.height, minWidth: metrics.minWidth, maxWidth: metrics.maxWidth),
-                  child: Padding(padding: metrics.padding, child: content),
-                ),
+          // Only the fill follows a fading window background; the content
+          // is built once.
+          child: FrostWindowFadeBuilder(
+            follows: paint.followsWindow,
+            // Only the content is clipped to the shape; the fill and edge are
+            // painted unclipped.
+            child: ClipPath(
+              clipper: ShapeBorderClipper(shape: shape),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: metrics.height, minWidth: metrics.minWidth, maxWidth: metrics.maxWidth),
+                child: Padding(padding: metrics.padding, child: content),
               ),
             ),
+            builder: (context, clipped) {
+              final (fill, layer) = paint.followsWindow
+                  ? _readable(context, tokens, surfaceBackground, paint.fill, paint.layer, paint.ink)
+                  : (paint.fill, paint.layer);
+              return FrostSkeletonShape(
+                shape: shape,
+                active: fill.a > 0,
+                child: FrostInteractionDecoration(
+                  duration: duration,
+                  curve: FrostMotion.hoverCurve,
+                  // The state layer is folded into the fill so the shape is
+                  // painted once; a second antialiased shape would fringe its edge.
+                  decoration: ShapeDecoration(shape: shape, color: Color.alphaBlend(layer, fill)),
+                  foregroundDecoration: paint.edge,
+                  child: clipped!,
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -580,10 +629,10 @@ class FrostButtonFrame extends StatelessWidget {
 
   // A window background behind the button may need a more opaque fill to keep
   // the ink readable; the state layer then folds into that fill.
-  (Color, Color) _readable(BuildContext context, FrostThemeTokens tokens, Color fill, Color layer, Color ink) {
+  (Color, Color) _readable(BuildContext context, FrostThemeTokens tokens, Color? surfaceBackground, Color fill, Color layer, Color ink) {
     final actualWindow = frostWindowBackgroundOf(context, tokens);
     if (actualWindow == null) return (fill, layer);
-    final background = FrostSurfaceScope.maybeOf(context)?.background ?? actualWindow;
+    final background = surfaceBackground ?? actualWindow;
     final composed = Color.alphaBlend(layer, fill);
     // Eases in and out with the ambient art, like the surfaces around it.
     final weight = FrostWindowBackgroundScope.maybeOf(context)!.ambientWeight;
@@ -640,7 +689,6 @@ class FrostButtonFrame extends StatelessWidget {
         : media.media || (destructive && feedbackRole == FrostFeedbackRole.primary)
         ? solidWashColor(fill).withValues(alpha: !interaction.interactive ? 0 : solidOverlayAlpha(fill, _washAlpha()))
         : frostButtonStateLayer(tokens, interaction.states, feedbackRole);
-    if (!media.media && mediaInk == null && !disabled) (fill, layer) = _readable(context, tokens, fill, layer, ink);
     final shape = media.media && !media.bare
         ? const CircleBorder()
         : style.shape == FrostButtonShape.pill
@@ -651,6 +699,7 @@ class FrostButtonFrame extends StatelessWidget {
       layer: layer,
       ink: ink,
       shape: shape,
+      followsWindow: !media.media && mediaInk == null && !disabled,
       edge: variant == FrostButtonVariant.outlined
           ? ShapeDecoration(
               shape: (shape as OutlinedBorder).copyWith(
@@ -709,8 +758,7 @@ class FrostButtonFrame extends StatelessWidget {
         : media.media
         ? solidWashColor(fill).withValues(alpha: !interaction.interactive ? 0 : solidOverlayAlpha(fill, _washAlpha()))
         : frostButtonStateLayer(tokens, interaction.states, FrostFeedbackRole.quiet);
-    if (!media.media && mediaInk == null) (fill, layer) = _readable(context, tokens, fill, layer, ink);
-    return _FramePaint(fill: fill, layer: layer, ink: ink, shape: FrostRadius.shape(context, metrics.radius));
+    return _FramePaint(fill: fill, layer: layer, ink: ink, shape: FrostRadius.shape(context, metrics.radius), followsWindow: !media.media && mediaInk == null);
   }
 }
 

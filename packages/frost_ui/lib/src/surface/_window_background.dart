@@ -4,6 +4,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 import '../foundation/_ambient_material.dart';
+import '../foundation/_listenable_rebuild.dart';
 
 import '../foundation/scope.dart';
 import '../foundation/tokens.dart';
@@ -15,24 +16,55 @@ class FrostWindowBackgroundScope extends InheritedWidget {
     required this.hasAmbient,
     required super.child,
     this.forceSolidBase = false,
-    this.background,
-    this.ambientWeight = 1,
+    this._background,
+    this._ambientWeight = 1,
+    this.fade,
     super.key,
   });
   final bool hasAmbient;
+  final bool forceSolidBase;
+  final Color? _background;
+  final double _ambientWeight;
+
+  /// The window background and how far the ambient art has faded in, as they
+  /// change from frame to frame. They do not notify this scope's dependents:
+  /// a widget whose colours follow the fade listens here
+  /// ([FrostWindowFadeBuilder]), so a fade repaints those colours instead of
+  /// rebuilding every control that reads the scope. Null for fixed values.
+  final ValueListenable<({Color background, double weight})?>? fade;
+
+  /// The window background now; read again as [fade] notifies.
+  Color? get background => fade == null ? _background : fade!.value?.background;
 
   /// How far the ambient art has faded in while [hasAmbient]: 0 at the start
-  /// of a fade in and the end of a fade out, 1 at rest.
-  final double ambientWeight;
-  final bool forceSolidBase;
-  final Color? background;
+  /// of a fade in and the end of a fade out, 1 at rest. Read again as [fade]
+  /// notifies.
+  double get ambientWeight => fade == null ? _ambientWeight : fade!.value?.weight ?? 0;
+
   static FrostWindowBackgroundScope? maybeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<FrostWindowBackgroundScope>();
   @override
   bool updateShouldNotify(FrostWindowBackgroundScope oldWidget) =>
       hasAmbient != oldWidget.hasAmbient ||
-      ambientWeight != oldWidget.ambientWeight ||
       forceSolidBase != oldWidget.forceSolidBase ||
-      background != oldWidget.background;
+      fade != oldWidget.fade ||
+      fade == null && (_ambientWeight != oldWidget._ambientWeight || _background != oldWidget._background);
+}
+
+/// Builds with [builder] again on each frame the window background fades, and
+/// whenever [follows] is false only once. [child] is built once either way.
+class FrostWindowFadeBuilder extends StatelessWidget {
+  const FrostWindowFadeBuilder({required this.builder, this.follows = true, this.child, super.key});
+  final TransitionBuilder builder;
+
+  /// Whether what [builder] makes depends on the window background.
+  final bool follows;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    final fade = follows ? FrostWindowBackgroundScope.maybeOf(context)?.fade : null;
+    return FrostListenableRebuild(listenable: fade, builder: builder, child: child);
+  }
 }
 
 bool frostHasTranslucentWindowBase(BuildContext context) =>

@@ -103,6 +103,16 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
     _mediaRects = rects?..addListener(_checkMedia);
   }
 
+  // Window-level fills follow the ambient art's fade frame by frame.
+  ValueListenable<Object?>? _windowFade;
+  void _watchWindowFade(ValueListenable<Object?>? fade) {
+    if (identical(fade, _windowFade)) return;
+    _windowFade?.removeListener(_windowFaded);
+    _windowFade = fade?..addListener(_windowFaded);
+  }
+
+  void _windowFaded() => setState(() {});
+
   void _scheduleMediaCheck() {
     if (_mediaCheckScheduled) return;
     _mediaCheckScheduled = true;
@@ -139,6 +149,7 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
   @override
   void dispose() {
     _mediaRects?.removeListener(_checkMedia);
+    _windowFade?.removeListener(_windowFaded);
     _mediaCover?.dispose();
     super.dispose();
   }
@@ -164,6 +175,7 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
     final highContrast = MediaQuery.highContrastOf(context);
     final solid = FrostScope.solidSurfaces(context);
     final translucentWindow = frostHasTranslucentWindowBase(context);
+    _watchWindowFade(FrostWindowBackgroundScope.maybeOf(context)?.fade);
     final actualWindow = frostWindowBackgroundOf(context, tokens);
     final behind = FrostSurfaceScope.maybeOf(context)?.background ?? actualWindow ?? tokens.canvas;
     final radius = frostSurfaceRadius(widget);
@@ -481,10 +493,7 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
     // translucent or changing fill it masks them. A surface that paints nothing
     // leaves content on what lies behind it.
     if (targetSigma > 0 || fill.a > 0 || windowFill != null) {
-      shaded = FrostBackdropVeilScope(
-        veil: targetSigma == 0 && windowFill == null && fill.a >= 1 ? FrostBackdropVeil.solid(fill) : null,
-        child: shaded,
-      );
+      shaded = FrostBackdropVeilScope(veil: targetSigma == 0 && windowFill == null && fill.a >= 1 ? FrostBackdropVeil.solid(fill) : null, child: shaded);
     }
     return FrostSurfaceScope(
       // Semantic ink follows the target material, including deferred sampling.

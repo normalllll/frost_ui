@@ -3,7 +3,9 @@ import 'package:flutter/widgets.dart';
 
 import '../foundation/_ambient_material.dart';
 import '../foundation/_colors.dart';
+import '../foundation/_listenable_rebuild.dart';
 import '../foundation/_premultiplied_lerp.dart';
+import '../foundation/_ticker_mode_watch.dart';
 import '../foundation/feedback.dart';
 import '../foundation/metrics.dart';
 import '../foundation/radius.dart';
@@ -40,10 +42,21 @@ class FrostClickFeedbackVisual extends StatelessWidget {
   // Slider animates its own thumb diameter but shares feedback and focus.
   final bool scalesOnPress;
   final FrostMediaImageRegistry? mediaImages;
+  // A covered route shows no press or hover. Only a visual that shows one
+  // watches for that.
   @override
   Widget build(BuildContext context) {
+    final shown = states.contains(WidgetState.pressed) || states.contains(WidgetState.hovered);
+    final tickers = shown ? TickerMode.getValuesNotifier(context) : null;
+    return FrostListenableRebuild(
+      listenable: tickers,
+      builder: (context, _) =>
+          _build(context, tickers == null || tickers.value.enabled ? states : (states.toSet()..removeAll({WidgetState.pressed, WidgetState.hovered}))),
+    );
+  }
+
+  Widget _build(BuildContext context, Set<WidgetState> activeStates) {
     final tokens = FrostThemeTokens.of(context);
-    final activeStates = TickerMode.valuesOf(context).enabled ? states : (states.toSet()..removeAll({WidgetState.pressed, WidgetState.hovered}));
     final enabled = !activeStates.contains(WidgetState.disabled);
     final border = shape ?? FrostRadius.shape(context, FrostRadius.md);
     var color = switch (feedback) {
@@ -51,18 +64,29 @@ class FrostClickFeedbackVisual extends StatelessWidget {
       FrostClickFeedback.quiet => frostButtonStateLayer(tokens, activeStates, FrostFeedbackRole.quiet),
       FrostClickFeedback.media => frostClear,
     };
-    final actualWindow = frostWindowBackgroundOf(context, tokens);
-    if (actualWindow != null && color.a > 0) {
-      final readable = frostReadableWindowFill(tokens, color, FrostSurfaceScope.maybeOf(context)?.background ?? actualWindow, tokens.textSecondary);
-      color = frostLerpColorPremultiplied(color, readable, FrostWindowBackgroundScope.maybeOf(context)!.ambientWeight)!;
-    }
+    final surfaceBackground = FrostSurfaceScope.maybeOf(context)?.background;
     final rectangular = fillsBounds || (clipsContent && frostNeedsClippedFill(border, Directionality.of(context)));
-    Widget content = FrostInteractionDecoration(
-      duration: FrostMotion.duration(context, FrostMotion.hover),
-      curve: FrostMotion.hoverCurve,
-      decoration: rectangular ? BoxDecoration(color: color) : ShapeDecoration(shape: border, color: color),
-      foregroundDecoration: rectangular && border is OutlinedBorder && border.side != BorderSide.none ? ShapeDecoration(shape: border) : null,
+    final duration = FrostMotion.duration(context, FrostMotion.hover);
+    // A clear layer has nothing to keep readable, so it does not follow the
+    // window background's fade.
+    Widget content = FrostWindowFadeBuilder(
+      follows: color.a > 0,
       child: child,
+      builder: (context, child) {
+        var fill = color;
+        final actualWindow = frostWindowBackgroundOf(context, tokens);
+        if (actualWindow != null && fill.a > 0) {
+          final readable = frostReadableWindowFill(tokens, fill, surfaceBackground ?? actualWindow, tokens.textSecondary);
+          fill = frostLerpColorPremultiplied(fill, readable, FrostWindowBackgroundScope.maybeOf(context)!.ambientWeight)!;
+        }
+        return FrostInteractionDecoration(
+          duration: duration,
+          curve: FrostMotion.hoverCurve,
+          decoration: rectangular ? BoxDecoration(color: fill) : ShapeDecoration(shape: border, color: fill),
+          foregroundDecoration: rectangular && border is OutlinedBorder && border.side != BorderSide.none ? ShapeDecoration(shape: border) : null,
+          child: child!,
+        );
+      },
     );
     if (clipsContent) {
       content = ClipPath(
@@ -104,10 +128,17 @@ class FrostInteractionScale extends StatefulWidget {
 class _InteractionScaleState extends State<FrostInteractionScale> with SingleTickerProviderStateMixin {
   late final _scale = AnimationController.unbounded(vsync: this, value: widget.mediaImages == null ? widget.value : 1);
   bool _tickersEnabled = true, _reducedMotion = false;
+  late final _tickers = FrostTickerModeWatch(_tickersChanged);
   @override
   void initState() {
     super.initState();
     widget.mediaImages?.addListener(_update);
+  }
+
+  void _tickersChanged() {
+    if (_tickersEnabled == _tickers.enabled) return;
+    _tickersEnabled = _tickers.enabled;
+    if (widget.mediaImages != null || !_tickersEnabled || _reducedMotion) _update();
   }
 
   void _update() {
@@ -126,7 +157,8 @@ class _InteractionScaleState extends State<FrostInteractionScale> with SingleTic
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _tickersEnabled = TickerMode.valuesOf(context).enabled;
+    _tickers.attach(context);
+    _tickersEnabled = _tickers.enabled;
     _reducedMotion = MediaQuery.disableAnimationsOf(context);
     if (widget.mediaImages != null || !_tickersEnabled || _reducedMotion) _update();
   }
@@ -143,6 +175,7 @@ class _InteractionScaleState extends State<FrostInteractionScale> with SingleTic
 
   @override
   void dispose() {
+    _tickers.dispose();
     widget.mediaImages?.removeListener(_update);
     _scale.dispose();
     super.dispose();
@@ -220,16 +253,29 @@ class _InteractionDecorationState extends AnimatedWidgetBaseState<FrostInteracti
         visitor(_foreground, widget.foregroundDecoration, (value) => FrostPremultipliedDecorationTween(begin: value as Decoration)) as DecorationTween?;
   }
 
+  late final _tickers = FrostTickerModeWatch(_finishWithoutTickers);
+
+  void _finishWithoutTickers() {
+    if (!_tickers.enabled && controller.value != 1) controller.value = 1;
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!TickerMode.valuesOf(context).enabled) controller.value = 1;
+    _tickers.attach(context);
+    if (!_tickers.enabled) controller.value = 1;
   }
 
   @override
   void didUpdateWidget(FrostInteractionDecoration oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!TickerMode.valuesOf(context).enabled) controller.value = 1;
+    if (!_tickers.enabled) controller.value = 1;
+  }
+
+  @override
+  void dispose() {
+    _tickers.dispose();
+    super.dispose();
   }
 
   @override
