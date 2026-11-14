@@ -209,6 +209,15 @@ class _ProviderImageState extends State<_ProviderImage> {
   // The placeholder keeps its state when it moves under the fading image.
   final _standKey = GlobalKey();
 
+  // The image paints its fade as its own alpha, which takes no layer.
+  final _opacity = _ImageOpacity();
+
+  @override
+  void dispose() {
+    _opacity.dispose();
+    super.dispose();
+  }
+
   @override
   void didUpdateWidget(_ProviderImage oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -234,6 +243,7 @@ class _ProviderImageState extends State<_ProviderImage> {
   Widget build(BuildContext context) => Image(
     image: widget.image,
     fit: widget.fit,
+    opacity: _opacity,
     excludeFromSemantics: true,
     frameBuilder: (context, imageChild, frame, synchronous) {
       final outgoing = _outgoing;
@@ -244,10 +254,12 @@ class _ProviderImageState extends State<_ProviderImage> {
       final displayed = FrostMediaImage(child: imageChild);
       if ((synchronous && outgoing == null) || MediaQuery.disableAnimationsOf(context)) {
         _outgoing = null;
+        _opacity.value = 1;
         return displayed;
       }
       return _ImageFadeIn(
         key: ValueKey<ImageProvider>(widget.image),
+        opacity: _opacity,
         // The stroke already stands around an outgoing image; it does not dip.
         tracksReveal: outgoing == null,
         underlay: outgoing == null ? _stand(context, 1) : _outgoingImage(outgoing),
@@ -277,13 +289,32 @@ class _ProviderImageState extends State<_ProviderImage> {
   );
 }
 
+/// An image's opacity as its fade sets it.
+class _ImageOpacity extends Animation<double> with AnimationLocalListenersMixin, AnimationLocalStatusListenersMixin, AnimationEagerListenerMixin {
+  double _value = 1;
+
+  @override
+  double get value => _value;
+  set value(double value) {
+    if (value == _value) return;
+    _value = value;
+    notifyListeners();
+  }
+
+  @override
+  AnimationStatus get status => AnimationStatus.forward;
+}
+
 /// Fades a newly arrived image in over [underlay] and tells the enclosing
 /// registries how far it has got, so the media stroke does not outshine a still
 /// transparent picture. The underlay stays opaque until the image is, so an
 /// opaque image never lets the backdrop through; it then fades out over a
 /// further quarter of the fade, which only a transparent image shows.
 class _ImageFadeIn extends StatefulWidget {
-  const _ImageFadeIn({required this.tracksReveal, required this.underlay, required this.onEnd, required this.child, super.key});
+  const _ImageFadeIn({required this.opacity, required this.tracksReveal, required this.underlay, required this.onEnd, required this.child, super.key});
+
+  /// The alpha [child], the image, paints itself with.
+  final _ImageOpacity opacity;
   final bool tracksReveal;
   final Widget underlay;
   final VoidCallback onEnd;
@@ -322,6 +353,7 @@ class _ImageFadeInState extends State<_ImageFadeIn> {
       final opacity = math.min(1.0, progress);
       final underlay = progress <= 1 ? 1.0 : (1 + _underlayFade - progress) / _underlayFade;
       _registry?.setReveal(this, widget.tracksReveal ? opacity : 1);
+      widget.opacity.value = opacity;
       return Stack(
         fit: StackFit.passthrough,
         alignment: Alignment.topLeft,
@@ -330,7 +362,7 @@ class _ImageFadeInState extends State<_ImageFadeIn> {
             Positioned.fill(
               child: FadeTransition(opacity: AlwaysStoppedAnimation(underlay), child: widget.underlay),
             ),
-          Opacity(opacity: opacity, child: child),
+          child!,
         ],
       );
     },

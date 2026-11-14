@@ -1,4 +1,3 @@
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/media.dart';
@@ -76,11 +75,12 @@ void main() {
     final base = innerStrokes(tester, frame).single.color!.a;
     image.completer.complete(await _decoded(tester));
     await tester.pump();
-    final fade = find.descendant(of: frame, matching: find.byType(Opacity));
-    expect(tester.renderObject<RenderOpacity>(fade).opacity, 0);
+    // The image fades by its own alpha.
+    double fade() => tester.widget<RawImage>(find.descendant(of: frame, matching: find.byType(RawImage)).last).opacity!.value;
+    expect(fade(), 0);
     expect(innerStrokes(tester, frame).single.drawn!.a, closeTo(0, 1e-3));
     await tester.pump(FrostMotion.imageFade ~/ 3);
-    final opacity = tester.renderObject<RenderOpacity>(fade).opacity;
+    final opacity = fade();
     expect(opacity, inExclusiveRange(0, 1));
     expect(innerStrokes(tester, frame).single.drawn!.a, closeTo(base * opacity, 2 / 255));
     await tester.pumpAndSettle();

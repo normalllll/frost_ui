@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/media.dart';
@@ -20,6 +19,10 @@ class ControlledCompleter extends ImageStreamCompleter {
   void fail(Object error) => reportError(exception: error, silent: true);
   void complete(ImageInfo image) => setImage(image);
 }
+
+/// The alpha the frame's newest image paints itself with.
+double imageOpacity(WidgetTester tester) =>
+    tester.widget<RawImage>(find.descendant(of: find.byType(FrostMediaFrame), matching: find.byType(RawImage)).last).opacity?.value ?? 1;
 
 void main() {
   testWidgets('media child has configurable clip, aspect, physical inner stroke and semantics', (tester) async {
@@ -87,13 +90,14 @@ void main() {
     await tester.pump();
     // The placeholder stays under the fading image and leaves with the fade.
     expect(find.text('loading'), findsOneWidget);
-    final fade = find.descendant(of: find.byType(FrostMediaFrame), matching: find.byType(Opacity));
-    expect(tester.renderObject<RenderOpacity>(fade).opacity, 0);
+    // The image fades by its own alpha, with no opacity layer over it.
+    expect(find.descendant(of: find.byType(FrostMediaFrame), matching: find.byType(Opacity)), findsNothing);
+    expect(imageOpacity(tester), 0);
     await tester.pump(FrostMotion.imageFade ~/ 2);
     expect(find.text('loading'), findsOneWidget);
-    expect(tester.renderObject<RenderOpacity>(fade).opacity, allOf(greaterThan(0), lessThan(1)));
+    expect(imageOpacity(tester), allOf(greaterThan(0), lessThan(1)));
     await tester.pump(FrostMotion.imageFade);
-    expect(tester.renderObject<RenderOpacity>(fade).opacity, 1);
+    expect(imageOpacity(tester), 1);
     expect(find.text('loading'), findsNothing);
     final error = ControlledImage();
     await tester.pumpWidget(frostTestApp(SizedBox(width: 100, height: 80, child: FrostMediaFrame(image: error))));
@@ -117,7 +121,7 @@ void main() {
     );
     image.completer.complete(ImageInfo(image: (await tester.runAsync(() => createTestImage(width: 2, height: 2)))!));
     await tester.pump();
-    expect(find.descendant(of: find.byType(FrostMediaFrame), matching: find.byType(Opacity)), findsNothing);
+    expect(imageOpacity(tester), 1);
     expect(find.descendant(of: find.byType(FrostMediaFrame), matching: find.byType(RawImage)), findsOneWidget);
     final error = ControlledImage();
     final failure = StateError('failure');
@@ -149,11 +153,11 @@ void main() {
     image.completer.complete(ImageInfo(image: (await tester.runAsync(() => createTestImage(width: 2, height: 2)))!));
     Future<void> mount() => tester.pumpWidget(frostTestApp(SizedBox(width: 100, height: 80, child: FrostMediaFrame(image: image))));
     await mount();
-    expect(find.descendant(of: find.byType(FrostMediaFrame), matching: find.byType(Opacity)), findsNothing);
+    expect(imageOpacity(tester), 1);
     await tester.pumpWidget(const SizedBox());
     expect(PaintingBinding.instance.imageCache.statusForKey(image).keepAlive, isTrue);
     await mount();
-    expect(find.descendant(of: find.byType(FrostMediaFrame), matching: find.byType(Opacity)), findsNothing);
+    expect(imageOpacity(tester), 1);
     final pixels = tester.widget<RawImage>(find.byType(RawImage));
     expect(pixels.image, isNotNull);
     expect(tester.takeException(), isNull);
@@ -258,7 +262,10 @@ void main() {
             child: SizedBox(
               width: 100,
               height: 80,
-              child: FrostMediaFrame(image: image, placeholderBuilder: (_, _) => _CountingPlaceholder(onMount: () => mounts++)),
+              child: FrostMediaFrame(
+                image: image,
+                placeholderBuilder: (_, _) => _CountingPlaceholder(onMount: () => mounts++),
+              ),
             ),
           ),
         ),
@@ -271,7 +278,7 @@ void main() {
     await tester.pump();
     final frame = find.byType(FrostMediaFrame);
     double coverage() {
-      final image = tester.renderObject<RenderOpacity>(find.descendant(of: frame, matching: find.byType(Opacity))).opacity;
+      final image = imageOpacity(tester);
       final under = find.descendant(of: frame, matching: find.byType(FadeTransition));
       final underlay = under.evaluate().isEmpty ? 0.0 : tester.widget<FadeTransition>(under.first).opacity.value;
       return image + underlay * (1 - image);
@@ -296,8 +303,7 @@ void main() {
     completer.complete(ImageInfo(image: pixels));
     await tester.pumpAndSettle();
     await tester.pumpWidget(frame());
-    final fade = find.descendant(of: find.byType(FrostMediaFrame), matching: find.byType(Opacity));
-    expect(tester.renderObject<RenderOpacity>(fade).opacity, 1);
+    expect(imageOpacity(tester), 1);
     await tester.pumpWidget(const SizedBox());
     PaintingBinding.instance.imageCache.clear();
   });

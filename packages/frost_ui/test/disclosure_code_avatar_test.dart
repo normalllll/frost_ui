@@ -309,10 +309,11 @@ void main() {
     await display(tester, FrostAvatar(image: image, semanticLabel: 'Loaded'));
     image.completer.complete(ImageInfo(image: (await tester.runAsync(() => createTestImage(width: 2, height: 2)))!));
     await tester.pump();
-    final opacity = find.descendant(of: find.byType(FrostMediaFrame), matching: find.byType(Opacity));
-    expect(tester.renderObject<RenderOpacity>(opacity).opacity, 0);
+    // The image fades by its own alpha.
+    double opacity() => tester.widget<RawImage>(find.descendant(of: find.byType(FrostMediaFrame), matching: find.byType(RawImage)).last).opacity!.value;
+    expect(opacity(), 0);
     await tester.pump(FrostMotion.imageFade ~/ 2);
-    expect(tester.renderObject<RenderOpacity>(opacity).opacity, inExclusiveRange(0, 1));
+    expect(opacity(), inExclusiveRange(0, 1));
     await tester.pumpAndSettle();
     const child = Text('App-owned');
     await display(tester, const FrostAvatar(semanticLabel: 'Child', child: child));
@@ -336,7 +337,7 @@ void main() {
     await display(tester, FrostAvatar(image: image, semanticLabel: 'Reduced'), reduced: true);
     image.completer.complete(ImageInfo(image: (await tester.runAsync(() => createTestImage(width: 2, height: 2)))!));
     await tester.pump();
-    expect(find.descendant(of: find.byType(FrostMediaFrame), matching: find.byType(Opacity)), findsNothing);
+    expect(tester.widget<RawImage>(find.descendant(of: find.byType(FrostMediaFrame), matching: find.byType(RawImage)).last).opacity?.value ?? 1, 1);
     expect(tester.takeException(), isNull);
   });
 }
