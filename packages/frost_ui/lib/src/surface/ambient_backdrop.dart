@@ -12,6 +12,7 @@ import '../foundation/scope.dart';
 import '../foundation/tokens.dart';
 import '../layout/window_caption_scope.dart';
 import '../motion/_frame_work.dart';
+import '_backdrop_veil.dart';
 import '_media_ambient.dart';
 import '_window_background.dart';
 
@@ -912,7 +913,21 @@ class _FrostAmbientBackdropHostState extends State<FrostAmbientBackdropHost> wit
             fit: StackFit.expand,
             children: [
               const RepaintBoundary(child: FrostAmbientBackdrop()),
-              FrostAmbientCardScope(registry: _controller._cards, media: _controller._media, mediaRects: _controller._mediaRects, child: child!),
+              FrostAmbientCardScope(
+                registry: _controller._cards,
+                media: _controller._media,
+                mediaRects: _controller._mediaRects,
+                // Content lying on the window fades its edges into the art.
+                child: FrostBackdropVeilScope(
+                  veil: _AmbientVeil(
+                    controller: _controller,
+                    tokens: FrostThemeTokens.of(context),
+                    plain: FrostScope.solidSurfaces(context),
+                    systemBackdrop: !FrostScope.solidSurfaces(context) && widget.intensity != 0 && FrostWindowCaptionScope.systemBackdropActiveOf(context),
+                  ),
+                  child: child!,
+                ),
+              ),
             ],
           ),
         ),
@@ -987,6 +1002,125 @@ Widget _ambientPaint(BuildContext context, double opacity) {
     systemBackdrop: !plain && !(scope?.forceSolid ?? false) && FrostWindowCaptionScope.systemBackdropActiveOf(context),
     opacity: opacity.clamp(0.0, 1.0),
   );
+}
+
+/// The draws that make up the ambient picture, bottom first, each with the
+/// alpha that lays it over the ones before it, and the live grain's opacity;
+/// null when nothing is painted.
+///
+/// An endpoint is a flat colour or a texture, and one whose glow is fading in
+/// over a prepared texture is that texture over the draw it fades from. Only
+/// an endpoint with neither is painted live (null).
+({List<(_AmbientFrame, Object?, double)> draws, double grain})? _ambientDraws(
+  FrostAmbientBackdropController controller, {
+  required bool plain,
+  required bool systemBackdrop,
+  required double opacity,
+}) {
+  final frames = controller._frames;
+  final draws = <(_AmbientFrame, Object?, double)>[];
+  var total = 0.0;
+  for (var index = 0; index < frames.length; index++) {
+    final frame = frames[index], weight = controller._weight(index);
+    if (weight <= 0 || (systemBackdrop && frame.image == null && !frame.accentFallback)) continue;
+    total += weight;
+    if (_RenderAmbient._flatColor(frame, solid: plain) case final color?) {
+      draws.add((frame, color, weight));
+    } else if (frame.texture case final texture?) {
+      if (frame.glowFrom case final from? when frame.glowFade < 1) draws.add((frame, from, weight * (1 - frame.glowFade)));
+      draws.add((frame, texture, frame.glowFrom != null && frame.glowFade < 1 ? weight * frame.glowFade : weight));
+    } else {
+      draws.add((frame, null, weight));
+    }
+  }
+  if (total == 0) return null;
+  final scale = total.clamp(0.0, 1.0) * opacity;
+  // Each draw's share of the picture is its weight, scaled to the picture's
+  // opacity. Retargeting retains the current weighted picture instead of
+  // jumping to the old target. Laying each draw over the ones before it with
+  // an alpha solved from the top gives it that share without an opacity
+  // buffer: its share is its alpha times what the draws above it let
+  // through.
+  final shares = [for (final (_, _, weight) in draws) scale * weight / total];
+  final alphas = List.filled(draws.length, 0.0);
+  var through = 1.0;
+  for (var index = draws.length - 1; index >= 0; index--) {
+    alphas[index] = through <= 0 ? 0 : (shares[index] / through).clamp(0.0, 1.0);
+    through *= 1 - alphas[index];
+  }
+  var grain = 0.0;
+  for (var index = 0; index < draws.length; index++) {
+    if (alphas[index] > 0 && draws[index].$2 is ui.Image && !draws[index].$1.tokens.isDark) grain += shares[index];
+  }
+  return (draws: [for (var index = 0; index < draws.length; index++) (draws[index].$1, draws[index].$2, alphas[index])], grain: grain.clamp(0.0, 1.0));
+}
+
+/// The rect of a window of [window] size in [box]'s paint coordinates at [offset].
+Rect _ambientWindowRect(Size window, RenderBox box, Offset offset) {
+  final toWindow = Matrix4.tryInvert(box.getTransformTo(null));
+  return toWindow == null ? (offset - box.localToGlobal(Offset.zero)) & window : MatrixUtils.transformRect(toWindow, Offset.zero & window).shift(offset);
+}
+
+/// The window's ambient backdrop laid over content near an edge, as the same
+/// draws the backdrop is made of, each faded across the strip. At rest the
+/// backdrop is one draw and the veil repaints it exactly; while it changes,
+/// each draw is faded on its own, which is close to the crossfading picture.
+class _AmbientVeil extends FrostBackdropVeil {
+  const _AmbientVeil({required this.controller, required this.tokens, required this.plain, required this.systemBackdrop});
+  final FrostAmbientBackdropController controller;
+  final FrostThemeTokens tokens;
+  final bool plain, systemBackdrop;
+
+  @override
+  bool reproducesBelow(BuildContext context) => frostAmbientBackdropCovers(context);
+
+  @override
+  Listenable get repaint => controller;
+
+  @override
+  void paint(Canvas canvas, RenderBox box, Offset offset, Rect strip, Offset opaqueAt, Offset clearAt) {
+    if (controller._frames.isEmpty) return FrostBackdropVeil.drawColor(canvas, strip, opaqueAt, clearAt, tokens.canvas);
+    final picture = _ambientDraws(controller, plain: plain, systemBackdrop: systemBackdrop, opacity: 1);
+    if (picture == null) return;
+    // Textures are prepared for this window size.
+    final windowRect = _ambientWindowRect(controller._window.isEmpty ? box.size : controller._window, box, offset);
+    for (final (frame, draw, alpha) in picture.draws) {
+      if (alpha <= 0) continue;
+      switch (draw) {
+        case final Color color:
+          FrostBackdropVeil.drawColor(canvas, strip, opaqueAt, clearAt, color.withValues(alpha: color.a * alpha));
+        case final ui.Image texture:
+          final matrix = Matrix4.translationValues(windowRect.left, windowRect.top, 0)
+            ..scaleByDouble(windowRect.width / texture.width, windowRect.height / texture.height, 1, 1);
+          FrostBackdropVeil.drawShaded(canvas, strip, opaqueAt, clearAt, ImageShader(texture, TileMode.clamp, TileMode.clamp, matrix.storage), alpha: alpha);
+        default:
+          // A live endpoint is rare and short; its canvas stands in for it.
+          FrostBackdropVeil.drawColor(canvas, strip, opaqueAt, clearAt, frame.tokens.canvas.withValues(alpha: frame.tokens.canvas.a * alpha));
+      }
+    }
+    if (picture.grain > 0) {
+      if (frostAmbientGrain.value case final grain?) {
+        final pixelRatio = controller._pixelRatio;
+        final scale = Matrix4.diagonal3Values(1 / pixelRatio, 1 / pixelRatio, 1);
+        FrostBackdropVeil.drawShaded(
+          canvas,
+          strip,
+          opaqueAt,
+          clearAt,
+          ImageShader(grain, TileMode.repeated, TileMode.repeated, scale.storage),
+          alpha: picture.grain,
+          blendMode: BlendMode.difference,
+        );
+      }
+    }
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is _AmbientVeil && other.controller == controller && other.tokens == tokens && other.plain == plain && other.systemBackdrop == systemBackdrop;
+
+  @override
+  int get hashCode => Object.hash(controller, tokens, plain, systemBackdrop);
 }
 
 class _AmbientPaint extends LeafRenderObjectWidget {
@@ -1092,54 +1226,14 @@ class _RenderAmbient extends RenderBox {
       canvas.drawRect(local, Paint()..color = _tokens.canvas.withValues(alpha: _tokens.canvas.a * _opacity));
       return;
     }
+    final picture = _ambientDraws(_controller!, plain: _plain, systemBackdrop: _systemBackdrop, opacity: _opacity);
+    if (picture == null) return;
     final view = ui.PlatformDispatcher.instance.implicitView;
-    final window = view == null ? size : view.physicalSize / view.devicePixelRatio;
-    final toWindow = Matrix4.tryInvert(getTransformTo(null));
-    final windowRect = toWindow == null
-        ? (offset - localToGlobal(Offset.zero)) & window
-        : MatrixUtils.transformRect(toWindow, Offset.zero & window).shift(offset);
-    final frames = _controller!._frames;
-    // The draws that make up the picture, each with its weight: an endpoint is
-    // a flat colour or a texture, and one whose glow is fading in over a
-    // prepared texture is that texture over the draw it fades from. Only an
-    // endpoint with neither is painted live (null).
-    final draws = <(_AmbientFrame, Object?, double)>[];
-    var total = 0.0;
-    for (var index = 0; index < frames.length; index++) {
-      final frame = frames[index], weight = _controller!._weight(index);
-      if (weight <= 0 || (_systemBackdrop && frame.image == null && !frame.accentFallback)) continue;
-      total += weight;
-      if (_flatColor(frame, solid: _plain) case final color?) {
-        draws.add((frame, color, weight));
-      } else if (frame.texture case final texture?) {
-        if (frame.glowFrom case final from? when frame.glowFade < 1) draws.add((frame, from, weight * (1 - frame.glowFade)));
-        draws.add((frame, texture, frame.glowFrom != null && frame.glowFade < 1 ? weight * frame.glowFade : weight));
-      } else {
-        draws.add((frame, null, weight));
-      }
-    }
-    if (total == 0) return;
-    final opacity = total.clamp(0.0, 1.0) * _opacity;
-    // Each draw's share of the picture is its weight, scaled to the picture's
-    // opacity. Retargeting retains the current weighted picture instead of
-    // jumping to the old target. Laying each draw over the ones before it with
-    // an alpha solved from the top gives it that share without an opacity
-    // buffer: its share is its alpha times what the draws above it let
-    // through.
-    final shares = [for (final (_, _, weight) in draws) opacity * weight / total];
-    final alphas = List.filled(draws.length, 0.0);
-    var through = 1.0;
-    for (var index = draws.length - 1; index >= 0; index--) {
-      alphas[index] = through <= 0 ? 0 : (shares[index] / through).clamp(0.0, 1.0);
-      through *= 1 - alphas[index];
-    }
+    final windowRect = _ambientWindowRect(view == null ? size : view.physicalSize / view.devicePixelRatio, this, offset);
     final pixelRatio = view?.devicePixelRatio ?? 1;
-    var grain = 0.0;
     canvas.save();
     canvas.clipRect(local);
-    for (var index = 0; index < draws.length; index++) {
-      final (frame, draw, _) = draws[index];
-      final alpha = alphas[index];
+    for (final (frame, draw, alpha) in picture.draws) {
       if (alpha <= 0) continue;
       switch (draw) {
         case final Color color:
@@ -1153,7 +1247,6 @@ class _RenderAmbient extends RenderBox {
               ..filterQuality = FilterQuality.medium
               ..color = Color.fromRGBO(0, 0, 0, alpha),
           );
-          if (!frame.tokens.isDark) grain += shares[index];
         default:
           // Painted live in several draws, which fade as one.
           if (alpha < 1) canvas.saveLayer(local, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
@@ -1161,7 +1254,7 @@ class _RenderAmbient extends RenderBox {
           if (alpha < 1) canvas.restore();
       }
     }
-    if (grain > 0) frostPaintAmbientGrain(canvas, local, pixelRatio, opacity: grain.clamp(0.0, 1.0));
+    if (picture.grain > 0) frostPaintAmbientGrain(canvas, local, pixelRatio, opacity: picture.grain);
     canvas.restore();
   }
 

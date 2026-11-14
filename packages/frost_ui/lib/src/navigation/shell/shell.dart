@@ -56,6 +56,7 @@ import '../../primitives/glyph.dart';
 import '../../primitives/icon.dart' show FrostIcon;
 import '../../primitives/surface.dart';
 import '../../primitives/text.dart';
+import '../../surface/_backdrop_veil.dart';
 import '../_destination_root.dart';
 import '../_destination_status.dart';
 import '../_navigation_tile.dart';
@@ -633,74 +634,83 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
                     layoutIdentity: _layoutIdentity,
                     child: _ShellBase(
                       enabled: useHorizontalLayout,
-                      child: Scaffold(
-                        key: _scaffoldKey,
-                        backgroundColor: useHorizontalLayout ? frostClear : FrostThemeTokens.of(context).canvas,
-                        // The shell never shrinks for the keyboard: the sidebar
-                        // stays put. Destination pages own mobile navigation; pages
-                        // keep avoiding it through their own Scaffolds.
-                        resizeToAvoidBottomInset: false,
-                        extendBody: false,
-                        body: AnimatedBuilder(
-                          animation: Listenable.merge([_sidebarProgress, ?widget.tabs?.controller]),
-                          builder: (context, _) {
-                            final progress = besidePage ? (_settledProgress ?? _sidebarProgress.value) : 0.0;
-                            final railWidth = lerpDouble(_railWidth, expandedWidth, progress)!;
-                            final frame = _frame(context);
-                            final rtl = Directionality.of(context) == TextDirection.rtl;
-                            // Native window controls stay above application
-                            // navigation; the sidebar header shares its icon axis.
-                            final sidebarTop = (showCaption ? captionHeight : 0.0) + math.max(frame.top, !hasCaption ? FrostGap.related : 0.0);
-                            // Only positioned layers: the Stack must take the body size.
-                            return Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                // Pages start beside the sidebar so it never covers
-                                // their hit targets. The tree keeps one shape so a
-                                // fold or resize that switches layouts keeps state.
-                                Positioned.fill(
-                                  left: showSidebar && !rtl ? frame.left + railWidth : 0,
-                                  top: showCaption
-                                      ? captionHeight + captionInset
-                                      : showSidebar
-                                      ? sidebarTop
-                                      : 0,
-                                  right: showSidebar && rtl ? frame.right + railWidth : 0,
-                                  bottom: showSidebar ? FrostGap.related : 0,
-                                  child: MediaQuery.removePadding(
-                                    context: context,
-                                    removeLeft: showSidebar && !rtl,
-                                    removeRight: showSidebar && rtl,
-                                    removeTop: showSidebar,
-                                    child: FrostCaptionClearance(
-                                      child: _ContentSheet(
-                                        enabled: showSidebar,
-                                        radius: FrostRadius.borderRadius(FrostRadius.lg),
-                                        child: FrostContentViewport(
-                                          key: _pageKey,
-                                          navigationReserve: besidePage ? expandedWidth - railWidth : 0,
-                                          child: FrostOverlayRegionGeometry(
-                                            onChanged: _overlayBounds.update,
-                                            child: FrostToastViewport(
-                                              key: const ValueKey('frost-toast-viewport'),
-                                              child: Column(
-                                                children: [
-                                                  // Out of the row the content keeps its state and
-                                                  // focus, and takes no room or Tab stop.
-                                                  if (!titleInCaption && !syntheticCaption && titleContent != null)
-                                                    Offstage(
-                                                      child: TickerMode(
-                                                        enabled: false,
-                                                        child: FocusTraversalGroup(descendantsAreTraversable: false, child: titleContent),
+                      // Pages on a phone lie on the shell's canvas; beside a
+                      // sidebar, on what lies behind the shell.
+                      child: FrostBackdropVeilScope(
+                        veil: useHorizontalLayout
+                            ? context.dependOnInheritedWidgetOfExactType<FrostBackdropVeilScope>()?.veil
+                            : FrostThemeTokens.of(context).canvas.a >= 1
+                            ? FrostBackdropVeil.solid(FrostThemeTokens.of(context).canvas)
+                            : null,
+                        child: Scaffold(
+                          key: _scaffoldKey,
+                          backgroundColor: useHorizontalLayout ? frostClear : FrostThemeTokens.of(context).canvas,
+                          // The shell never shrinks for the keyboard: the sidebar
+                          // stays put. Destination pages own mobile navigation; pages
+                          // keep avoiding it through their own Scaffolds.
+                          resizeToAvoidBottomInset: false,
+                          extendBody: false,
+                          body: AnimatedBuilder(
+                            animation: Listenable.merge([_sidebarProgress, ?widget.tabs?.controller]),
+                            builder: (context, _) {
+                              final progress = besidePage ? (_settledProgress ?? _sidebarProgress.value) : 0.0;
+                              final railWidth = lerpDouble(_railWidth, expandedWidth, progress)!;
+                              final frame = _frame(context);
+                              final rtl = Directionality.of(context) == TextDirection.rtl;
+                              // Native window controls stay above application
+                              // navigation; the sidebar header shares its icon axis.
+                              final sidebarTop = (showCaption ? captionHeight : 0.0) + math.max(frame.top, !hasCaption ? FrostGap.related : 0.0);
+                              // Only positioned layers: the Stack must take the body size.
+                              return Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  // Pages start beside the sidebar so it never covers
+                                  // their hit targets. The tree keeps one shape so a
+                                  // fold or resize that switches layouts keeps state.
+                                  Positioned.fill(
+                                    left: showSidebar && !rtl ? frame.left + railWidth : 0,
+                                    top: showCaption
+                                        ? captionHeight + captionInset
+                                        : showSidebar
+                                        ? sidebarTop
+                                        : 0,
+                                    right: showSidebar && rtl ? frame.right + railWidth : 0,
+                                    bottom: showSidebar ? FrostGap.related : 0,
+                                    child: MediaQuery.removePadding(
+                                      context: context,
+                                      removeLeft: showSidebar && !rtl,
+                                      removeRight: showSidebar && rtl,
+                                      removeTop: showSidebar,
+                                      child: FrostCaptionClearance(
+                                        child: _ContentSheet(
+                                          enabled: showSidebar,
+                                          radius: FrostRadius.borderRadius(FrostRadius.lg),
+                                          child: FrostContentViewport(
+                                            key: _pageKey,
+                                            navigationReserve: besidePage ? expandedWidth - railWidth : 0,
+                                            child: FrostOverlayRegionGeometry(
+                                              onChanged: _overlayBounds.update,
+                                              child: FrostToastViewport(
+                                                key: const ValueKey('frost-toast-viewport'),
+                                                child: Column(
+                                                  children: [
+                                                    // Out of the row the content keeps its state and
+                                                    // focus, and takes no room or Tab stop.
+                                                    if (!titleInCaption && !syntheticCaption && titleContent != null)
+                                                      Offstage(
+                                                        child: TickerMode(
+                                                          enabled: false,
+                                                          child: FocusTraversalGroup(descendantsAreTraversable: false, child: titleContent),
+                                                        ),
+                                                      ),
+                                                    Expanded(
+                                                      child: NotificationListener<NavigationNotification>(
+                                                        onNotification: _contentNavigated,
+                                                        child: FrostShellPageTitleScope(title: showsPageTitle ? _pageTitle : null, child: widget.child),
                                                       ),
                                                     ),
-                                                  Expanded(
-                                                    child: NotificationListener<NavigationNotification>(
-                                                      onNotification: _contentNavigated,
-                                                      child: FrostShellPageTitleScope(title: showsPageTitle ? _pageTitle : null, child: widget.child),
-                                                    ),
-                                                  ),
-                                                ],
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -708,120 +718,120 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
                                       ),
                                     ),
                                   ),
-                                ),
-                                if (showSidebar)
-                                  Positioned(
-                                    left: rtl ? null : frame.left,
-                                    right: rtl ? frame.right : null,
-                                    top: sidebarTop,
-                                    bottom: frame.bottom,
-                                    width: railWidth,
-                                    // Paints nothing. The sidebar that opened over the page
-                                    // drew its shadow here; keeping the box keeps the render
-                                    // tree the constructor baselines recorded for the inset
-                                    // sidebar.
-                                    child: DecoratedBox(
-                                      decoration: const BoxDecoration(),
-                                      child: _SidebarNavigation(
-                                        destinations: widget.destinations,
-                                        selectedIndex: widget.tabs?.controller.baseTab != null && !widget.tabs!.controller.isBaseTabActive
-                                            ? null
-                                            : widget.atDestinationRoot
-                                            ? _currentPrimary
-                                            : null,
-                                        secondary: _sidebarSecondary(),
-                                        expandedWidth: expandedWidth,
-                                        ellipsizesLabels: ellipsizesLabels,
-                                        progress: progress,
-                                        bottomAligned: bottomAligned,
-                                        footer: _sidebarFooter(
+                                  if (showSidebar)
+                                    Positioned(
+                                      left: rtl ? null : frame.left,
+                                      right: rtl ? frame.right : null,
+                                      top: sidebarTop,
+                                      bottom: frame.bottom,
+                                      width: railWidth,
+                                      // Paints nothing. The sidebar that opened over the page
+                                      // drew its shadow here; keeping the box keeps the render
+                                      // tree the constructor baselines recorded for the inset
+                                      // sidebar.
+                                      child: DecoratedBox(
+                                        decoration: const BoxDecoration(),
+                                        child: _SidebarNavigation(
+                                          destinations: widget.destinations,
+                                          selectedIndex: widget.tabs?.controller.baseTab != null && !widget.tabs!.controller.isBaseTabActive
+                                              ? null
+                                              : widget.atDestinationRoot
+                                              ? _currentPrimary
+                                              : null,
+                                          secondary: _sidebarSecondary(),
+                                          expandedWidth: expandedWidth,
+                                          ellipsizesLabels: ellipsizesLabels,
                                           progress: progress,
                                           bottomAligned: bottomAligned,
-                                          tabsOverview: touch && widget.tabs != null
-                                              ? Builder(
-                                                  builder: (context) {
-                                                    final tabs = widget.tabs!;
-                                                    final label = (tabs.sidebarLabel ?? tabs.countLabel)(tabs.controller.length);
-                                                    void open() => tabs.showOverview(context);
-                                                    return Padding(
-                                                      padding: const EdgeInsets.symmetric(horizontal: _SidebarNavigation._innerPadding),
-                                                      child: Semantics(
-                                                        key: const ValueKey('frost-shell-tabs-overview'),
-                                                        button: true,
-                                                        label: label,
-                                                        onTap: open,
-                                                        // This count is tabs, not the unread count announced
-                                                        // by ordinary destination badges. Own its semantics.
-                                                        excludeSemantics: true,
-                                                        child: FrostDestinationStatus(
-                                                          badge: progress < .5 ? tabs.controller.length : 0,
-                                                          badgeTone: FrostCountBadgeTone.neutral,
-                                                          progress: null,
-                                                          child: FrostNavItem(
-                                                            label: label,
-                                                            icon: FrostIconSet.of(context).multiPage,
-                                                            selected: false,
-                                                            progress: progress,
-                                                            onTap: open,
+                                          footer: _sidebarFooter(
+                                            progress: progress,
+                                            bottomAligned: bottomAligned,
+                                            tabsOverview: touch && widget.tabs != null
+                                                ? Builder(
+                                                    builder: (context) {
+                                                      final tabs = widget.tabs!;
+                                                      final label = (tabs.sidebarLabel ?? tabs.countLabel)(tabs.controller.length);
+                                                      void open() => tabs.showOverview(context);
+                                                      return Padding(
+                                                        padding: const EdgeInsets.symmetric(horizontal: _SidebarNavigation._innerPadding),
+                                                        child: Semantics(
+                                                          key: const ValueKey('frost-shell-tabs-overview'),
+                                                          button: true,
+                                                          label: label,
+                                                          onTap: open,
+                                                          // This count is tabs, not the unread count announced
+                                                          // by ordinary destination badges. Own its semantics.
+                                                          excludeSemantics: true,
+                                                          child: FrostDestinationStatus(
+                                                            badge: progress < .5 ? tabs.controller.length : 0,
+                                                            badgeTone: FrostCountBadgeTone.neutral,
+                                                            progress: null,
+                                                            child: FrostNavItem(
+                                                              label: label,
+                                                              icon: FrostIconSet.of(context).multiPage,
+                                                              selected: false,
+                                                              progress: progress,
+                                                              onTap: open,
+                                                            ),
                                                           ),
                                                         ),
-                                                      ),
-                                                    );
-                                                  },
-                                                )
-                                              : null,
+                                                      );
+                                                    },
+                                                  )
+                                                : null,
+                                          ),
+                                          header: usesCaptionNavigation || syntheticCaption
+                                              ? null
+                                              : _SidebarHeader(
+                                                  expandedWidth: expandedWidth,
+                                                  progress: progress,
+                                                  brand: widget.brand?.expanded,
+                                                  onBack: canGoBack ? goBack : null,
+                                                ),
+                                          controls: _SidebarToggle(expanded: _expandedTarget, onToggle: besidePage ? _toggleExpansion : null),
+                                          onDestinationSelected: _selectIndex,
+                                          moreButtonFocus: _moreButtonFocus,
                                         ),
-                                        header: usesCaptionNavigation || syntheticCaption
-                                            ? null
-                                            : _SidebarHeader(
-                                                expandedWidth: expandedWidth,
-                                                progress: progress,
-                                                brand: widget.brand?.expanded,
-                                                onBack: canGoBack ? goBack : null,
-                                              ),
-                                        controls: _SidebarToggle(expanded: _expandedTarget, onToggle: besidePage ? _toggleExpansion : null),
-                                        onDestinationSelected: _selectIndex,
-                                        moreButtonFocus: _moreButtonFocus,
                                       ),
                                     ),
-                                  ),
-                                if (showCaption)
-                                  Positioned(
-                                    left: 0,
-                                    right: 0,
-                                    top: captionInset,
-                                    height: captionHeight,
-                                    child: _CaptionRow(
-                                      titleContent: titleInCaption || syntheticCaption ? titleContent : null,
-                                      tabs: useHorizontalLayout ? widget.tabs : null,
-                                      brandIcon: widget.brand?.icon,
-                                      expandsSearch: widget.titleBarSearch != null,
-                                      searchAtEnd: widget.titleBarSearchPlacement == FrostCaptionSearchPlacement.end,
-                                      brandLabel: _brandLabel(context),
-                                      iconAxis: (rtl ? frame.right : frame.left) + _railWidth / 2,
-                                      nativeCaption: hasCaption,
-                                      showsBack: (usesCaptionNavigation || syntheticCaption) && useHorizontalLayout,
-                                      onBack: canGoBack ? goBack : null,
-                                      brand: usesCaptionNavigation || syntheticCaption ? captionBrand : null,
-                                      pageTitle: showsPageTitle ? _pageTitle : null,
+                                  if (showCaption)
+                                    Positioned(
+                                      left: 0,
+                                      right: 0,
+                                      top: captionInset,
+                                      height: captionHeight,
+                                      child: _CaptionRow(
+                                        titleContent: titleInCaption || syntheticCaption ? titleContent : null,
+                                        tabs: useHorizontalLayout ? widget.tabs : null,
+                                        brandIcon: widget.brand?.icon,
+                                        expandsSearch: widget.titleBarSearch != null,
+                                        searchAtEnd: widget.titleBarSearchPlacement == FrostCaptionSearchPlacement.end,
+                                        brandLabel: _brandLabel(context),
+                                        iconAxis: (rtl ? frame.right : frame.left) + _railWidth / 2,
+                                        nativeCaption: hasCaption,
+                                        showsBack: (usesCaptionNavigation || syntheticCaption) && useHorizontalLayout,
+                                        onBack: canGoBack ? goBack : null,
+                                        brand: usesCaptionNavigation || syntheticCaption ? captionBrand : null,
+                                        pageTitle: showsPageTitle ? _pageTitle : null,
+                                      ),
                                     ),
-                                  ),
-                                // Above the content Navigator, so pushed
-                                // routes that cover the bar keep the entry.
-                                if (floatingTask)
-                                  Positioned.fill(
-                                    child: _FloatingTaskLayer(
-                                      key: const ValueKey('frost-shell-floating-task'),
-                                      entry: widget.taskEntry!,
-                                      position: _floatingPosition ??= widget.taskEntry!.initialFloatingPosition,
-                                      barExtent: _barExtent,
-                                      onPositionChanged: _setFloatingPosition,
-                                      covered: _contentModal,
+                                  // Above the content Navigator, so pushed
+                                  // routes that cover the bar keep the entry.
+                                  if (floatingTask)
+                                    Positioned.fill(
+                                      child: _FloatingTaskLayer(
+                                        key: const ValueKey('frost-shell-floating-task'),
+                                        entry: widget.taskEntry!,
+                                        position: _floatingPosition ??= widget.taskEntry!.initialFloatingPosition,
+                                        barExtent: _barExtent,
+                                        onPositionChanged: _setFloatingPosition,
+                                        covered: _contentModal,
+                                      ),
                                     ),
-                                  ),
-                              ],
-                            );
-                          },
+                                ],
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),

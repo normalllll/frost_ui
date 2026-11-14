@@ -12,6 +12,7 @@ import '../foundation/metrics.dart';
 import '../foundation/scope.dart';
 import '../foundation/tokens.dart';
 import '../motion/_material_reveal.dart';
+import '../surface/_backdrop_veil.dart';
 import '../surface/_window_background.dart';
 import '../surface/ambient_backdrop.dart';
 import '_on_media_chrome_scope.dart';
@@ -476,6 +477,15 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
         ? FrostAmbientCardScope.maybeOf(context)
         : null;
     if (cards != null) shaded = FrostAmbientCardRegistration(registry: cards, child: shaded);
+    // Content on an opaque fill fades its edges into that fill; on glass or a
+    // translucent or changing fill it masks them. A surface that paints nothing
+    // leaves content on what lies behind it.
+    if (targetSigma > 0 || fill.a > 0 || windowFill != null) {
+      shaded = FrostBackdropVeilScope(
+        veil: targetSigma == 0 && windowFill == null && fill.a >= 1 ? FrostBackdropVeil.solid(fill) : null,
+        child: shaded,
+      );
+    }
     return FrostSurfaceScope(
       // Semantic ink follows the target material, including deferred sampling.
       isGlass: targetSigma > 0,

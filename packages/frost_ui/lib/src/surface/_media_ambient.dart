@@ -8,6 +8,7 @@ import '../foundation/_ambient_material.dart';
 import '../foundation/metrics.dart';
 import '../foundation/scope.dart';
 import '../foundation/tokens.dart';
+import '_backdrop_veil.dart';
 
 // Match the existing window-ambient cache's bounded capacity.
 const frostAmbientCacheCapacity = 12;
@@ -340,7 +341,8 @@ class _FrostMediaAmbientBackdropState extends State<_SizedMediaAmbientBackdrop> 
           ),
         ),
       ),
-      widget.child,
+      // Media art behind the content cannot be laid over it again.
+      FrostBackdropVeilScope(veil: null, child: widget.child),
     ],
   );
 }
