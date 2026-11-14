@@ -81,7 +81,7 @@ export 'src/foundation/typography.dart';
 export 'src/layout/auto_scaffold.dart' hide FrostAutoScaffoldBuilder;
 export 'src/layout/chrome_active_body.dart' show FrostChromeActiveBody;
 export 'src/layout/column_placement.dart' hide FrostPageColumnWidth;
-export 'src/layout/content_viewport.dart' hide FrostContentColumnBudget;
+export 'src/layout/content_viewport.dart' hide FrostContentColumnBudget, FrostSliverFillPage;
 export 'src/layout/fit.dart' show FrostFit;
 export 'src/layout/grid.dart' show FrostGrid, FrostSliverGrid;
 export 'src/layout/header_sections.dart' show FrostHeaderSections;

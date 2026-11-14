@@ -173,3 +173,63 @@ class _ContentKeyline extends StatelessWidget {
     );
   }
 }
+
+/// Fills what the slivers before it leave of the viewport, as a
+/// [SliverFillRemaining] without a scroll body does, less the bottom
+/// [MediaQuery] padding: a bar lying over the page's bottom edge covers that
+/// part, and the scroll view's end spacer fills it. A page state placed here
+/// (empty, error) is laid out above the bar and adds nothing to scroll.
+class FrostSliverFillPage extends StatelessWidget {
+  const FrostSliverFillPage({required this.child, super.key});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => _SliverFillPage(
+    reserve: MediaQuery.paddingOf(context).bottom,
+    child: MediaQuery.removePadding(context: context, removeBottom: true, child: child),
+  );
+}
+
+class _SliverFillPage extends SingleChildRenderObjectWidget {
+  const _SliverFillPage({required this.reserve, required super.child});
+  final double reserve;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderSliverFillPage(reserve);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderSliverFillPage renderObject) => renderObject.reserve = reserve;
+}
+
+class _RenderSliverFillPage extends RenderSliverSingleBoxAdapter {
+  _RenderSliverFillPage(this._reserve);
+  double _reserve;
+  set reserve(double value) {
+    if (value == _reserve) return;
+    _reserve = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void performLayout() {
+    final constraints = this.constraints;
+    var extent = math.max(0.0, constraints.viewportMainAxisExtent - constraints.precedingScrollExtent - _reserve);
+    if (child case final child?) {
+      final childExtent = switch (constraints.axis) {
+        Axis.horizontal => child.getMaxIntrinsicWidth(constraints.crossAxisExtent),
+        Axis.vertical => child.getMaxIntrinsicHeight(constraints.crossAxisExtent),
+      };
+      extent = math.max(extent, childExtent);
+      child.layout(constraints.asBoxConstraints(minExtent: extent, maxExtent: extent));
+    }
+    final painted = calculatePaintOffset(constraints, from: 0, to: extent);
+    geometry = SliverGeometry(
+      scrollExtent: extent,
+      paintExtent: painted,
+      maxPaintExtent: painted,
+      hasVisualOverflow: extent > constraints.remainingPaintExtent || constraints.scrollOffset > 0,
+      cacheExtent: calculateCacheOffset(constraints, from: 0, to: extent),
+    );
+    if (child case final child?) setChildParentData(child, constraints, geometry!);
+  }
+}

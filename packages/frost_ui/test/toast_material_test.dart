@@ -118,7 +118,8 @@ void main() {
       expect(content.contains(text.bottomRight), true);
       if (platform == TargetPlatform.android) {
         expect(text.top, greaterThan(content.center.dy));
-        expect(content.bottom, lessThan(900), reason: 'The destination owns an actual bottom bar.');
+        expect(content.bottom, 900, reason: 'The page runs beneath the bottom bar.');
+        expect(text.bottom, lessThanOrEqualTo(900 - 64), reason: 'The toast stays above the bar.');
       } else {
         expect(content.left, greaterThan(0), reason: 'The sidebar remains outside the toast viewport.');
       }

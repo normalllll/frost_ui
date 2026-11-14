@@ -7,7 +7,12 @@ part of 'shell.dart';
 /// itself or each branch. The bar and its target State remain mounted across
 /// destination changes. Secondary routes cover the complete root page, including
 /// its navigation, without resizing either route. Horizontal layouts reserve no
-/// navigation height. The bar owns the root's bottom system safe area.
+/// navigation height.
+///
+/// On a phone the page runs beneath the bottom navigation bar, which is glass
+/// over it. The page sees the bar, its bottom safe area included, as its
+/// bottom [MediaQuery] padding: scroll views end their content above it, and
+/// toasts and floating actions stay above it.
 class FrostShellDestination extends StatelessWidget {
   const FrostShellDestination({required this.child, super.key});
   final Widget child;
@@ -23,23 +28,68 @@ class FrostShellDestination extends StatelessWidget {
     // its own; its glass still waits for a page above it to settle.
     return FrostSettledGlass(
       secondary: route?.secondaryAnimation ?? kAlwaysDismissedAnimation,
-      child: Column(
-        children: [
-          Expanded(
-            child: FrostToastViewport(
-              key: const ValueKey('frost-destination-toast-viewport'),
-              child: MediaQuery.removePadding(
-                context: context,
-                removeBottom: navigation.enabled,
-                child: FrostDestinationRoot(route: route, child: child),
+      // The page runs beneath the bar, so the bar is glass over it, and the
+      // page's own bars and this one read the backdrop once between them.
+      child: BackdropGroup(
+        child: CustomMultiChildLayout(
+          delegate: _DestinationLayout(),
+          children: [
+            LayoutId(
+              id: _DestinationSlot.page,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // The delegate lays the bar out first and passes its height,
+                  // bottom safe area included, as the page's minimum height.
+                  final media = MediaQuery.of(context);
+                  final bar = navigation.enabled ? constraints.minHeight : 0.0;
+                  return SizedBox.expand(
+                    child: MediaQuery(
+                      data: !navigation.enabled
+                          ? media
+                          : media.copyWith(
+                              padding: media.padding.copyWith(bottom: math.max(0.0, bar - media.viewInsets.bottom)),
+                              viewPadding: media.viewPadding.copyWith(bottom: bar),
+                            ),
+                      child: FrostToastViewport(
+                        key: const ValueKey('frost-destination-toast-viewport'),
+                        bottomInset: bar,
+                        child: FrostDestinationRoot(route: route, child: child),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
-          ),
-          if (navigation.enabled) navigation.navigation,
-        ],
+            if (navigation.enabled) LayoutId(id: _DestinationSlot.bar, child: navigation.navigation),
+          ],
+        ),
       ),
     );
   }
+}
+
+enum _DestinationSlot { page, bar }
+
+/// The page takes the whole area and the bar lies over its bottom edge.
+class _DestinationLayout extends MultiChildLayoutDelegate {
+  _DestinationLayout();
+
+  @override
+  void performLayout(Size size) {
+    var bar = 0.0;
+    if (hasChild(_DestinationSlot.bar)) {
+      bar = layoutChild(_DestinationSlot.bar, BoxConstraints(minWidth: size.width, maxWidth: size.width, maxHeight: size.height)).height;
+      positionChild(_DestinationSlot.bar, Offset(0, size.height - bar));
+    }
+    layoutChild(
+      _DestinationSlot.page,
+      BoxConstraints(minWidth: size.width, maxWidth: size.width, minHeight: math.min(bar, size.height), maxHeight: size.height),
+    );
+    positionChild(_DestinationSlot.page, Offset.zero);
+  }
+
+  @override
+  bool shouldRelayout(_DestinationLayout oldDelegate) => false;
 }
 
 class _FrostDestinationNavigation extends InheritedWidget {

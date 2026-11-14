@@ -253,7 +253,8 @@ class _SettingsSectionsState extends State<FrostSettingsSections> with SingleTic
                     wide ? FrostGap.related : gap.page,
                     wide ? 0 : gap.section,
                     (wide ? FrostGap.related : gap.page) + (wide ? 0 : FrostPageOutline.channelOf(context)),
-                    wide ? 0 : gap.section,
+                    // A compact list is the page and ends above a bar over its bottom edge.
+                    wide ? 0 : gap.section + MediaQuery.paddingOf(context).bottom,
                   ),
                   itemCount: widget.labels.length,
                   itemBuilder: (context, index) => Padding(

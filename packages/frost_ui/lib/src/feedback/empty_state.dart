@@ -82,9 +82,15 @@ class FrostStateContent extends StatelessWidget {
               ),
       ),
     );
+    final bottom = MediaQuery.paddingOf(context).bottom;
     return _CenteredScroll(
       layout: layout,
-      child: SingleChildScrollView(primary: false, child: Center(child: body)),
+      bottom: bottom,
+      child: SingleChildScrollView(
+        primary: false,
+        padding: EdgeInsets.only(bottom: bottom),
+        child: Center(child: body),
+      ),
     );
   }
 }
@@ -109,16 +115,28 @@ class _EmptyLayout {
 }
 
 class _CenteredScroll extends SingleChildRenderObjectWidget {
-  const _CenteredScroll({required this.layout, required super.child});
+  const _CenteredScroll({required this.layout, required this.bottom, required super.child});
   final _EmptyLayout layout;
+  final double bottom;
   @override
-  RenderObject createRenderObject(BuildContext context) => _RenderCenteredScroll(layout);
+  RenderObject createRenderObject(BuildContext context) => _RenderCenteredScroll(layout).._bottom = bottom;
   @override
-  void updateRenderObject(BuildContext context, _RenderCenteredScroll renderObject) => renderObject.anchorLayout = layout;
+  void updateRenderObject(BuildContext context, _RenderCenteredScroll renderObject) => renderObject
+    ..anchorLayout = layout
+    ..bottom = bottom;
 }
 
 class _RenderCenteredScroll extends RenderShiftedBox {
   _RenderCenteredScroll(this._layout) : super(null);
+
+  // A bar over the bottom edge: the anchor is placed in the height above it.
+  double _bottom = 0;
+  set bottom(double value) {
+    if (value == _bottom) return;
+    _bottom = value;
+    markNeedsLayout();
+  }
+
   _EmptyLayout _layout;
   set anchorLayout(_EmptyLayout value) {
     _layout = value;
@@ -128,15 +146,15 @@ class _RenderCenteredScroll extends RenderShiftedBox {
   // SliverFillRemaining must measure the summary, not expanded details. Otherwise
   // its new extent becomes the next anchor viewport and moves the summary.
   @override
-  double computeMinIntrinsicHeight(double width) => _layout.body?.summary.getMinIntrinsicHeight(width.clamp(0, _emptyMaximumWidth)) ?? 0;
+  double computeMinIntrinsicHeight(double width) => (_layout.body?.summary.getMinIntrinsicHeight(width.clamp(0, _emptyMaximumWidth)) ?? 0) + _bottom;
   @override
-  double computeMaxIntrinsicHeight(double width) => _layout.body?.summary.getMaxIntrinsicHeight(width.clamp(0, _emptyMaximumWidth)) ?? 0;
+  double computeMaxIntrinsicHeight(double width) => (_layout.body?.summary.getMaxIntrinsicHeight(width.clamp(0, _emptyMaximumWidth)) ?? 0) + _bottom;
   @override
   void performLayout() {
-    final height = constraints.hasBoundedHeight ? constraints.maxHeight : 0.0;
-    if (_layout.viewportHeight != height) {
+    final height = constraints.hasBoundedHeight ? constraints.maxHeight : 0.0, anchor = math.max(0.0, height - _bottom);
+    if (_layout.viewportHeight != anchor) {
       invokeLayoutCallback<BoxConstraints>((_) {
-        _layout.viewportHeight = height;
+        _layout.viewportHeight = anchor;
         _layout.body?.markNeedsLayout();
       });
     }

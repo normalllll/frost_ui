@@ -248,6 +248,8 @@ class _ListState<T> extends State<FrostList<T>> {
               delegate: SliverChildBuilderDelegate((context, index) => _item(context, _origin + index), childCount: widget.items.length - _origin),
             ),
             if (_input?.footer case final footer?) SliverToBoxAdapter(child: footer),
+            // A page list ends above a bar that lies over the page's bottom edge.
+            if (_input == null) SliverToBoxAdapter(child: SizedBox(height: MediaQuery.paddingOf(context).bottom)),
           ],
         ),
       ),

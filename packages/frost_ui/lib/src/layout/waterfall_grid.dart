@@ -153,6 +153,8 @@ class FrostWaterfallGrid<T> extends StatelessWidget {
           padding: padding,
           controller: controller,
         ),
+        // The last tiles end above a bar that lies over the page's bottom edge.
+        SliverToBoxAdapter(child: SizedBox(height: MediaQuery.paddingOf(context).bottom)),
       ],
     );
   }

@@ -405,12 +405,15 @@ class _AppToastHostState extends State<FrostToastHost> {
       });
       return const SizedBox.shrink();
     }
-    final box = owner?.context.findRenderObject();
-    final measured = box is RenderBox && box.hasSize && host is RenderBox
-        ? Rect.fromPoints(host.globalToLocal(box.localToGlobal(Offset.zero)), host.globalToLocal(box.localToGlobal(box.size.bottomRight(Offset.zero))))
+    final found = owner?.context.findRenderObject();
+    final box = found is RenderBox && found.hasSize ? found : null;
+    // The part of the viewport no bar lies over.
+    final area = box == null ? null : Size(box.size.width, math.max(0.0, box.size.height - owner!.widget.bottomInset));
+    final measured = area != null && host is RenderBox
+        ? Rect.fromPoints(host.globalToLocal(box!.localToGlobal(Offset.zero)), host.globalToLocal(box.localToGlobal(area.bottomRight(Offset.zero))))
         : Offset.zero & constraints.biggest;
     final rect = owner?.bounds != null && host is RenderBox ? measured.intersect(owner!.bounds!.inOverlay(host)) : measured;
-    final size = box is RenderBox && box.hasSize ? box.size : rect.size;
+    final size = area ?? rect.size;
     if (size.isEmpty || rect.isEmpty) return const SizedBox.shrink();
     final sourceMedia = owner?.media ?? MediaQuery.of(context);
     final media = sourceMedia.copyWith(size: size, padding: owner == null ? sourceMedia.padding : EdgeInsets.zero);

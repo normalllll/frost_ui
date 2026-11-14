@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:frost_ui/frost_ui.dart';
 // ignore: implementation_imports -- same checkout; each such import is a layers row of the health gate.
-import 'package:frost_ui/src/layout/content_viewport.dart' show FrostContentColumnBudget;
+import 'package:frost_ui/src/layout/content_viewport.dart' show FrostContentColumnBudget, FrostSliverFillPage;
 // ignore: implementation_imports -- same checkout; each such import is a layers row of the health gate.
 import 'package:frost_ui/src/layout/waterfall_grid.dart' show FrostCrossAxisSliverBuilder, frostBrowseGridPadding, frostFittedColumnCount;
 
@@ -226,13 +226,11 @@ class _PagedSliverState<T> extends State<_PagedSliver<T>> {
         if (!source.busy) _load(initial: true);
         return SliverToBoxAdapter(child: widget.firstLoadSkeleton);
       case FrostLoadPhase.error:
-        return SliverFillRemaining(
-          hasScrollBody: false,
+        return FrostSliverFillPage(
           child: FrostPagedError(key: ObjectKey(source), source: source, placement: FrostPagedErrorPlacement.page),
         );
       case FrostLoadPhase.empty:
-        return SliverFillRemaining(
-          hasScrollBody: false,
+        return FrostSliverFillPage(
           child: widget.empty ?? FrostEmptyState(icon: FrostIconSet.of(context).empty, title: FrostScope.labelsOf(context).noItems),
         );
       case FrostLoadPhase.content:

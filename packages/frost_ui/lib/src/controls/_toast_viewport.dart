@@ -44,8 +44,12 @@ class FrostToastViewportScope extends InheritedWidget {
 }
 
 class FrostToastViewport extends StatefulWidget {
-  const FrostToastViewport({required super.key, required this.child});
+  const FrostToastViewport({required super.key, required this.child, this.bottomInset = 0});
   final Widget child;
+
+  /// The height at the bottom of the viewport that a bar lies over; toasts
+  /// stay above it.
+  final double bottomInset;
   @override
   State<FrostToastViewport> createState() => FrostToastViewportState();
 }

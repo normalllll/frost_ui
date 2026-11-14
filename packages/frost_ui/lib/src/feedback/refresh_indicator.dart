@@ -11,6 +11,7 @@ import '../foundation/spacing.dart';
 import '../foundation/tokens.dart';
 import '../foundation/typography.dart';
 import '../layout/_page_scroll_behavior.dart';
+import '../layout/content_viewport.dart' show FrostSliverFillPage;
 import '../primitives/icon.dart';
 import '../primitives/text.dart';
 import '_pull_refresh.dart';
@@ -217,11 +218,7 @@ class FrostSliverFillBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return FrostLoadingScrollView(
       physics: physics,
-      slivers: [
-        ...leadingSlivers,
-        ?sliverHeader,
-        SliverFillRemaining(hasScrollBody: false, child: child),
-      ],
+      slivers: [...leadingSlivers, ?sliverHeader, FrostSliverFillPage(child: child)],
     );
   }
 }

@@ -76,7 +76,8 @@ void main() {
     final originalBody = tester.getRect(find.byKey(body));
     final originalBar = tester.getRect(find.byKey(target));
     final targetState = target.currentState;
-    expect(originalBody.bottom, originalBar.top);
+    // The page runs beneath the bar.
+    expect(originalBody.bottom, 800);
     expect(originalBar.bottom, 776);
     update(() => selected = 1);
     await tester.pumpAndSettle();

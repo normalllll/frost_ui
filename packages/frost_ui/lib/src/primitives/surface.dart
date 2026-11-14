@@ -444,12 +444,14 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
           );
     Widget layered = content;
     if (glass) {
-      layered = BackdropFilter(
-        filter: sigma == 0 ? ImageFilter.blur() : frostGlassFilter(sigma: sigma, opacity: frostGlassFilterOpacity(materialProgress, alpha)),
-        blendMode: BlendMode.srcOver,
-        enabled: sigma > 0 && materialProgress > 0,
-        child: content,
-      );
+      final filter = sigma == 0 ? ImageFilter.blur() : frostGlassFilter(sigma: sigma, opacity: frostGlassFilterOpacity(materialProgress, alpha));
+      final enabled = sigma > 0 && materialProgress > 0;
+      // Chrome bars under a group (a page's pinned header and the bottom
+      // navigation) read the backdrop once between them. Where one lies over
+      // another, the overlap shows the blurred page, not the bar below.
+      layered = role == FrostSurfaceRole.chrome && BackdropGroup.of(context) != null
+          ? BackdropFilter.grouped(filter: filter, enabled: enabled, child: content)
+          : BackdropFilter(filter: filter, blendMode: BlendMode.srcOver, enabled: enabled, child: content);
     }
     Widget shaded = DecoratedBox(
       decoration: ShapeDecoration(shape: shapeFor(), shadows: shadow),
