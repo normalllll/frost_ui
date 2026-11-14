@@ -3,8 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/controls/_button_control.dart';
 import 'package:frost_ui/src/controls/_button_types.dart';
+import 'package:frost_ui/src/motion/_material_reveal.dart';
 import 'package:frost_ui/src/overlays/overlay_region.dart';
 import 'package:frost_ui/src/primitives/_focus_outline.dart';
+import 'package:frost_ui/src/surface/ambient_backdrop.dart' show FrostFadingAmbientBackdrop;
 import 'package:material_ui/material_ui.dart';
 
 export 'package:frost_ui/src/controls/_button_types.dart' show FrostButtonVariant, FrostIconButtonStyle;
@@ -447,4 +449,14 @@ class _TestOverlayRegionState extends State<TestOverlayRegion> {
     bounds: _bounds,
     child: FrostOverlayRegionGeometry(onChanged: _bounds.update, child: widget.child),
   );
+}
+
+/// How much of a moving page's [content] shows: its reveal opacity, times what
+/// the backdrop veil of an opaque media page lets through while the content
+/// emerges from it.
+double shownContent(WidgetTester tester, Finder content) {
+  final reveal = tester.widget<FrostMaterialReveal>(find.ancestor(of: content, matching: find.byType(FrostMaterialReveal)).first);
+  final backdrops = tester.widgetList<FrostFadingAmbientBackdrop>(find.byType(FrostFadingAmbientBackdrop)).toList();
+  final veil = backdrops.length == 2 ? backdrops.last.opacity : 0.0;
+  return reveal.opacity * (1 - veil);
 }

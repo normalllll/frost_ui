@@ -53,7 +53,7 @@ void main() {
     await show(media: true);
     final mediaReveal = find.ancestor(of: find.byKey(const ValueKey('route-child')), matching: find.byType(FrostMaterialReveal)).first;
     expect(find.descendant(of: mediaReveal, matching: find.byType(Transform)), findsNothing);
-    expect(opacity(), .5);
+    expect(shownContent(tester, find.byKey(const ValueKey('route-child'))), 0, reason: 'midway, a media page is still under its backdrop veil');
     expect(tester.takeException(), isNull);
   });
 

@@ -15,8 +15,10 @@ import '../motion/_frame_work.dart';
 import '_media_ambient.dart';
 import '_window_background.dart';
 
-// Bound full-window textures independently from the small decoded-art cache.
-const _ambientTextureCapacity = 2;
+// Bound full-window textures independently from the small decoded-art cache:
+// the endpoints still fading and the one entering, so every endpoint in a
+// crossfade stays one draw.
+const _ambientTextureCapacity = 3;
 
 typedef _AmbientGlow = ({ui.Image image, Size window, double ratio, List<Rect> cards});
 
@@ -45,6 +47,9 @@ class _AmbientFrame implements FrostAmbientFading {
   // while fading in.
   List<Rect> glowCards = const [];
   ui.Image? glowPrevious;
+  // While a glow fades in over a prepared texture: the one draw it fades
+  // from, the endpoint's flat colour or its previous texture.
+  Object? glowFrom;
   @override
   void dispose() {
     disposed = true;
@@ -53,6 +58,7 @@ class _AmbientFrame implements FrostAmbientFading {
     texture?.dispose();
     glow?.dispose();
     glowPrevious?.dispose();
+    if (glowFrom case final ui.Image from) from.dispose();
     image?.dispose();
   }
 }
@@ -88,7 +94,8 @@ class FrostAmbientBackdropController extends ChangeNotifier {
   int _glowRequest = 0;
 
   FrostAmbientBackdropController() {
-    frostAmbientGrain.addListener(_invalidateTextures);
+    // The grain is painted live over the prepared endpoints.
+    frostAmbientGrain.addListener(notifyListeners);
   }
 
   // The rects seen after the latest frame: a bake can start during build,
@@ -107,14 +114,10 @@ class FrostAmbientBackdropController extends ChangeNotifier {
     final frame = _frames.lastOrNull;
     if (_disposed || _pending != null || _progress < 1 || frame == null || frame.glow == null || frame.glowBaking || frame.glowFade < 1) return;
     if (frostAmbientSameRects(frame.glowCards, _cardRects())) return;
-    frame.textureEpoch++;
-    frame.preparation?.cancel();
-    frame.preparation = null;
-    frame.texture?.dispose();
-    frame.texture = null;
+    // The endpoint keeps its texture while the new field bakes; the new glow
+    // fades in over it.
     frame.glowReshape = true;
-    _prepareTexture(frame);
-    notifyListeners();
+    if (!_bakeGlow(frame)) _prepareTexture(frame);
   }
 
   void _resize(Size window, double pixelRatio) {
@@ -125,8 +128,7 @@ class FrostAmbientBackdropController extends ChangeNotifier {
     _invalidateTextures();
   }
 
-  // Window size, pixel ratio or the light grain arriving all change the
-  // prepared endpoint.
+  // Window size and pixel ratio change the prepared endpoint and its glow.
   void _invalidateTextures() {
     if (_disposed) return;
     for (final frame in _frames) {
@@ -217,26 +219,70 @@ class FrostAmbientBackdropController extends ChangeNotifier {
       if (!_disposed) FlutterError.reportError(FlutterErrorDetails(exception: error, stack: stack, library: 'ambient endpoint preparation'));
       return;
     }
-    frame.glowBaking = false;
-    if (glow == null) return;
-    if (_disposed || frame.disposed) {
+    if (glow == null) {
+      frame.glowBaking = false;
+      return;
+    }
+    // The glow waits for a running crossfade to end, and an endpoint on its
+    // way out keeps what it shows.
+    if (_frames.lastOrNull == frame && _progress < 1) await (_resting ??= Completer<void>()).future;
+    if (_disposed || frame.disposed || _frames.lastOrNull != frame) {
+      frame.glowBaking = false;
       glow.image.dispose();
       return;
     }
-    // Re-shaping fades from the previous field, not from canvas.
+    // Over an endpoint that shows as one draw, the glow fades in as a
+    // crossfade of single draws, from that draw to the endpoint's texture with
+    // the glow in full. Painted live, the fade would take a window-sized layer
+    // whenever the endpoint blends, as in the backdrop a moving page carries.
+    // The endpoint keeps showing as it does until that texture lands.
+    final from = frame.texture ?? _RenderAmbient._flatColor(frame, solid: false);
+    final texture = from == null || !_windowUsable ? null : await _glowTexture(frame, glow);
+    frame.glowBaking = false;
+    if (_disposed || frame.disposed || _frames.lastOrNull != frame) {
+      texture?.dispose();
+      glow.image.dispose();
+      return;
+    }
+    final unchanged = switch (from) {
+      final ui.Image image => identical(frame.texture, image),
+      final Color color => frame.texture == null && _RenderAmbient._flatColor(frame, solid: false) == color,
+      _ => false,
+    };
     frame.glowPrevious?.dispose();
-    frame.glowPrevious = frame.glowWindow == glow.window ? frame.glow : null;
-    if (frame.glowPrevious == null) frame.glow?.dispose();
+    if (texture != null && unchanged) {
+      frame.glow?.dispose();
+      frame
+        ..glowPrevious = null
+        ..textureEpoch += 1;
+      frame.preparation?.cancel();
+      frame.preparation = null;
+      // The texture it fades from moves to [glowFrom]; the endpoint owns the
+      // new one.
+      frame
+        ..glowFrom = from
+        ..texture = texture;
+    } else {
+      // What the endpoint showed changed meanwhile, by a resize say, or it is
+      // painted live already: the glow fades in live. Re-shaping fades from
+      // the previous field, not from canvas.
+      texture?.dispose();
+      frame.glowPrevious = frame.glowWindow == glow.window ? frame.glow : null;
+      if (frame.glowPrevious == null) frame.glow?.dispose();
+      frame
+        ..texture?.dispose()
+        ..texture = null;
+    }
     frame
       ..glow = glow.image
       ..glowWindow = glow.window
       ..glowRatio = glow.ratio
-      ..glowCards = glow.cards
-      ..texture?.dispose()
-      ..texture = null;
+      ..glowCards = glow.cards;
     void settle() {
       frame.glowPrevious?.dispose();
       frame.glowPrevious = null;
+      if (frame.glowFrom case final ui.Image previous) previous.dispose();
+      frame.glowFrom = null;
       if (_frames.lastOrNull != frame) return;
       _prepareTexture(frame);
       // Cards that moved during the bake or fade.
@@ -244,8 +290,7 @@ class FrostAmbientBackdropController extends ChangeNotifier {
     }
 
     if (!reduceMotion) {
-      // Fade the baked glow in over 300 ms, live, then prepare
-      // the static endpoint texture.
+      // Fade the baked glow in over 300 ms.
       final clock = Stopwatch()..start();
       frame.glowFade = 0;
       void tick(Duration _) {
@@ -266,6 +311,80 @@ class FrostAmbientBackdropController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The texture of [frame] with [glow] in full, recorded without touching
+  /// what [frame] shows now.
+  Future<ui.Image?> _glowTexture(_AmbientFrame frame, _AmbientGlow glow) async {
+    final window = _window, scale = frostAmbientTextureScale(window);
+    final kept = (frame.glow, frame.glowWindow, frame.glowRatio, frame.glowCards, frame.glowFade, frame.glowPrevious);
+    frame
+      ..glow = glow.image
+      ..glowWindow = glow.window
+      ..glowRatio = glow.ratio
+      ..glowCards = glow.cards
+      ..glowFade = 1
+      ..glowPrevious = null;
+    final picture = _endpointPicture(frame, window, scale);
+    frame
+      ..glow = kept.$1
+      ..glowWindow = kept.$2
+      ..glowRatio = kept.$3
+      ..glowCards = kept.$4
+      ..glowFade = kept.$5
+      ..glowPrevious = kept.$6;
+    try {
+      return await picture.toImage(math.max(1, (window.width * scale).ceil()), math.max(1, (window.height * scale).ceil()));
+    } catch (error, stack) {
+      if (!_disposed) FlutterError.reportError(FlutterErrorDetails(exception: error, stack: stack, library: 'ambient endpoint preparation'));
+      return null;
+    } finally {
+      picture.dispose();
+    }
+  }
+
+  // Without the grain, the endpoint is smooth; the grain is painted live.
+  static ui.Picture _endpointPicture(_AmbientFrame frame, Size window, double scale) {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder)..scale(scale, scale);
+    _RenderAmbient._paintEndpoint(canvas, frame, Offset.zero & window, Offset.zero & window, grain: false);
+    return recorder.endRecording();
+  }
+
+  bool _needsTextureBeforeShowing(_AmbientFrame frame) => _windowUsable && _RenderAmbient._flatColor(frame, solid: false) == null;
+
+  /// Holds back the raster work of endpoint textures until it completes, as a
+  /// busy raster thread does.
+  @visibleForTesting
+  static Future<void>? debugTextureDelay;
+
+  /// The texture of an endpoint as it paints now.
+  Future<ui.Image> _endpointTexture(_AmbientFrame frame) async {
+    final window = _window, scale = frostAmbientTextureScale(window);
+    final picture = _endpointPicture(frame, window, scale);
+    try {
+      return await picture.toImage(math.max(1, (window.width * scale).ceil()), math.max(1, (window.height * scale).ceil()));
+    } finally {
+      picture.dispose();
+    }
+  }
+
+  /// The texture of an endpoint that is not on screen yet. Withdrawn work
+  /// never completes.
+  Future<ui.Image?> _textureBeforeShowing(_AmbientFrame frame) async {
+    final window = _window, scale = frostAmbientTextureScale(window);
+    final recorded = Completer<ui.Picture>();
+    frame.preparation = FrostFrameWorkQueue.enqueue(() {
+      frame.preparation = null;
+      recorded.complete(_endpointPicture(frame, window, scale));
+    });
+    final picture = await recorded.future;
+    try {
+      await debugTextureDelay;
+      return await picture.toImage(math.max(1, (window.width * scale).ceil()), math.max(1, (window.height * scale).ceil()));
+    } finally {
+      picture.dispose();
+    }
+  }
+
   void _prepareTexture(_AmbientFrame frame) {
     if (_preparingTexture ||
         frame.texture != null ||
@@ -278,23 +397,21 @@ class FrostAmbientBackdropController extends ChangeNotifier {
     if (_bakeGlow(frame)) return;
     final epoch = ++frame.textureEpoch;
     final window = _window;
-    final ratio = _pixelRatio;
+    final scale = frostAmbientTextureScale(window);
     frame.preparation?.cancel();
     frame.preparation = FrostFrameWorkQueue.enqueue(() {
       frame.preparation = null;
       _preparingTexture = true;
       unawaited(() async {
-        final recorder = ui.PictureRecorder();
-        final canvas = Canvas(recorder)..scale(ratio, ratio);
-        _RenderAmbient._paintEndpoint(canvas, frame, Offset.zero & window, Offset.zero & window, pixelRatio: ratio);
-        final picture = recorder.endRecording();
+        final picture = _endpointPicture(frame, window, scale);
         ui.Image? texture;
         try {
-          texture = await picture.toImage((window.width * ratio).ceil(), (window.height * ratio).ceil());
+          await debugTextureDelay;
+          texture = await picture.toImage(math.max(1, (window.width * scale).ceil()), math.max(1, (window.height * scale).ceil()));
           if (_disposed || frame.textureEpoch != epoch || _frames.lastOrNull != frame) return;
-          // Only two full-resolution endpoints are retained. Rapid retargeting
-          // keeps the original live paint for older, fading endpoints instead
-          // of growing a window-sized texture cache without a bound.
+          // Only two endpoint textures are retained. Rapid retargeting keeps
+          // the original live paint for older, fading endpoints instead of
+          // growing a texture cache without a bound.
           final cached = _frames.where((f) => f.texture != null && f != frame).toList();
           for (final old in cached.take((cached.length + 1 - _ambientTextureCapacity).clamp(0, cached.length))) {
             old.texture?.dispose();
@@ -372,6 +489,54 @@ class FrostAmbientBackdropController extends ChangeNotifier {
       _dropGlowRequest();
     }
     if (_disposed || target.disposed) return;
+    // The new endpoint enters as one draw, a prepared texture or a flat
+    // colour, so the crossfade never paints it live through a layer.
+    // A flat endpoint commits at once, in the frame that asked for it.
+    ui.Image? texture;
+    try {
+      if (_needsTextureBeforeShowing(target)) texture = await _textureBeforeShowing(target);
+    } catch (error, stack) {
+      if (!target.disposed) {
+        _pending = null;
+        target.dispose();
+        FlutterError.reportError(FlutterErrorDetails(exception: error, stack: stack, library: 'ambient endpoint preparation'));
+      }
+      return;
+    }
+    if (_disposed || target.disposed) {
+      texture?.dispose();
+      return;
+    }
+    // An endpoint on its way out blends too. One still painted live, such as
+    // one whose glow has just faded in and whose texture is still preparing,
+    // would fade out through a window-sized layer, so it is rasterized as it
+    // shows now first.
+    final outgoing = <_AmbientFrame, ui.Image>{};
+    try {
+      for (var index = 0; index < _frames.length; index++) {
+        final frame = _frames[index];
+        if (frame.texture != null || _weight(index) <= 0 || !_needsTextureBeforeShowing(frame)) continue;
+        outgoing[frame] = await _endpointTexture(frame);
+        if (_disposed || target.disposed) break;
+      }
+    } catch (error, stack) {
+      FlutterError.reportError(FlutterErrorDetails(exception: error, stack: stack, library: 'ambient endpoint preparation'));
+    }
+    if (_disposed || target.disposed) {
+      texture?.dispose();
+      for (final image in outgoing.values) {
+        image.dispose();
+      }
+      return;
+    }
+    for (final MapEntry(key: frame, value: image) in outgoing.entries) {
+      if (frame.disposed || frame.texture != null) {
+        image.dispose();
+      } else {
+        frame.texture = image;
+      }
+    }
+    target.texture = texture;
     _pending = null;
     for (var index = 0; index < _frames.length; index++) {
       _frames[index].startWeight = _weight(index);
@@ -387,6 +552,12 @@ class FrostAmbientBackdropController extends ChangeNotifier {
       frame.textureEpoch++;
       frame.preparation?.cancel();
       frame.preparation = null;
+    }
+    // Only two endpoint textures are retained, the newest ones.
+    final cached = _frames.where((frame) => frame.texture != null).toList();
+    for (final old in cached.take((cached.length + (target.texture == null ? 0 : 1) - _ambientTextureCapacity).clamp(0, cached.length))) {
+      old.texture?.dispose();
+      old.texture = null;
     }
     _frames.add(target);
     _prepareTexture(target);
@@ -433,9 +604,16 @@ class FrostAmbientBackdropController extends ChangeNotifier {
     if (next != _material.value) _material.value = next;
   }
 
+  // Completes when the crossfade in progress ends.
+  Completer<void>? _resting;
+
   void _setProgress(double value) {
     if (_progress == value) return;
     _progress = value;
+    if (value >= 1) {
+      _resting?.complete();
+      _resting = null;
+    }
     if (value >= 1 && _frames.length > 1) {
       for (final frame in _frames.take(_frames.length - 1)) {
         frame.dispose();
@@ -453,7 +631,9 @@ class FrostAmbientBackdropController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    frostAmbientGrain.removeListener(_invalidateTextures);
+    _resting?.complete();
+    _resting = null;
+    frostAmbientGrain.removeListener(notifyListeners);
     _dropGlowRequest();
     _cardsSettle?.cancel();
     _cards.dispose();
@@ -758,33 +938,69 @@ class FrostAmbientBackdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (_media case final media?) return FrostMediaAmbientBackdrop(image: media.image, stageKey: media.stageKey, child: media.child);
-    final tokens = FrostThemeTokens.of(context);
-    final plain = FrostScope.solidSurfaces(context);
-    final scope = context.dependOnInheritedWidgetOfExactType<_AmbientScope>();
-    final controller = scope?.controller;
-    // No repaint boundary here: the backdrop is window-aligned, so it has to
-    // repaint when an ancestor transition moves it.
-    // Reduced transparency still follows the controller, painting each
-    // endpoint as one opaque palette fill.
-    return _AmbientPaint(
-      controller: controller,
-      tokens: tokens,
-      plain: plain,
-      systemBackdrop: !plain && !(scope?.forceSolid ?? false) && FrostWindowCaptionScope.systemBackdropActiveOf(context),
-    );
+    return _ambientPaint(context, 1);
   }
 }
 
+/// The window backdrop a moving page carries, faded by its own paint alpha
+/// rather than inside an opacity layer, so a page transition composites no
+/// window-sized offscreen buffer for it.
+class FrostFadingAmbientBackdrop extends StatelessWidget {
+  const FrostFadingAmbientBackdrop({required this.opacity, super.key});
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) => _ambientPaint(context, opacity);
+}
+
+/// Whether a backdrop painted here at full opacity hides what lies below it.
+/// Over a system backdrop, endpoints without artwork leave the window to the
+/// system and hide nothing.
+bool frostAmbientBackdropCovers(BuildContext context) {
+  if (FrostScope.solidSurfaces(context)) return true;
+  final scope = context.dependOnInheritedWidgetOfExactType<_AmbientScope>();
+  if ((scope?.forceSolid ?? false) || !FrostWindowCaptionScope.systemBackdropActiveOf(context)) return true;
+  final controller = scope?.controller;
+  if (controller == null) return false;
+  final frames = controller._frames;
+  var covered = false;
+  for (var index = 0; index < frames.length; index++) {
+    if (controller._weight(index) <= 0) continue;
+    if (frames[index].image == null && !frames[index].accentFallback) return false;
+    covered = true;
+  }
+  return covered;
+}
+
+Widget _ambientPaint(BuildContext context, double opacity) {
+  final tokens = FrostThemeTokens.of(context);
+  final plain = FrostScope.solidSurfaces(context);
+  final scope = context.dependOnInheritedWidgetOfExactType<_AmbientScope>();
+  // No repaint boundary here: the backdrop is window-aligned, so it has to
+  // repaint when an ancestor transition moves it.
+  // Reduced transparency still follows the controller, painting each
+  // endpoint as one opaque palette fill.
+  return _AmbientPaint(
+    controller: scope?.controller,
+    tokens: tokens,
+    plain: plain,
+    systemBackdrop: !plain && !(scope?.forceSolid ?? false) && FrostWindowCaptionScope.systemBackdropActiveOf(context),
+    opacity: opacity.clamp(0.0, 1.0),
+  );
+}
+
 class _AmbientPaint extends LeafRenderObjectWidget {
-  const _AmbientPaint({required this.controller, required this.tokens, required this.plain, required this.systemBackdrop});
+  const _AmbientPaint({required this.controller, required this.tokens, required this.plain, required this.systemBackdrop, required this.opacity});
 
   final FrostAmbientBackdropController? controller;
   final FrostThemeTokens tokens;
   final bool plain;
   final bool systemBackdrop;
+  final double opacity;
 
   @override
-  RenderObject createRenderObject(BuildContext context) => _RenderAmbient(controller: controller, tokens: tokens, plain: plain, systemBackdrop: systemBackdrop);
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderAmbient(controller: controller, tokens: tokens, plain: plain, systemBackdrop: systemBackdrop).._opacity = opacity;
 
   @override
   void updateRenderObject(BuildContext context, _RenderAmbient renderObject) {
@@ -792,7 +1008,8 @@ class _AmbientPaint extends LeafRenderObjectWidget {
       ..controller = controller
       ..tokens = tokens
       ..plain = plain
-      ..systemBackdrop = systemBackdrop;
+      ..systemBackdrop = systemBackdrop
+      ..opacity = opacity;
   }
 }
 
@@ -800,6 +1017,14 @@ class _RenderAmbient extends RenderBox {
   _RenderAmbient({required FrostAmbientBackdropController? controller, required FrostThemeTokens tokens, required bool plain, required bool systemBackdrop})
     : this._(controller, tokens, plain, systemBackdrop);
   _RenderAmbient._(this._controller, this._tokens, this._plain, this._systemBackdrop);
+
+  // The whole picture's alpha, applied to each draw.
+  double _opacity = 1;
+  set opacity(double value) {
+    if (value == _opacity) return;
+    _opacity = value;
+    markNeedsPaint();
+  }
 
   FrostAmbientBackdropController? _controller;
   set controller(FrostAmbientBackdropController? value) {
@@ -862,8 +1087,9 @@ class _RenderAmbient extends RenderBox {
     // Opaque fallbacks remain entirely app-owned on every other platform.
     final hasAccentFallback = _controller?._frames.any((frame) => frame.accentFallback && frame.intensity > 0) ?? false;
     if (!_plain && _systemBackdrop && !hasAccentFallback && _controller?.current == null && _controller?.previous == null) return;
+    if (_opacity <= 0) return;
     if (_controller == null || _controller!._frames.isEmpty) {
-      canvas.drawRect(local, Paint()..color = _tokens.canvas);
+      canvas.drawRect(local, Paint()..color = _tokens.canvas.withValues(alpha: _tokens.canvas.a * _opacity));
       return;
     }
     final view = ui.PlatformDispatcher.instance.implicitView;
@@ -873,60 +1099,108 @@ class _RenderAmbient extends RenderBox {
         ? (offset - localToGlobal(Offset.zero)) & window
         : MatrixUtils.transformRect(toWindow, Offset.zero & window).shift(offset);
     final frames = _controller!._frames;
-    final visible = <(int, double)>[];
+    // The draws that make up the picture, each with its weight: an endpoint is
+    // a flat colour or a texture, and one whose glow is fading in over a
+    // prepared texture is that texture over the draw it fades from. Only an
+    // endpoint with neither is painted live (null).
+    final draws = <(_AmbientFrame, Object?, double)>[];
     var total = 0.0;
     for (var index = 0; index < frames.length; index++) {
-      final weight = _controller!._weight(index);
-      if (weight <= 0 || (_systemBackdrop && frames[index].image == null && !frames[index].accentFallback)) continue;
-      visible.add((index, weight));
+      final frame = frames[index], weight = _controller!._weight(index);
+      if (weight <= 0 || (_systemBackdrop && frame.image == null && !frame.accentFallback)) continue;
       total += weight;
+      if (_flatColor(frame, solid: _plain) case final color?) {
+        draws.add((frame, color, weight));
+      } else if (frame.texture case final texture?) {
+        if (frame.glowFrom case final from? when frame.glowFade < 1) draws.add((frame, from, weight * (1 - frame.glowFade)));
+        draws.add((frame, texture, frame.glowFrom != null && frame.glowFade < 1 ? weight * frame.glowFade : weight));
+      } else {
+        draws.add((frame, null, weight));
+      }
     }
     if (total == 0) return;
-    final opacity = total.clamp(0.0, 1.0);
-    // A complete endpoint is opaque. Do not allocate a window-sized opacity
-    // buffer for alpha one on every moving-page frame.
-    if (opacity < 1) {
-      canvas.saveLayer(local, Paint()..color = _tokens.canvas.withValues(alpha: opacity));
-    } else {
-      canvas.save();
+    final opacity = total.clamp(0.0, 1.0) * _opacity;
+    // Each draw's share of the picture is its weight, scaled to the picture's
+    // opacity. Retargeting retains the current weighted picture instead of
+    // jumping to the old target. Laying each draw over the ones before it with
+    // an alpha solved from the top gives it that share without an opacity
+    // buffer: its share is its alpha times what the draws above it let
+    // through.
+    final shares = [for (final (_, _, weight) in draws) opacity * weight / total];
+    final alphas = List.filled(draws.length, 0.0);
+    var through = 1.0;
+    for (var index = draws.length - 1; index >= 0; index--) {
+      alphas[index] = through <= 0 ? 0 : (shares[index] / through).clamp(0.0, 1.0);
+      through *= 1 - alphas[index];
     }
+    final pixelRatio = view?.devicePixelRatio ?? 1;
+    var grain = 0.0;
+    canvas.save();
     canvas.clipRect(local);
-    var accumulated = 0.0;
-    for (final (index, weight) in visible) {
-      final frame = frames[index];
-      accumulated += weight;
-      // Blend complete, already-readable endpoints. Retargeting retains the
-      // current weighted picture instead of jumping to the old target.
-      final blend = weight / accumulated;
-      if (blend < 1) canvas.saveLayer(local, Paint()..color = _tokens.canvas.withValues(alpha: blend));
-      if (_plain) {
-        _paintEndpoint(canvas, frame, local, windowRect, solid: true);
-      } else if (frame.texture case final texture?) {
-        canvas.drawRect(local, Paint()..color = frame.tokens.canvas);
-        canvas.drawImageRect(
-          texture,
-          Rect.fromLTWH(0, 0, texture.width.toDouble(), texture.height.toDouble()),
-          windowRect,
-          Paint()..filterQuality = FilterQuality.medium,
-        );
-      } else {
-        _paintEndpoint(canvas, frame, local, windowRect, pixelRatio: view?.devicePixelRatio ?? 1);
+    for (var index = 0; index < draws.length; index++) {
+      final (frame, draw, _) = draws[index];
+      final alpha = alphas[index];
+      if (alpha <= 0) continue;
+      switch (draw) {
+        case final Color color:
+          canvas.drawRect(local, Paint()..color = color.withValues(alpha: color.a * alpha));
+        case final ui.Image texture:
+          canvas.drawImageRect(
+            texture,
+            Rect.fromLTWH(0, 0, texture.width.toDouble(), texture.height.toDouble()),
+            windowRect,
+            Paint()
+              ..filterQuality = FilterQuality.medium
+              ..color = Color.fromRGBO(0, 0, 0, alpha),
+          );
+          if (!frame.tokens.isDark) grain += shares[index];
+        default:
+          // Painted live in several draws, which fade as one.
+          if (alpha < 1) canvas.saveLayer(local, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
+          _paintEndpoint(canvas, frame, local, windowRect, pixelRatio: pixelRatio);
+          if (alpha < 1) canvas.restore();
       }
-      if (blend < 1) canvas.restore();
     }
+    if (grain > 0) frostPaintAmbientGrain(canvas, local, pixelRatio, opacity: grain.clamp(0.0, 1.0));
     canvas.restore();
   }
 
-  static void _paintEndpoint(Canvas canvas, _AmbientFrame frame, Rect local, Rect windowRect, {bool solid = false, double pixelRatio = 1}) {
+  /// The one colour [frame] paints, or null when it paints more than that.
+  static Color? _flatColor(_AmbientFrame frame, {required bool solid}) {
     final material = frame.material;
     if (solid) {
       // Reduced transparency: the palette's weighted mean as one opaque fill.
       final fill = material?.solid;
-      canvas.drawRect(local, Paint()..color = fill == null ? frame.tokens.canvas : Color.lerp(frame.tokens.canvas, fill, frame.intensity)!);
+      return fill == null ? frame.tokens.canvas : Color.lerp(frame.tokens.canvas, fill, frame.intensity)!;
+    }
+    if (frame.intensity <= 0 || material == null || material.palette.isEmpty && !frame.accentFallback) return frame.tokens.canvas;
+    // Dark before its glow field arrives: the canvas under the wash.
+    if (frame.tokens.isDark && material.palette.isNotEmpty && frame.glow == null && frame.glowPrevious == null) {
+      final wash = _washOf(frame, material);
+      return wash == null ? frame.tokens.canvas : Color.alphaBlend(wash, frame.tokens.canvas);
+    }
+    return null;
+  }
+
+  /// The tint laid over a palette endpoint: the mean of its colours.
+  static Color? _washOf(_AmbientFrame frame, FrostAmbientMaterials material) {
+    final colors = frame.tokens.isDark ? frostAmbientGlowPeaks(frame.tokens, material.raw, free: true) : material.palette.map((entry) => entry.color).toList();
+    if (colors.isEmpty) return null;
+    return Color.from(
+      alpha: .20 * frame.intensity,
+      red: colors.fold(0.0, (sum, color) => sum + color.r) / colors.length,
+      green: colors.fold(0.0, (sum, color) => sum + color.g) / colors.length,
+      blue: colors.fold(0.0, (sum, color) => sum + color.b) / colors.length,
+    );
+  }
+
+  static void _paintEndpoint(Canvas canvas, _AmbientFrame frame, Rect local, Rect windowRect, {double pixelRatio = 1, bool grain = true}) {
+    if (_flatColor(frame, solid: false) case final color?) {
+      canvas.drawRect(local, Paint()..color = color);
       return;
     }
+    final material = frame.material!;
     canvas.drawRect(local, Paint()..color = frame.tokens.canvas);
-    if (frame.intensity <= 0 || material == null) return;
     if (material.palette.isNotEmpty) {
       if (frame.tokens.isDark) {
         // Dark: the baked glow field, until then plain canvas.
@@ -954,27 +1228,14 @@ class _RenderAmbient extends RenderBox {
       } else {
         frostPaintAmbientPalette(canvas, local, windowRect, material.palette, material.sourceSize, frame.intensity);
       }
-    } else if (frame.accentFallback) {
+    } else {
       // No usable artwork colour: the accent-tinted mesh.
       frostPaintAmbientMesh(canvas, local, windowRect, frame.tokens, frame.intensity);
-    } else {
-      return;
     }
     if (material.palette.isNotEmpty) {
-      final colors = frame.tokens.isDark
-          ? frostAmbientGlowPeaks(frame.tokens, material.raw, free: true)
-          : material.palette.map((entry) => entry.color).toList();
-      if (colors.isNotEmpty) {
-        final wash = Color.from(
-          alpha: 1,
-          red: colors.fold(0.0, (sum, color) => sum + color.r) / colors.length,
-          green: colors.fold(0.0, (sum, color) => sum + color.g) / colors.length,
-          blue: colors.fold(0.0, (sum, color) => sum + color.b) / colors.length,
-        );
-        canvas.drawRect(local, Paint()..color = wash.withValues(alpha: .20 * frame.intensity));
-      }
+      if (_washOf(frame, material) case final wash?) canvas.drawRect(local, Paint()..color = wash);
     }
-    // Light grain, part of the static endpoint (and its texture).
-    frostPaintAmbientGrain(canvas, local, pixelRatio, dark: frame.tokens.isDark);
+    // Light grain; a prepared texture leaves it out and has it painted live.
+    if (grain) frostPaintAmbientGrain(canvas, local, pixelRatio, dark: frame.tokens.isDark);
   }
 }

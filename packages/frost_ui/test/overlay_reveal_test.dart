@@ -212,7 +212,7 @@ void main() {
         await systemBack(tester, 'updateBackGestureProgress', .3);
         await tester.pump();
         expect(navigator.currentState!.userGestureInProgress, isTrue);
-        expect(reveal(tester).opacity, inExclusiveRange(0, 1));
+        expect(shownContent(tester, find.byKey(nested)), inExclusiveRange(0, 1));
         expect(handle(tester).nestedProgress, 0);
         expectSafeLayers(tester);
         await systemBack(tester, 'cancelBackGesture');
@@ -229,15 +229,15 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 70));
       if (predictive) {
-        expect(reveal(tester).opacity, inInclusiveRange(0, 1));
+        expect(shownContent(tester, find.byKey(nested)), inInclusiveRange(0, 1));
         expect(handle(tester).nestedProgress, 0);
       } else {
-        expect(reveal(tester).opacity, 1);
+        expect(shownContent(tester, find.byKey(nested)), 1);
         expect(handle(tester).nestedProgress, inExclusiveRange(0, 1));
       }
       expectSafeLayers(tester);
       await tester.pump(const Duration(milliseconds: 70));
-      expect(reveal(tester).opacity, predictive ? inInclusiveRange(0, 1) : 1);
+      expect(shownContent(tester, find.byKey(nested)), predictive ? inInclusiveRange(0, 1) : 1);
       expect(handle(tester).nestedProgress, 0);
       await tester.pumpAndSettle();
       expect(find.byKey(nested), findsNothing);

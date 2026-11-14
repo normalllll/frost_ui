@@ -129,18 +129,20 @@ class _PointerPageTransition extends StatelessWidget {
       final opacity = entering * (1 - leaving);
       final scale = reduced ? 1.0 : (.96 + .04 * entering) * (1 + .02 * Curves.easeOutCubic.transform(covered));
       final moving = animation.status != AnimationStatus.completed || secondary.status != AnimationStatus.dismissed;
-      return FrostMaterialReveal(
-        contentOnly: true,
-        handle: revealHandle,
-        opacity: opacity,
-        deferNestedBlur: moving,
-        child: Stack(
-          fit: StackFit.passthrough,
-          children: [
-            Positioned.fill(child: moving && ModalRoute.of(context)?.opaque != false ? const FrostAmbientBackdrop() : const SizedBox.shrink()),
-            Transform.scale(scale: scale, child: child!),
-          ],
-        ),
+      // The backdrop fades by its own alpha, outside the content's opacity
+      // layer, so that layer covers the page's content, not the whole window.
+      return Stack(
+        fit: StackFit.passthrough,
+        children: [
+          Positioned.fill(child: moving && ModalRoute.of(context)?.opaque != false ? FrostFadingAmbientBackdrop(opacity: opacity) : const SizedBox.shrink()),
+          FrostMaterialReveal(
+            contentOnly: true,
+            handle: revealHandle,
+            opacity: opacity,
+            deferNestedBlur: moving,
+            child: Transform.scale(scale: scale, child: child!),
+          ),
+        ],
       );
     },
   );
@@ -172,9 +174,21 @@ class _MovingBackdrop extends StatelessWidget {
 
 const _previousDimAlpha = .2;
 
+// Route progress at which an opaque media page's content takes over from its
+// backdrop.
+const _dipSplit = .5;
+
 // Content and scrim use raw route progress so a held gesture, its commit and
 // its cancellation all paint the same opacity. Hero retains its geometric curve.
 // The dim peaks midway and is clear at both ends, because a settled page paints none.
+//
+// An opaque page dips through its backdrop instead of fading its content over
+// the route below: the backdrop fades in over that route for the first half,
+// then the content shows at full opacity under a veil of the same backdrop
+// that fades out. Both are single draws with an alpha, so a page whose content
+// fills the window composites no window-sized offscreen pass. Over a system
+// backdrop without artwork, where the backdrop hides nothing, and on a
+// see-through page, the content fades over the route below as a whole.
 class _PageTransition extends StatelessWidget {
   const _PageTransition({required this.animation, required this.child, this.revealHandle});
   final Animation<double> animation;
@@ -190,6 +204,11 @@ class _PageTransition extends StatelessWidget {
       builder: (context, child) {
         final moving = animation.status != AnimationStatus.completed;
         final opacity = animation.value.clamp(0.0, 1.0);
+        final carried = moving && route?.opaque != false;
+        final dip = carried && frostAmbientBackdropCovers(context);
+        final emerged = dip ? ((opacity - _dipSplit) / (1 - _dipSplit)).clamp(0.0, 1.0) : 1.0;
+        // The children keep their places whichever way the page moves, so the
+        // content keeps its state.
         return Stack(
           fit: StackFit.passthrough,
           children: [
@@ -198,17 +217,20 @@ class _PageTransition extends StatelessWidget {
                 child: ColoredBox(color: FrostThemeTokens.of(context).onMediaScrim.withValues(alpha: _previousDimAlpha * 4 * opacity * (1 - opacity))),
               ),
             ),
+            Positioned.fill(
+              child: !carried ? const SizedBox.shrink() : FrostFadingAmbientBackdrop(opacity: dip ? (opacity / _dipSplit).clamp(0.0, 1.0) : opacity),
+            ),
             FrostMaterialReveal(
               contentOnly: true,
               handle: revealHandle,
-              opacity: opacity,
-              child: Stack(
-                fit: StackFit.passthrough,
-                children: [
-                  Positioned.fill(child: (moving && route?.opaque != false) ? const FrostAmbientBackdrop() : const SizedBox.shrink()),
-                  child!,
-                ],
-              ),
+              opacity: dip ? (opacity < _dipSplit ? 0 : 1) : opacity,
+              deferNestedBlur: dip && opacity < 1,
+              child: child!,
+            ),
+            Positioned.fill(
+              child: dip && emerged < 1 && opacity >= _dipSplit
+                  ? IgnorePointer(child: FrostFadingAmbientBackdrop(opacity: 1 - emerged))
+                  : const SizedBox.shrink(),
             ),
           ],
         );

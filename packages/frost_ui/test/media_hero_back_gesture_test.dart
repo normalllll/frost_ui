@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
 import 'package:frost_ui/src/motion/_material_reveal.dart';
+import 'package:frost_ui/src/surface/ambient_backdrop.dart' show FrostFadingAmbientBackdrop;
 import 'package:material_ui/material_ui.dart';
 
 import 'media_test_image.dart';
@@ -64,7 +65,16 @@ void main() {
         Rect flight() => tester.getRect(find.byType(Image));
         final release = flight();
         final content = tester.widget<FrostMaterialReveal>(find.ancestor(of: find.byType(Scaffold).last, matching: find.byType(FrostMaterialReveal)).first);
-        expect(content.opacity, closeTo(1 - progress, .001), reason: 'A held gesture retains 80% content at 20% and half at 50%.');
+        // The page dips through its backdrop: past the midpoint of route
+        // progress the content shows through a fading veil, before it not at all.
+        final value = 1 - progress;
+        final backdrops = tester.widgetList<FrostFadingAmbientBackdrop>(find.byType(FrostFadingAmbientBackdrop)).toList();
+        final veil = value >= .5 && backdrops.length == 2 ? backdrops.last.opacity : 0.0;
+        expect(
+          content.opacity * (1 - veil),
+          closeTo(((value - .5) / .5).clamp(0.0, 1.0), .001),
+          reason: 'A held gesture shows the content in step with route progress.',
+        );
         expect(release.width, lessThan(400));
         await gesture(tester, cancel ? 'cancelBackGesture' : 'commitBackGesture');
         await tester.pump();

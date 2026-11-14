@@ -13,14 +13,14 @@ import 'package:material_ui/material_ui.dart';
 import 'media_frame_test.dart' show ControlledImage;
 import 'support.dart';
 
-Future<void> resolveImage(WidgetTester tester, ControlledImage provider, Color color) async {
+Future<void> resolveImage(WidgetTester tester, ControlledImage provider, Color color, {bool settle = true}) async {
   final picture = ui.PictureRecorder();
   Canvas(picture).drawColor(color, BlendMode.src);
   final recording = picture.endRecording();
   final image = (await tester.runAsync(() => recording.toImage(48, 32)))!;
   recording.dispose();
   provider.completer.complete(ImageInfo(image: image));
-  await settleGlow(tester);
+  if (settle) await settleGlow(tester);
 }
 
 // Dark bakes its glow field on another isolate and fades it in on the wall

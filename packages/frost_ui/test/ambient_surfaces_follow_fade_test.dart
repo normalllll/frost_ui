@@ -71,7 +71,8 @@ void main() {
           update(change);
           await tester.pump();
           await arrive?.call();
-          for (var i = 0; i < 40; i++) {
+          // Long enough for the crossfade and the glow fading in after it.
+          for (var i = 0; i < 70; i++) {
             await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 5)));
             await tester.pump(const Duration(milliseconds: 16));
             frames.add(await _probe(tester, key));

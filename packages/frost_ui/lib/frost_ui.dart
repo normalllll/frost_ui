@@ -153,4 +153,4 @@ export 'src/primitives/selection_area.dart' show FrostSelectionArea, FrostSelect
 export 'src/primitives/status_glyph.dart' show FrostStatusGlyph, FrostStatusGlyphKind;
 export 'src/primitives/surface.dart';
 export 'src/primitives/text.dart' hide frostTextStyle;
-export 'src/surface/ambient_backdrop.dart' hide FrostAmbientBackdropController;
+export 'src/surface/ambient_backdrop.dart' hide FrostAmbientBackdropController, FrostFadingAmbientBackdrop, frostAmbientBackdropCovers;

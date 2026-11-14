@@ -65,12 +65,7 @@ class FrostMediaAmbientBackdrop extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => _SizedMediaAmbientBackdrop(
-      image: image,
-      size: constraints.biggest,
-      stageKey: stageKey,
-      child: child,
-    ),
+    builder: (context, constraints) => _SizedMediaAmbientBackdrop(image: image, size: constraints.biggest, stageKey: stageKey, child: child),
   );
 }
 
@@ -84,18 +79,46 @@ class _SizedMediaAmbientBackdrop extends StatefulWidget {
   State<_SizedMediaAmbientBackdrop> createState() => _FrostMediaAmbientBackdropState();
 }
 
+/// One endpoint of the surround: its canvas with the glow or palette over it,
+/// prepared as one texture so the crossfade draws it once with an alpha.
+/// Without a surface it is plain canvas.
 class _MediaFrame implements FrostAmbientFading {
-  _MediaFrame(this.tokens, this.palette, this.sourceSize, this.solid, this.stage, this.glow, this.startWeight);
+  _MediaFrame(this.tokens, this.solid, this.surface, this.startWeight);
   final FrostThemeTokens tokens;
-  final List<FrostAmbientPaletteEntry> palette;
-  final Size sourceSize;
   final Color solid;
-  final Rect? stage;
-  final ui.Image? glow;
+  final ui.Image? surface;
   @override
   double startWeight;
   @override
-  void dispose() => glow?.dispose();
+  void dispose() => surface?.dispose();
+}
+
+Future<ui.Image> _mediaSurface({
+  required FrostThemeTokens tokens,
+  required Size size,
+  required ui.Image? glow,
+  required List<FrostAmbientPaletteEntry> palette,
+  required Size sourceSize,
+  required Rect? stage,
+}) async {
+  final scale = frostAmbientTextureScale(size);
+  final rect = Offset.zero & size;
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder)..scale(scale, scale);
+  canvas.drawRect(rect, Paint()..color = tokens.canvas);
+  if (tokens.isDark) {
+    if (glow != null) {
+      canvas.drawImageRect(glow, Offset.zero & Size(glow.width.toDouble(), glow.height.toDouble()), rect, Paint()..filterQuality = FilterQuality.medium);
+    }
+  } else {
+    frostPaintAmbientPalette(canvas, rect, rect, palette, sourceSize, 1, falloffFrom: stage?.center ?? rect.center);
+  }
+  final picture = recorder.endRecording();
+  try {
+    return await picture.toImage(math.max(1, (size.width * scale).ceil()), math.max(1, (size.height * scale).ceil()));
+  } finally {
+    picture.dispose();
+  }
 }
 
 class _FrostMediaAmbientBackdropState extends State<_SizedMediaAmbientBackdrop> with SingleTickerProviderStateMixin {
@@ -204,10 +227,25 @@ class _FrostMediaAmbientBackdropState extends State<_SizedMediaAmbientBackdrop> 
         bakes.cancel(this);
       }
       if (!mounted || epoch != _preparation) return;
+      final toned = sample.toned(tokens);
+      // Reduced transparency fills with the solid colour and needs no surface.
+      final surface = _solid
+          ? null
+          : await _mediaSurface(
+              tokens: tokens,
+              size: size,
+              glow: glow,
+              palette: toned.palette,
+              sourceSize: Size(sample.width.toDouble(), sample.height.toDouble()),
+              stage: stage,
+            );
+      if (!mounted || epoch != _preparation) {
+        surface?.dispose();
+        return;
+      }
       // What moved during the bake gets its own preparation; this result still
       // shows, so moving layout cannot hold the transition back.
       final moved = size != widget.size || stage != _stageRect();
-      final toned = sample.toned(tokens);
       for (var index = 0; index < _frames.length; index++) {
         _frames[index].startWeight = _weight(index);
       }
@@ -217,9 +255,8 @@ class _FrostMediaAmbientBackdropState extends State<_SizedMediaAmbientBackdrop> 
         return true;
       });
       frostAmbientBoundFading(_frames);
-      if (_frames.isEmpty) _frames.add(_MediaFrame(tokens, const [], Size.zero, tokens.canvas, stage, null, 1));
-      setState(() => _frames.add(_MediaFrame(tokens, toned.palette, Size(sample.width.toDouble(), sample.height.toDouble()), toned.solid, stage, glow, 0)));
-      glow = null;
+      if (_frames.isEmpty) _frames.add(_MediaFrame(tokens, tokens.canvas, null, 1));
+      setState(() => _frames.add(_MediaFrame(tokens, toned.solid, surface, 0)));
       if (MediaQuery.disableAnimationsOf(context)) {
         _fade.value = 1;
         // Setting an already completed controller does not emit a status event.
@@ -318,25 +355,32 @@ class _MediaPalettePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
     canvas.drawRect(rect, Paint()..color = tokens.canvas);
-    var total = 0.0;
+    // Each frame is one opaque draw laid over the ones before it with the
+    // alpha of its share, which composites as fading it in as a group would,
+    // without an opacity buffer.
+    var total = 0.0, grain = 0.0;
     for (final (frame, weight) in frames) {
       total += weight;
       final opacity = weight / total;
-      if (opacity < 1) canvas.saveLayer(rect, Paint()..color = Color.fromRGBO(0, 0, 0, opacity));
-      canvas.drawRect(rect, Paint()..color = frame.tokens.canvas);
-      if (frame.tokens.isDark) {
-        if (frame.glow case final glow?) {
-          canvas.drawImageRect(glow, Offset.zero & Size(glow.width.toDouble(), glow.height.toDouble()), rect, Paint()..filterQuality = FilterQuality.medium);
-        }
+      if (frame.surface case final surface?) {
+        canvas.drawImageRect(
+          surface,
+          Offset.zero & Size(surface.width.toDouble(), surface.height.toDouble()),
+          rect,
+          Paint()
+            ..filterQuality = FilterQuality.medium
+            ..color = Color.fromRGBO(0, 0, 0, opacity),
+        );
       } else {
-        frostPaintAmbientPalette(canvas, rect, rect, frame.palette, frame.sourceSize, 1, falloffFrom: frame.stage?.center ?? rect.center);
+        final canvasColor = frame.tokens.canvas;
+        canvas.drawRect(rect, Paint()..color = canvasColor.withValues(alpha: canvasColor.a * opacity));
       }
-      frostPaintAmbientGrain(canvas, rect, pixelRatio, dark: frame.tokens.isDark);
-      if (opacity < 1) canvas.restore();
+      // The grain belongs to the light frames' share of the picture.
+      grain = grain * (1 - opacity) + (frame.tokens.isDark ? 0 : opacity);
     }
+    if (grain > 0) frostPaintAmbientGrain(canvas, rect, pixelRatio, opacity: grain.clamp(0.0, 1.0));
   }
 
   @override
   bool shouldRepaint(_MediaPalettePainter old) => true;
 }
-

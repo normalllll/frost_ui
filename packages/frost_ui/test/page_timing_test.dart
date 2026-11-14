@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frost_ui/frost_ui.dart';
-import 'package:frost_ui/src/motion/_material_reveal.dart';
+import 'package:frost_ui/src/surface/ambient_backdrop.dart' show FrostFadingAmbientBackdrop;
 import 'package:material_ui/material_ui.dart';
 
 import 'support.dart';
 
 void main() {
-  testWidgets('stationary content fades gradually over the complete route progress', (tester) async {
+  testWidgets('stationary content dips through its backdrop over the complete route progress', (tester) async {
     final animation = AnimationController(vsync: tester, duration: FrostMotion.page, reverseDuration: FrostMotion.exit);
     addTearDown(animation.dispose);
     const page = ValueKey('ordinary content');
@@ -17,22 +17,28 @@ void main() {
         ),
       ),
     );
-    double alpha() => tester.widget<FrostMaterialReveal>(find.ancestor(of: find.byKey(page), matching: find.byType(FrostMaterialReveal)).first).opacity;
+    double shown() => shownContent(tester, find.byKey(page));
+    // Content shows over the second half of route progress, through the veil.
+    double expected(double progress) => ((progress - .5) / .5).clamp(0.0, 1.0);
     final rect = tester.getRect(find.byKey(page));
     animation.forward();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 70));
-    expect(alpha(), closeTo(.25, .001));
+    expect(animation.value, closeTo(.25, .001));
+    expect(shown(), 0, reason: 'the backdrop covers the route below first');
+    expect(tester.widget<FrostFadingAmbientBackdrop>(find.byType(FrostFadingAmbientBackdrop).first).opacity, closeTo(.5, .001));
     expect(tester.getRect(find.byKey(page)), rect);
     await tester.pump(const Duration(milliseconds: 100));
-    expect(alpha(), inExclusiveRange(0, 1));
+    expect(shown(), closeTo(expected(animation.value), .001));
+    expect(shown(), inExclusiveRange(0, 1));
     expect(tester.getRect(find.byKey(page)), rect);
     await tester.pumpAndSettle();
-    expect(alpha(), 1);
+    expect(shown(), 1);
     animation.reverse();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 80));
-    expect(alpha(), closeTo(1 - 80 / FrostMotion.exit.inMilliseconds, .001));
+    expect(animation.value, closeTo(1 - 80 / FrostMotion.exit.inMilliseconds, .001));
+    expect(shown(), closeTo(expected(animation.value), .001));
     expect(tester.getRect(find.byKey(page)), rect);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);

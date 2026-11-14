@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
@@ -573,8 +574,8 @@ void frostEnsureAmbientGrain() {
 /// Draws the grain over an already opaque light backdrop in [rect], one texel
 /// per physical pixel. Dark backdrops paint light, not stain, so they carry
 /// none; nothing either before the tile is ready.
-void frostPaintAmbientGrain(Canvas canvas, Rect rect, double pixelRatio, {bool dark = false}) {
-  if (dark) return;
+void frostPaintAmbientGrain(Canvas canvas, Rect rect, double pixelRatio, {bool dark = false, double opacity = 1}) {
+  if (dark || opacity <= 0) return;
   final grain = frostAmbientGrain.value;
   if (grain == null) {
     frostEnsureAmbientGrain();
@@ -585,6 +586,7 @@ void frostPaintAmbientGrain(Canvas canvas, Rect rect, double pixelRatio, {bool d
     rect,
     Paint()
       ..blendMode = BlendMode.difference
+      ..color = Color.fromRGBO(0, 0, 0, opacity)
       ..shader = ImageShader(grain, TileMode.repeated, TileMode.repeated, Float64List.fromList([s, 0, 0, 0, 0, s, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])),
   );
 }
@@ -1252,6 +1254,15 @@ class FrostAmbientGlowBakes {
 /// one megapixel; [centres] are logical positions. [freeLift] and [cards]
 /// shape the window field (see the bake); [window] takes the window ratio as
 /// the chroma cap.
+// The most pixels a window-sized glow field or endpoint texture holds. Both
+// are smooth, so more pixels than this show nothing more.
+const _ambientRasterPixels = 1.1e6;
+
+/// Texels per logical pixel of a prepared window endpoint texture: at most one,
+/// and fewer for windows above the raster budget. Independent of the device
+/// pixel ratio, since the endpoint without its grain is smooth.
+double frostAmbientTextureScale(Size window) => math.min(1.0, math.sqrt(_ambientRasterPixels / math.max(1.0, window.width * window.height)));
+
 FrostAmbientGlowBake frostAmbientGlowBakeFor(
   FrostThemeTokens tokens,
   ({List<FrostAmbientGlow> glows, double lift}) model,
@@ -1264,7 +1275,7 @@ FrostAmbientGlowBake frostAmbientGlowBakeFor(
   bool window = false,
 }) {
   final canvas = _OkLab.of(tokens.canvas);
-  final scale = math.min(pixelRatio, math.sqrt(1.1e6 / math.max(1.0, size.width * size.height)));
+  final scale = math.min(pixelRatio, math.sqrt(_ambientRasterPixels / math.max(1.0, size.width * size.height)));
   return (
     width: math.max(1, (size.width * scale).ceil()),
     height: math.max(1, (size.height * scale).ceil()),
