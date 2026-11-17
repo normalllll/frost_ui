@@ -8,6 +8,7 @@ import '../foundation/metrics.dart';
 import '../foundation/scope.dart';
 import '../foundation/tokens.dart';
 import '../primitives/_page_outline.dart';
+import '../surface/_backdrop_veil.dart';
 import '../surface/ambient_backdrop.dart';
 import '_material_reveal.dart';
 
@@ -142,7 +143,7 @@ class _PointerPageTransition extends StatelessWidget {
       return Stack(
         fit: StackFit.passthrough,
         children: [
-          Positioned.fill(child: moving && ModalRoute.of(context)?.opaque != false ? FrostFadingAmbientBackdrop(opacity: opacity) : const SizedBox.shrink()),
+          Positioned.fill(child: moving && ModalRoute.of(context)?.opaque != false ? _carriedGround(context, opacity) : const SizedBox.shrink()),
           FrostMaterialReveal(
             contentOnly: true,
             handle: revealHandle,
@@ -156,10 +157,21 @@ class _PointerPageTransition extends StatelessWidget {
   );
 }
 
-// A Frost page paints over the window backdrop, which the opaque route below
-// covers until this route settles. While moving, the page carries the
-// backdrop itself, as the pointer transitions do, so the route below never
-// shows through it and nothing changes in the frame it settles.
+/// The plain fill a page rests on, such as the compact shell's canvas, or null
+/// where it rests on the window backdrop.
+Color? _restingFill(BuildContext context) => context.dependOnInheritedWidgetOfExactType<FrostBackdropVeilScope>()?.veil?.solidColor;
+
+/// What a moving page carries beneath it: the fill it rests on, or else the
+/// window backdrop, at [opacity].
+Widget _carriedGround(BuildContext context, double opacity) => switch (_restingFill(context)) {
+  final fill? => ColoredBox(color: fill.withValues(alpha: fill.a * opacity)),
+  null => FrostFadingAmbientBackdrop(opacity: opacity),
+};
+
+// A Frost page paints over what it rests on, which the opaque route below
+// covers until this route settles. While moving, the page carries that ground
+// itself, as the pointer transitions do, so the route below never shows
+// through it and nothing changes in the frame it settles.
 class _MovingBackdrop extends StatelessWidget {
   const _MovingBackdrop({required this.animation, required this.opaque, required this.child});
   final Animation<double> animation;
@@ -173,7 +185,7 @@ class _MovingBackdrop extends StatelessWidget {
     builder: (context, child) => Stack(
       fit: StackFit.passthrough,
       children: [
-        Positioned.fill(child: opaque && animation.status != AnimationStatus.completed ? const FrostAmbientBackdrop() : const SizedBox.shrink()),
+        Positioned.fill(child: opaque && animation.status != AnimationStatus.completed ? _carriedGround(context, 1) : const SizedBox.shrink()),
         child!,
       ],
     ),
@@ -213,7 +225,9 @@ class _PageTransition extends StatelessWidget {
         final moving = animation.status != AnimationStatus.completed;
         final opacity = animation.value.clamp(0.0, 1.0);
         final carried = moving && route?.opaque != false;
-        final dip = carried && frostAmbientBackdropCovers(context);
+        // A page resting on a plain fill fades over it; only the window backdrop
+        // hides an opaque page's content behind a dip.
+        final dip = carried && _restingFill(context) == null && frostAmbientBackdropCovers(context);
         final emerged = dip ? ((opacity - _dipSplit) / (1 - _dipSplit)).clamp(0.0, 1.0) : 1.0;
         // The children keep their places whichever way the page moves, so the
         // content keeps its state.
@@ -226,7 +240,7 @@ class _PageTransition extends StatelessWidget {
               ),
             ),
             Positioned.fill(
-              child: !carried ? const SizedBox.shrink() : FrostFadingAmbientBackdrop(opacity: dip ? (opacity / _dipSplit).clamp(0.0, 1.0) : opacity),
+              child: !carried ? const SizedBox.shrink() : _carriedGround(context, dip ? (opacity / _dipSplit).clamp(0.0, 1.0) : opacity),
             ),
             FrostMaterialReveal(
               contentOnly: true,

@@ -15,6 +15,9 @@ abstract class FrostBackdropVeil {
   /// cannot (a system backdrop shows through) leaves the edge to a mask.
   bool reproducesBelow(BuildContext context) => true;
 
+  /// The one opaque colour this veil paints, when the backdrop is a plain fill.
+  Color? get solidColor => null;
+
   /// Notifies when the backdrop changes.
   Listenable? get repaint => null;
 
@@ -72,6 +75,9 @@ abstract class FrostBackdropVeil {
 class _SolidVeil extends FrostBackdropVeil {
   const _SolidVeil(this.color);
   final Color color;
+
+  @override
+  Color get solidColor => color;
 
   @override
   void paint(Canvas canvas, RenderBox box, Offset offset, Rect strip, Offset opaqueAt, Offset clearAt) =>
