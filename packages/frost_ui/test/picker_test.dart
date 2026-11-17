@@ -182,9 +182,16 @@ void main() {
           matching: find.byWidgetPredicate((w) => w is CustomPaint && w.foregroundPainter?.runtimeType.toString() == '_SwatchRingPainter'),
         ),
       );
+      // A swatch close to the surface rings in its edge colour, any other in
+      // its own colour.
+      final disc = tester
+          .widgetList<DecoratedBox>(find.descendant(of: bright, matching: find.byType(DecoratedBox)))
+          .map((box) => box.decoration)
+          .whereType<BoxDecoration>()
+          .firstWhere((decoration) => decoration.shape == BoxShape.circle);
       expect(
         (Canvas canvas) => ring.foregroundPainter!.paint(canvas, const Size.square(24)),
-        paints..circle(x: 12, y: 12, radius: 15, strokeWidth: 2, style: PaintingStyle.stroke, color: colors.first.color),
+        paints..circle(x: 12, y: 12, radius: 15, strokeWidth: 2, style: PaintingStyle.stroke, color: (disc.border as Border?)?.top.color ?? colors.first.color),
       );
       final data = tester.getSemantics(bright).getSemanticsData();
       expect(data.flagsCollection.isButton, true);

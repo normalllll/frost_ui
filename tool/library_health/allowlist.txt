@@ -95,6 +95,7 @@ silent	controls/_field_chrome.dart	FrostFieldChrome.resolve	maybeOf-fallback	2	b
 silent	controls/_field_frame.dart	_FrostFieldFrameState.build	maybeOf-fallback	1	baseline-20261102
 silent	controls/_form_scope.dart	FrostFormOrder.of	maybeOf-fallback	1	baseline-20261102
 silent	controls/_toolbar_geometry.dart	FrostToolbarEdge.trailingOf	maybeOf-fallback	1	baseline-20261102
+silent	controls/color_swatch.dart	FrostColorSwatch.build	maybeOf-fallback	1	reviewed:20261118:a swatch outside any surface lies on the window canvas
 silent	controls/field_appearance.dart	FrostFieldScope.of	maybeOf-fallback	1	baseline-20261102
 silent	controls/form.dart	_FrostFormState._submitFromField	maybeOf-fallback	1	baseline-20261102
 silent	controls/search_input.dart	_SearchField.build	maybeOf-fallback	1	baseline-20261102

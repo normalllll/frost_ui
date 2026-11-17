@@ -13,10 +13,15 @@ import '../overlays/tooltip.dart';
 import '../primitives/_click_feedback.dart';
 import '../primitives/click_surface.dart';
 import '../primitives/icon.dart';
+import '../primitives/surface.dart';
 import '_input_surface.dart';
 
 // Palette and custom actions share one visual and interaction implementation.
-const _swatchDiameter = 24.0, _swatchRingWidth = 2.0, _swatchRingGap = 2.0;
+const _swatchDiameter = 24.0, _swatchRingWidth = 2.0, _swatchRingGap = 2.0, _swatchEdgeWidth = 1.0;
+
+// Contrast a swatch keeps against the surface it lies on, as a non-text
+// boundary must.
+const _swatchEdgeContrast = 3.0;
 const _swatchHoverScale = 1.08, _swatchDisabledOpacity = .38;
 
 /// A labelled data-colour swatch sharing palette geometry and feedback.
@@ -39,6 +44,14 @@ class FrostColorSwatch extends StatelessWidget {
     final enabled = onPressed != null && FrostControlScope.enabledOf(context);
     final fill = icon != null && !selected ? tokens.fill : color;
     final dark = FrostScope.configOf(context).palettes.palette(Brightness.light, tokens.tone, tokens.accent).textPrimary;
+    // A colour close to the surface gets an edge in its own hue, moved until it
+    // stands out, and the selection ring takes that edge's colour. A custom
+    // action's icon already marks it.
+    final ground = FrostSurfaceScope.maybeOf(context)?.background ?? tokens.canvas;
+    final shown = Color.alphaBlend(fill, ground);
+    final edge = icon != null && !selected || colorContrast(shown, ground) >= _swatchEdgeContrast
+        ? null
+        : readableAccentTone(shown, ground, _swatchEdgeContrast);
     return FrostTooltip(
       message: label,
       excludeFromSemantics: true,
@@ -79,7 +92,11 @@ class FrostColorSwatch extends StatelessWidget {
                         fit: StackFit.expand,
                         children: [
                           DecoratedBox(
-                            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                              border: edge == null ? null : Border.all(color: edge, width: _swatchEdgeWidth),
+                            ),
                           ),
                           if (icon != null && !selected)
                             Center(
@@ -89,7 +106,7 @@ class FrostColorSwatch extends StatelessWidget {
                             opacity: selected ? 1 : 0,
                             duration: FrostMotion.duration(context, FrostMotion.hover),
                             child: CustomPaint(
-                              foregroundPainter: _SwatchRingPainter(color),
+                              foregroundPainter: _SwatchRingPainter(edge ?? color),
                               child: Center(
                                 child: ScaleTransition(
                                   scale: pop,
