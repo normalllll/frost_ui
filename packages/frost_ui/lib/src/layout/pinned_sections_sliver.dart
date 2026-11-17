@@ -17,9 +17,9 @@ part of 'pinned_chrome.dart';
 /// [PageStorageKey] on its scroll view. Do not keep off-screen sections alive:
 /// a [NestedScrollView] scrolls every attached section together.
 class FrostSliverSectionsHeader extends StatelessWidget {
-  const FrostSliverSectionsHeader({required this.lead, required this.tabs, this.trailing, super.key});
+  const FrostSliverSectionsHeader({required this.lead, required this.tabs, this.trailing, this.maxWidth = double.infinity, super.key});
 
-  /// Laid out at the content column's full width.
+  /// Laid out in the content column, [maxWidth] wide at most.
   final Widget lead;
 
   /// Usually a [FrostTabBar] with `scrollable: true`.
@@ -32,6 +32,11 @@ class FrostSliverSectionsHeader extends StatelessWidget {
   /// a toolbar overflows into its menu. Rebuild with the selected section's
   /// controls, or none, as the selection changes.
   final Widget? trailing;
+
+  /// The width of the column holding the lead, tabs and trailing, on the same
+  /// edges as a [FrostSliverContentColumn] of this width; the glass behind
+  /// the stuck tabs still spans the page.
+  final double maxWidth;
 
   /// How far the stuck tabs go under the header.
   static const _tuckDistance = 12.0;
@@ -51,7 +56,7 @@ class FrostSliverSectionsHeader extends StatelessWidget {
         tuck: band != null && roomy ? _tuckDistance : 0,
         band: band,
         children: [
-          FrostContentColumn(maxWidth: double.infinity, child: lead),
+          FrostContentColumn(maxWidth: maxWidth, child: lead),
           if (band == null)
             const FrostPinnedChromeGlass._(opacity: 1, hiddenExtent: 0, corners: FrostPinnedChromeCorners.bottom)
           else
@@ -60,7 +65,7 @@ class FrostSliverSectionsHeader extends StatelessWidget {
               builder: (context, _) => FrostPinnedChromeGlass._(opacity: band.reveal ?? 0, hiddenExtent: 0, animate: false),
             ),
           FrostContentColumn(
-            maxWidth: double.infinity,
+            maxWidth: maxWidth,
             // One parent whether or not the section has controls, so the tabs
             // keep their state as the selection changes.
             child: _TabsWithTrailing(tabs: tabs, trailing: trailing),

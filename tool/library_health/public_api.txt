@@ -495,7 +495,7 @@ ctor	FrostSliverExpand.new	layout/sliver_expand.dart	expanded,key,sliver	baselin
 ctor	FrostSliverGrid.new	layout/grid.dart	aspectRatio,itemBuilder,itemCount,key,minItemWidth	baseline-20261102
 ctor	FrostSliverList.columns	lists/sliver_list.dart	dividers,itemBuilder,itemCount,itemKey,key,maxColumns,minColumnWidth	baseline-20261102
 ctor	FrostSliverList.new	lists/sliver_list.dart	dividers,itemBuilder,itemCount,itemKey,key	baseline-20261102
-ctor	FrostSliverSectionsHeader.new	layout/pinned_sections_sliver.dart	key,lead,tabs,trailing	reviewed:20261112:pass: the choice between one row and two depends on the tabs' natural width, which an app cannot measure without duplicating the tabs and the toolbar
+ctor	FrostSliverSectionsHeader.new	layout/pinned_sections_sliver.dart	key,lead,maxWidth,tabs,trailing	reviewed:20261117:pass: a reading-column page keeps its lead and tabs on the column's edges while the stuck glass spans the page, which a SliverPadding around the sliver cannot do
 ctor	FrostSliverWaterfallGrid.new	layout/waterfall_grid.dart	columns,controller,crossAxisSpacing,itemBuilder,items,key,mainAxisSpacing,maxColumns,minTileWidth,padding,preferredTileWidth	reviewed:20261114:adds the card column rule (as many columns as fit at a minimum width, down to one) to a variable-height waterfall, which no public component gives without an app-side SliverLayoutBuilder rebuilding every scroll frame; consistent with FrostSliverDataGrid.minTileWidth and FrostSliverList.columns
 ctor	FrostSplitView.new	navigation/split_view.dart	header,initialPrimaryWidth,key,onCloseSecondary,onPrimaryWidthChanged,primary,resizable,secondary	baseline-20261102
 ctor	FrostSpringBuilder.new	motion/spring.dart	builder,child,key,spring,value	baseline-20261102
