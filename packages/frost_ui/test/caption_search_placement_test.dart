@@ -6,7 +6,7 @@ import 'support.dart';
 import 'window_caption_test.dart' show FakeWindow;
 
 void main() {
-  testWidgets('caption search keeps one control row in the caption and hides it for large text header', (tester) async {
+  testWidgets('caption search stays in the title row as the text grows, the row growing with it', (tester) async {
     tester.view.physicalSize = const Size(1200, 700);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -50,8 +50,9 @@ void main() {
       await tester.pumpWidget(tree());
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: 'text scale $value');
-      // Out of the row: hidden, taking no room, the editor alive.
-      expect(search, findsNothing, reason: 'text scale $value');
+      // Still in the row, which grows with the field; the editor is the same.
+      expect(search, findsOneWidget, reason: 'text scale $value');
+      expect(tester.getRect(search).top, lessThan(tester.getTopLeft(find.byKey(const ValueKey('content'))).dy), reason: 'text scale $value');
       expect(tester.element(find.byType(FrostSearchInput, skipOffstage: false)), same(element), reason: 'the editor survives');
     }
 

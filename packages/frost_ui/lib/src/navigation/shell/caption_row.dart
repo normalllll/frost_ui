@@ -18,8 +18,17 @@ class _CaptionRow extends StatelessWidget {
     this.searchAtEnd = false,
     this.tabs,
     this.pageTitle,
+    this.actions = const [],
+    this.wholeWindow = false,
+    this.pageRow,
   });
   final FrostShellPageTitle? pageTitle;
+  final List<FrostShellAction> actions;
+
+  /// The row of a page that has the whole window: only [pageRow] and the
+  /// window buttons, the rest of the row dragging.
+  final bool wholeWindow;
+  final Widget? pageRow;
   final double iconAxis;
   final bool nativeCaption, showsBack, expandsSearch, searchAtEnd;
   final Widget? brand, titleContent, brandIcon;
@@ -60,59 +69,91 @@ class _CaptionRow extends StatelessWidget {
         : buttonsLead
         ? math.max(_shellCaptionHeight, FrostDensity.of(context).targetHeight)
         : iconAxis * 2;
+    // Without Back or window buttons before it, the row's content starts on the
+    // page's own leading edge, as the page below it does.
+    final leadInset = showsBack || buttonsLead ? 0.0 : FrostGap.of(context).page;
     return FrostNativeCaptionPadding(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final flow = <Widget>[
-            if (showsBack)
-              hasTabs
-                  ? Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: FrostGap.related),
-                      child: _ShellCaptionBack(width: math.max(40, FrostDensity.of(context).targetHeight), onBack: onBack),
+          final flow = wholeWindow
+              ? <Widget>[
+                  if (leadInset > 0) SizedBox(width: leadInset, child: drag(const SizedBox.expand())),
+                  if (pageRow case final row?)
+                    ConstrainedBox(
+                      // Some of the row always drags the window.
+                      constraints: BoxConstraints(maxWidth: math.max(0.0, constraints.maxWidth - leadInset - 2 * FrostGap.section)),
+                      child: FrostCaptionRegion(kind: FrostHitKind.client, child: row),
+                    ),
+                  Expanded(child: drag(const SizedBox.expand())),
+                ]
+              : <Widget>[
+                  if (leadInset > 0) SizedBox(width: leadInset, child: drag(const SizedBox.expand())),
+                  if (showsBack)
+                    hasTabs
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: FrostGap.related),
+                            child: _ShellCaptionBack(width: math.max(40, FrostDensity.of(context).targetHeight), onBack: onBack),
+                          )
+                        : _ShellCaptionBack(width: backWidth, onBack: onBack),
+                  if (tabs != null || expandsSearch)
+                    Expanded(
+                      child: _TabbedCaptionContent(
+                        tabs: tabs,
+                        // The window centre, measured from the content's left edge.
+                        searchCenter:
+                            constraints.maxWidth / 2 -
+                            (showsBack && !rtl ? backWidth : 0) -
+                            (rtl ? 0 : leadInset) -
+                            (nativeCaption ? (state?.leftButtons.length ?? 0) * FrostCaptionMetrics.buttonWidth : 0) -
+                            // The padding past the traffic lights is outside these constraints.
+                            (native.isEmpty ? 0 : (native.right + FrostGap.related) / 2),
+                        brand: brand,
+                        brandIcon: brandIcon,
+                        brandLabel: brandLabel,
+                        titleContent: titleContent,
+                        pageTitle: pageTitle,
+                        nativeCaption: nativeCaption,
+                        searchAtEnd: searchAtEnd,
+                        // Match the leading clearance of Back in either caption mode.
+                        endInset: endButtons
+                            ? FrostGap.related
+                            : tabs != null && tabs!.hasVisibleTabs
+                            ? FrostGap.related + math.max(0, FrostDensity.of(context).targetHeight - 40) / 2
+                            : math.max(FrostGap.related, iconAxis - _shellCaptionHeight / 2),
+                      ),
                     )
-                  : _ShellCaptionBack(width: backWidth, onBack: onBack),
-            if (tabs != null || expandsSearch)
-              Expanded(
-                child: _TabbedCaptionContent(
-                  tabs: tabs,
-                  // The window centre, measured from the content's left edge.
-                  searchCenter:
-                      constraints.maxWidth / 2 -
-                      (showsBack && !rtl ? backWidth : 0) -
-                      (nativeCaption ? (state?.leftButtons.length ?? 0) * FrostCaptionMetrics.buttonWidth : 0) -
-                      // The padding past the traffic lights is outside these constraints.
-                      (native.isEmpty ? 0 : (native.right + FrostGap.related) / 2),
-                  brand: brand,
-                  brandIcon: brandIcon,
-                  brandLabel: brandLabel,
-                  titleContent: titleContent,
-                  pageTitle: pageTitle,
-                  nativeCaption: nativeCaption,
-                  searchAtEnd: searchAtEnd,
-                  // Match the leading clearance of Back in either caption mode.
-                  endInset: endButtons
-                      ? FrostGap.related
-                      : tabs != null && tabs!.hasVisibleTabs
-                      ? FrostGap.related + math.max(0, FrostDensity.of(context).targetHeight - 40) / 2
-                      : math.max(FrostGap.related, iconAxis - _shellCaptionHeight / 2),
-                ),
-              )
-            else ...[
-              Expanded(
-                child: drag(_CaptionLead(brand: brand, pageTitle: pageTitle)),
-              ),
-              if (titleContent != null) ...[
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: constraints.maxWidth * .45),
-                  child: FrostCaptionRegion(
-                    kind: FrostHitKind.client,
-                    child: Center(child: titleContent),
-                  ),
-                ),
-                SizedBox(width: FrostGap.section, child: drag(const SizedBox.expand())),
-              ],
-            ],
-          ];
+                  else ...[
+                    Expanded(
+                      child: drag(_CaptionLead(brand: brand, pageTitle: pageTitle)),
+                    ),
+                    if (titleContent != null) ...[
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: constraints.maxWidth * .45),
+                        child: FrostCaptionRegion(
+                          kind: FrostHitKind.client,
+                          child: Center(child: titleContent),
+                        ),
+                      ),
+                      SizedBox(width: FrostGap.section, child: drag(const SizedBox.expand())),
+                    ],
+                  ],
+                  if (actions.isNotEmpty)
+                    FrostCaptionRegion(
+                      kind: FrostHitKind.client,
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.only(end: FrostGap.related),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (final action in actions)
+                              Center(
+                                child: FrostButton.icon(label: action.label, icon: action.icon, onPressed: action.onPressed, size: FrostControlSize.compact),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ];
           return Row(
             textDirection: TextDirection.ltr,
             crossAxisAlignment: CrossAxisAlignment.stretch,

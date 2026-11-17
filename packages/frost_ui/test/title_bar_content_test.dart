@@ -9,7 +9,7 @@ import 'support.dart';
 import 'window_caption_test.dart' show FakeWindow;
 
 void main() {
-  testWidgets('interactive title content hides intact for narrow/large text, hides for actual fullscreen and restores hits', (tester) async {
+  testWidgets('interactive title content hides intact when narrow, stays at large text, hides for actual fullscreen and restores hits', (tester) async {
     tester.view.physicalSize = const Size(1200, 700);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -62,7 +62,8 @@ void main() {
     scale = 2;
     await tester.pumpWidget(tree());
     await tester.pumpAndSettle();
-    expect(finder, findsNothing);
+    // Large text grows the row instead of hiding the content.
+    expect(finder, findsOneWidget);
     expect(tester.element(hidden), same(element));
 
     window.current = const FrostCaptionState(maximized: false, fullscreen: true, active: true, maximizeHovered: false, maximizePressed: false, failed: false);

@@ -179,6 +179,7 @@ class	FrostSettingsSections	layout/settings_sections.dart	-	baseline-20261102
 class	FrostSettingsSelectTile	layout/settings_select_tile.dart	-	baseline-20261102
 class	FrostShelf	layout/shelf.dart	-	baseline-20261102
 class	FrostShell	navigation/shell/shell.dart	-	baseline-20261102
+class	FrostShellAction	navigation/shell/shell.dart	-	reviewed:20261117:pass: a temporary title-row action is caption chrome an app may not draw, and the shell owns the title row's layout and drag regions
 class	FrostShellBackToFirst	navigation/shell_navigation_scope.dart	-	baseline-20261102
 class	FrostShellBrand	navigation/shell/shell.dart	-	baseline-20261102
 class	FrostShellDestination	navigation/shell/destination.dart	-	baseline-20261102
@@ -188,6 +189,7 @@ class	FrostShellTabs	navigation/shell_tabs.dart	-	baseline-20261102
 class	FrostShellTaskButton	navigation/shell/task_entry.dart	-	baseline-20261102
 class	FrostShellTaskEntry	navigation/shell/task_entry.dart	-	baseline-20261102
 class	FrostShellTaskPanel	navigation/shell/task_panel.dart	-	reviewed:20261107:pass: expanding the floating entry into a draggable panel needs the shell's private entry area, bottom bar height, entry position, expand animation and Back and focus handling, which an app cannot compose; only a panel slot is added and the content stays with the app
+class	FrostShellWholeWindow	navigation/shell/whole_window.dart	-	reviewed:20261117:pass: only the shell can hide its sidebar and title-row content for one page and restore them, keeping the window buttons and drag area
 class	FrostShortcut	controls/shortcuts.dart	-	baseline-20261102
 class	FrostShortcuts	controls/shortcuts.dart	-	baseline-20261102
 class	FrostSizeLayout	foundation/_layout_scope.dart	-	baseline-20261102
@@ -472,7 +474,8 @@ ctor	FrostSettingsSections.new	layout/settings_sections.dart	compact,detail,head
 ctor	FrostSettingsSelectTile.new	layout/settings_select_tile.dart	enabled,icon,items,key,onChanged,subtitle,subtitleStatus,title,value	baseline-20261102
 ctor	FrostSettingsSelectTile.values	layout/settings_select_tile.dart	enabled,icon,key,label,onChanged,subtitle,subtitleStatus,title,value,values	baseline-20261102
 ctor	FrostShelf.new	layout/shelf.dart	action,height,inset,itemBuilder,itemCount,itemExtent,key,spacing,title	baseline-20261102
-ctor	FrostShell.new	navigation/shell/shell.dart	atDestinationRoot,backToFirst,brand,canGoBack,child,destinations,initiallyExpanded,key,navigationPlacement,onBack,onDestinationSelected,onExpandedChanged,routeDepth,secondary,selectedIndex,showsMobileNavigation,sidebarAlignment,tabs,taskEntry,titleBarContent,titleBarSearch,titleBarSearchPlacement	reviewed:20261109:shell owns caption geometry; app cannot compose end placement
+ctor	FrostShell.new	navigation/shell/shell.dart	atDestinationRoot,backToFirst,brand,canGoBack,child,destinations,initiallyExpanded,key,navigationPlacement,onBack,onDestinationSelected,onExpandedChanged,routeDepth,secondary,selectedIndex,showsMobileNavigation,sidebarAlignment,tabs,taskEntry,titleBarActions,titleBarContent,titleBarSearch,titleBarSearchPlacement	reviewed:20261117:pass: a temporary title-row action is caption chrome an app may not draw, and the shell owns the title row's layout and drag regions
+ctor	FrostShellAction.new	navigation/shell/shell.dart	icon,label,onPressed	reviewed:20261117:pass: a temporary title-row action is caption chrome an app may not draw, and the shell owns the title row's layout and drag regions
 ctor	FrostShellBackToFirst.new	navigation/shell_navigation_scope.dart	icon,label,onPressed	baseline-20261102
 ctor	FrostShellBrand.new	navigation/shell/shell.dart	expanded,icon,label	baseline-20261102
 ctor	FrostShellDestination.new	navigation/shell/destination.dart	child,key	baseline-20261102
@@ -482,6 +485,7 @@ ctor	FrostShellTabs.new	navigation/shell_tabs.dart	closeTooltip,controller,count
 ctor	FrostShellTaskButton.new	navigation/shell/task_entry.dart	badge,badgeTone,icon,key,label,onPressed,progress	baseline-20261102
 ctor	FrostShellTaskEntry.new	navigation/shell/task_entry.dart	builder,initialFloatingPosition,onFloatingPositionChanged,panel,visible	reviewed:20261107:pass: expanding the floating entry into a draggable panel needs the shell's private entry area, bottom bar height, entry position, expand animation and Back and focus handling, which an app cannot compose; only a panel slot is added and the content stays with the app
 ctor	FrostShellTaskPanel.new	navigation/shell/task_panel.dart	builder,title	reviewed:20261107:pass: expanding the floating entry into a draggable panel needs the shell's private entry area, bottom bar height, entry position, expand animation and Back and focus handling, which an app cannot compose; only a panel slot is added and the content stays with the app
+ctor	FrostShellWholeWindow.new	navigation/shell/whole_window.dart	child,key,titleRow	reviewed:20261117:pass: only the shell can hide its sidebar and title-row content for one page and restore them, keeping the window buttons and drag area
 ctor	FrostShortcut.new	controls/shortcuts.dart	alt,key,primary,shift	baseline-20261102
 ctor	FrostShortcuts.new	controls/shortcuts.dart	bindings,child,key	baseline-20261102
 ctor	FrostSizeLayout.fromSize	foundation/_layout_scope.dart	desktopBreakpoint,mobileBreakpoint,size,tabletBreakpoint	baseline-20261102

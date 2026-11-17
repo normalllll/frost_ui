@@ -76,6 +76,7 @@ part 'mobile_bar.dart';
 part 'sidebar.dart';
 part 'task_entry.dart';
 part 'task_panel.dart';
+part 'whole_window.dart';
 
 enum FrostSidebarAlignment { automatic, top, bottom }
 
@@ -153,6 +154,17 @@ class FrostShellSecondary {
   final ValueChanged<int> onSelected;
 }
 
+/// An icon action in the shell's title row.
+@immutable
+class FrostShellAction {
+  const FrostShellAction({required this.label, required this.icon, required this.onPressed});
+
+  /// Names the action for its tooltip and for assistive technology.
+  final String label;
+  final FrostIconData icon;
+  final VoidCallback? onPressed;
+}
+
 /// The App's identity in the shell.
 @immutable
 class FrostShellBrand {
@@ -202,6 +214,7 @@ class FrostShell extends StatefulWidget {
     this.brand,
     this.titleBarContent,
     this.titleBarSearch,
+    this.titleBarActions = const [],
     this.titleBarSearchPlacement = FrostCaptionSearchPlacement.center,
     this.tabs,
     this.navigationPlacement,
@@ -278,6 +291,11 @@ class FrostShell extends StatefulWidget {
   /// row has one content slot: passing this and [titleBarContent] throws.
   final Widget? titleBarSearch;
 
+  /// Icon actions at the end of the title row, before the window buttons, for
+  /// a state the app shows only while it lasts. Frost draws them as title-row
+  /// controls; the rest of the row still drags the window.
+  final List<FrostShellAction> titleBarActions;
+
   /// Where [titleBarSearch] sits in the title row.
   final FrostCaptionSearchPlacement titleBarSearchPlacement;
 
@@ -323,6 +341,18 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
   final _pageKey = GlobalKey();
   final _titleContentKey = GlobalKey();
   final _pageTitle = FrostShellPageTitle();
+  late final _wholeWindow = _WholeWindowClaims()..addListener(_wholeWindowChanged);
+
+  static MediaQueryData _pageMedia(MediaQueryData media, {double? top}) => top == null
+      ? media
+      : media.copyWith(
+          padding: media.padding.copyWith(top: math.max(media.padding.top, top)),
+          viewPadding: media.viewPadding.copyWith(top: math.max(media.viewPadding.top, top)),
+        );
+  void _wholeWindowChanged() {
+    if (mounted) setState(() {});
+  }
+
   late final AnimationController _sidebarProgress = AnimationController(vsync: this, value: widget.initiallyExpanded ? 1 : 0);
   final FocusNode _moreButtonFocus = FocusNode(debugLabel: 'More navigation');
   final ValueNotifier<({int index, int sequence})> _primaryReselection = ValueNotifier((index: 0, sequence: 0));
@@ -471,6 +501,7 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
   @override
   void dispose() {
     _pageTitle.dispose();
+    _wholeWindow.dispose();
     _overlayBounds.dispose();
     _layoutIdentity.dispose();
     _sidebarProgress.dispose();
@@ -555,7 +586,10 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
         final besidePage = hasNavigation && useHorizontalLayout && layout.width >= _expandableMinWidth;
         _updateBesidePage(besidePage);
         final (expandedWidth, ellipsizesLabels) = _expandedWidth(context);
-        final showSidebar = useHorizontalLayout && hasNavigation;
+        // A page asking for the whole window has it beside a sidebar; the
+        // sidebar keeps its state while hidden.
+        final wholeWindow = useHorizontalLayout && _wholeWindow.active;
+        final showSidebar = useHorizontalLayout && hasNavigation && !wholeWindow;
         final fullscreen = FrostWindowCaptionScope.stateOf(context)?.fullscreen ?? false;
         final hasCaption = FrostWindowCaptionScope.windowOf(context) != null && !fullscreen;
         final captionState = FrostWindowCaptionScope.stateOf(context);
@@ -567,14 +601,19 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
         ).height;
         final buttons = ((captionState?.leftButtons.length ?? 0) + (captionState?.rightButtons.length ?? 0)) * FrostCaptionMetrics.buttonWidth;
         final titleRoom = layout.width - buttons - nativeControls.width - _railWidth - expandedWidth - FrostGap.section;
+        final titleWidget = widget.titleBarSearch ?? widget.titleBarContent;
+        // A row holding title content grows with its text-scaled field, with
+        // tabs or without.
         final titleRowHeight = math.max(
           _shellCaptionHeight,
-          widget.tabs == null ? FrostDensity.of(context).controlHeight : math.max(FrostDensity.of(context).targetHeight, controlHeight),
+          widget.tabs == null
+              ? math.max(FrostDensity.of(context).controlHeight, titleWidget == null ? 0.0 : controlHeight)
+              : math.max(FrostDensity.of(context).targetHeight, controlHeight),
         );
         // Only a sidebar layout has title content in its row, so this agrees with
         // FrostAutoScaffold.usesHorizontalLayoutOf: a phone-like page owns its entry.
-        final titleInCaption = hasCaption && useHorizontalLayout && (widget.tabs != null || titleRoom >= 320) && controlHeight <= titleRowHeight;
-        final titleWidget = widget.titleBarSearch ?? widget.titleBarContent;
+        final titleInCaption =
+            hasCaption && useHorizontalLayout && !wholeWindow && (widget.tabs != null || titleRoom >= 320) && controlHeight <= titleRowHeight;
         final titleContent = titleWidget == null ? null : KeyedSubtree(key: _titleContentKey, child: titleWidget);
         final usesCaptionNavigation =
             hasCaption && (captionState?.mode == FrostCaptionMode.client || captionState?.mode == FrostCaptionMode.nativeControls || widget.tabs != null);
@@ -582,12 +621,12 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
         // Without a title row (a full-screen iPad, an Android tablet) a sidebar
         // layout gets a top bar of the same shape, without window buttons. A
         // full-screen window stays immersive.
-        final syntheticCaption = !hasCaption && useHorizontalLayout && (widget.tabs != null || hasNavigation && !fullscreen);
+        final syntheticCaption = !hasCaption && useHorizontalLayout && !wholeWindow && (widget.tabs != null || hasNavigation && !fullscreen);
         // macOS windows carry no app icon or name, as Finder and System Settings,
         // and a tablet's top bar none either; the tab strip keeps its brand.
         final captionBrand = captionState?.mode == FrostCaptionMode.nativeControls || syntheticCaption && widget.tabs == null ? null : widget.brand?.expanded;
         // The title row names the visible page; tabs name their own pages.
-        final showsPageTitle = (usesCaptionNavigation || syntheticCaption) && useHorizontalLayout && widget.tabs == null;
+        final showsPageTitle = (usesCaptionNavigation || syntheticCaption) && useHorizontalLayout && !wholeWindow && widget.tabs == null;
         final showCaption = hasCaption || syntheticCaption;
         final captionInset = syntheticCaption ? MediaQuery.paddingOf(context).top : 0.0;
         final bottomAligned = widget.sidebarAlignment == FrostSidebarAlignment.bottom || widget.sidebarAlignment == FrostSidebarAlignment.automatic && touch;
@@ -622,7 +661,7 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
               canGoBack: widget.canGoBack,
               onBack: widget.onBack,
               builder: (context, canGoBack, goBack) => FrostShellNavigationScope(
-                ownsBackControl: useHorizontalLayout,
+                ownsBackControl: useHorizontalLayout && !wholeWindow,
                 routeDepth: widget.routeDepth,
                 backToFirst: widget.backToFirst,
                 canGoBack: canGoBack,
@@ -669,18 +708,23 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
                                   // fold or resize that switches layouts keeps state.
                                   Positioned.fill(
                                     left: showSidebar && !rtl ? frame.left + railWidth : 0,
-                                    top: showCaption
+                                    top: wholeWindow
+                                        ? 0
+                                        : showCaption
                                         ? captionHeight + captionInset
                                         : showSidebar
                                         ? sidebarTop
                                         : 0,
                                     right: showSidebar && rtl ? frame.right + railWidth : 0,
                                     bottom: showSidebar ? FrostGap.related : 0,
-                                    child: MediaQuery.removePadding(
-                                      context: context,
-                                      removeLeft: showSidebar && !rtl,
-                                      removeRight: showSidebar && rtl,
-                                      removeTop: showSidebar,
+                                    child: MediaQuery(
+                                      data: _pageMedia(
+                                        MediaQuery.of(context)
+                                            .removePadding(removeLeft: showSidebar && !rtl, removeRight: showSidebar && rtl, removeTop: showSidebar),
+                                        // A page with the whole window lies under the
+                                        // title row and clears it unless it draws there.
+                                        top: wholeWindow && showCaption ? captionHeight + captionInset : null,
+                                      ),
                                       child: FrostCaptionClearance(
                                         child: _ContentSheet(
                                           enabled: showSidebar,
@@ -706,7 +750,10 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
                                                     Expanded(
                                                       child: NotificationListener<NavigationNotification>(
                                                         onNotification: _contentNavigated,
-                                                        child: FrostShellPageTitleScope(title: showsPageTitle ? _pageTitle : null, child: widget.child),
+                                                        child: FrostShellPageTitleScope(
+                                                          title: showsPageTitle ? _pageTitle : null,
+                                                          child: _WholeWindowScope(claims: _wholeWindow, grants: useHorizontalLayout, child: widget.child),
+                                                        ),
                                                       ),
                                                     ),
                                                   ],
@@ -802,17 +849,20 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
                                       height: captionHeight,
                                       child: _CaptionRow(
                                         titleContent: titleInCaption || syntheticCaption ? titleContent : null,
-                                        tabs: useHorizontalLayout ? widget.tabs : null,
+                                        tabs: useHorizontalLayout && !wholeWindow ? widget.tabs : null,
                                         brandIcon: widget.brand?.icon,
                                         expandsSearch: widget.titleBarSearch != null,
                                         searchAtEnd: widget.titleBarSearchPlacement == FrostCaptionSearchPlacement.end,
                                         brandLabel: _brandLabel(context),
                                         iconAxis: (rtl ? frame.right : frame.left) + _railWidth / 2,
                                         nativeCaption: hasCaption,
-                                        showsBack: (usesCaptionNavigation || syntheticCaption) && useHorizontalLayout,
+                                        showsBack: (usesCaptionNavigation || syntheticCaption) && useHorizontalLayout && !wholeWindow,
                                         onBack: canGoBack ? goBack : null,
-                                        brand: usesCaptionNavigation || syntheticCaption ? captionBrand : null,
+                                        brand: (usesCaptionNavigation || syntheticCaption) && !wholeWindow ? captionBrand : null,
                                         pageTitle: showsPageTitle ? _pageTitle : null,
+                                        actions: wholeWindow ? const [] : widget.titleBarActions,
+                                        wholeWindow: wholeWindow,
+                                        pageRow: wholeWindow ? _wholeWindow.titleRow : null,
                                       ),
                                     ),
                                   // Above the content Navigator, so pushed
