@@ -178,6 +178,7 @@ const _scope = [
   'FrostScope',
   'FrostShellNavigationScope',
   'FrostShortcuts',
+  'FrostSolidMaterial',
   'FrostSurfaceScope',
   'FrostToastHost',
   'FrostWindowCaptionScope',

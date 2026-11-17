@@ -47,6 +47,23 @@ class FrostSurfaceScope extends InheritedWidget {
   bool updateShouldNotify(FrostSurfaceScope oldWidget) => isGlass != oldWidget.isGlass || background != oldWidget.background;
 }
 
+/// Makes the popovers, menus, sheets and dialogs opened from inside it
+/// opaque, so content beneath them never shows through their controls. The
+/// page's own surfaces keep their material. For a page whose content reads
+/// poorly under glass, such as dense body text.
+class FrostSolidMaterial extends InheritedTheme {
+  const FrostSolidMaterial({required super.child, super.key});
+
+  /// Whether overlay material at [context] is solid.
+  static bool _applies(BuildContext context) => context.dependOnInheritedWidgetOfExactType<FrostSolidMaterial>() != null;
+
+  @override
+  Widget wrap(BuildContext context, Widget child) => FrostSolidMaterial(child: child);
+
+  @override
+  bool updateShouldNotify(FrostSolidMaterial oldWidget) => false;
+}
+
 enum FrostSurfaceEdge { material, none }
 
 /// The side where a surface continues straight into a neighbouring one, the
@@ -173,7 +190,9 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
     final materialProgress = ownsReveal ? reveal.progress : 1.0;
     Widget revealContent(Widget content) => ownsReveal ? reveal.consume(context, content) : content;
     final highContrast = MediaQuery.highContrastOf(context);
-    final solid = FrostScope.solidSurfaces(context);
+    final solid =
+        FrostScope.solidSurfaces(context) ||
+        (widget.role == FrostSurfaceRole.overlay || widget.role == FrostSurfaceRole.sheet) && FrostSolidMaterial._applies(context);
     final translucentWindow = frostHasTranslucentWindowBase(context);
     _watchWindowFade(FrostWindowBackgroundScope.maybeOf(context)?.fade);
     final actualWindow = frostWindowBackgroundOf(context, tokens);

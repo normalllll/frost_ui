@@ -202,6 +202,7 @@ class	FrostSliverGrid	layout/grid.dart	-	baseline-20261102
 class	FrostSliverList	lists/sliver_list.dart	-	baseline-20261102
 class	FrostSliverSectionsHeader	layout/pinned_sections_sliver.dart	-	reviewed:20261108:lead scrolls away, tabs stick; joins private chrome glass
 class	FrostSliverWaterfallGrid	layout/waterfall_grid.dart	-	baseline-20261102
+class	FrostSolidMaterial	primitives/surface.dart	-	reviewed:20261117:pass: overlays opened from a page live on the root navigator, so only a scope their routes capture can make them opaque for one page
 class	FrostSplitView	navigation/split_view.dart	-	baseline-20261102
 class	FrostSpringBuilder	motion/spring.dart	-	baseline-20261102
 class	FrostSpringCurve	motion/spring.dart	-	baseline-20261102
@@ -497,6 +498,7 @@ ctor	FrostSliverList.columns	lists/sliver_list.dart	dividers,itemBuilder,itemCou
 ctor	FrostSliverList.new	lists/sliver_list.dart	dividers,itemBuilder,itemCount,itemKey,key	baseline-20261102
 ctor	FrostSliverSectionsHeader.new	layout/pinned_sections_sliver.dart	key,lead,maxWidth,tabs,trailing	reviewed:20261117:pass: a reading-column page keeps its lead and tabs on the column's edges while the stuck glass spans the page, which a SliverPadding around the sliver cannot do
 ctor	FrostSliverWaterfallGrid.new	layout/waterfall_grid.dart	columns,controller,crossAxisSpacing,itemBuilder,items,key,mainAxisSpacing,maxColumns,minTileWidth,padding,preferredTileWidth	reviewed:20261114:adds the card column rule (as many columns as fit at a minimum width, down to one) to a variable-height waterfall, which no public component gives without an app-side SliverLayoutBuilder rebuilding every scroll frame; consistent with FrostSliverDataGrid.minTileWidth and FrostSliverList.columns
+ctor	FrostSolidMaterial.new	primitives/surface.dart	child,key	reviewed:20261117:pass: overlays opened from a page live on the root navigator, so only a scope their routes capture can make them opaque for one page
 ctor	FrostSplitView.new	navigation/split_view.dart	header,initialPrimaryWidth,key,onCloseSecondary,onPrimaryWidthChanged,primary,resizable,secondary	baseline-20261102
 ctor	FrostSpringBuilder.new	motion/spring.dart	builder,child,key,spring,value	baseline-20261102
 ctor	FrostSpringCurve.new	motion/spring.dart	duration,spring	baseline-20261102
