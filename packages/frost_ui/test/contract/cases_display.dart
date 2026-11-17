@@ -278,6 +278,12 @@ final _cases = <DisplayCase>[
   DisplayCase('FrostMediaImage.new', FrostMediaImage, (_) => _picture),
   DisplayCase('FrostMediaStage.new', FrostMediaStage, (_) => const FrostMediaStage(aspectRatio: 1.5, child: _box)),
   DisplayCase(
+    'FrostMediaBlackStage.new',
+    FrostMediaBlackStage,
+    (_) => hosted(height: 120, width: 200, child: const FrostMediaBlackStage()),
+    skip: const {'intrinsic': 'a stage background: without a child it fills what it is given'},
+  ),
+  DisplayCase(
     'FrostMediaViewport.new',
     FrostMediaViewport,
     (_) => hosted(height: 200, width: 300, child: FrostMediaViewport(child: _box)),
@@ -478,6 +484,8 @@ const _layoutOnly = {
   'FrostFormRow.new',
   'FrostMediaImage.new',
   'FrostMediaStage.new',
+  // One fixed colour in every theme.
+  'FrostMediaBlackStage.new',
   'FrostRollingText.new',
 };
 

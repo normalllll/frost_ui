@@ -101,6 +101,7 @@ class	FrostLoadStateSwitcher	frost_data:load_state_switcher.dart	-	reviewed:2026
 class	FrostLoadingGate	feedback/loading_gate.dart	-	baseline-20261102
 class	FrostLoadingMoreIndicator	frost_data:loading_more_indicator.dart	-	reviewed:20261103:moved to frost_data unchanged
 class	FrostLoadingScrollView	feedback/refresh_indicator.dart	-	baseline-20261102
+class	FrostMediaBlackStage	media/media_black_stage.dart	-	reviewed:20261117:pass: fullscreen media needs an opaque black stage in every theme, which no token provides
 class	FrostMediaButton	media/media_button.dart	-	baseline-20261102
 class	FrostMediaCard	media/media_card.dart	-	baseline-20261102
 class	FrostMediaChrome	media/media_chrome.dart	-	baseline-20261102
@@ -388,6 +389,7 @@ ctor	FrostLoadStateSwitcher.new	frost_data:load_state_switcher.dart	animateSize,
 ctor	FrostLoadingGate.new	feedback/loading_gate.dart	builder,key,loading	baseline-20261102
 ctor	FrostLoadingMoreIndicator.new	frost_data:loading_more_indicator.dart	key,source	reviewed:20261103:moved to frost_data unchanged
 ctor	FrostLoadingScrollView.new	feedback/refresh_indicator.dart	cacheExtent,clipBehavior,controller,key,physics,preloadExtent,primary,shrinkWrap,slivers	baseline-20261102
+ctor	FrostMediaBlackStage.new	media/media_black_stage.dart	child,key	reviewed:20261117:pass: fullscreen media needs an opaque black stage in every theme, which no token provides
 ctor	FrostMediaButton.icon	media/media_button.dart	icon,key,label,onPressed,size	baseline-20261102
 ctor	FrostMediaButton.new	media/media_button.dart	icon,key,label,onPressed,size	baseline-20261102
 ctor	FrostMediaCard.new	media/media_card.dart	aspectRatio,bottomEnd,bottomStart,contextMenu,footer,key,media,metadata,onOpenInBackground,onOpenInNewTab,onPressed,overlay,progress,selected,semanticLabel,title,titleLines,topEnd,topStart	baseline-20261102

@@ -1,6 +1,7 @@
 /// Media viewing: viewports, chrome, images, media rows and pagers.
 library;
 
+export 'src/media/media_black_stage.dart' show FrostMediaBlackStage;
 export 'src/media/media_button.dart' show FrostMediaButton;
 export 'src/media/media_chrome.dart' show FrostMediaChrome;
 export 'src/media/media_image.dart' show FrostMediaImage;
