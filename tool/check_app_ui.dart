@@ -254,10 +254,12 @@ List<Finding> scanSource(String source, String relativePath) {
           arguments(code, m.end - 1, close).any((a) => a.name == 'decoration'))
         add(Rule.r5, m.start);
     }
-    matches(
-      Rule.r6,
-      r'\bTextStyle\s*\(|\b(?:fontSize|fontWeight)\s*:|\bTheme\s*\.\s*of\s*\(',
-    );
+    matches(Rule.r6, r'\bTextStyle\s*\(|\bTheme\s*\.\s*of\s*\(');
+    for (final m in RegExp(
+      r'\b(?:fontSize|fontWeight)\s*:(?!:)',
+    ).allMatches(code)) {
+      if (isTextStyling(code, m.start)) add(Rule.r6, m.start);
+    }
     matches(Rule.r10, r'\bbleed\s*:|\bTransform\s*\.\s*translate\s*\(');
     matches(
       Rule.r11,
@@ -359,6 +361,38 @@ List<Finding> scanSource(String source, String relativePath) {
         );
       }(),
   ];
+}
+
+/// Whether the call that directly encloses the named argument at [start] is
+/// text styling: a callee ending in `Style` (TextStyle, StrutStyle, ...), or a
+/// `.copyWith(` / `.merge(` / `.apply(` call. Other constructors may take a
+/// `fontSize:` of their own.
+bool isTextStyling(String code, int start) {
+  var depth = 0;
+  for (var i = start - 1; i >= 0; i--) {
+    final char = code[i];
+    if (')]}'.contains(char)) {
+      depth++;
+    } else if ('[{'.contains(char)) {
+      if (depth == 0) return false;
+      depth--;
+    } else if (char == '(') {
+      if (depth > 0) {
+        depth--;
+        continue;
+      }
+      final callee = RegExp(r'(\.\s*)?(\w+)\s*(?:<[^;(){}]*>)?\s*$')
+          .firstMatch(code.substring(math.max(0, i - 80), i));
+      if (callee == null) return false;
+      final name = callee.group(2)!;
+      return name.endsWith('Style') ||
+          (callee.group(1) != null &&
+              const ['copyWith', 'merge', 'apply'].contains(name));
+    } else if (char == ';' && depth == 0) {
+      return false;
+    }
+  }
+  return false;
 }
 
 bool endsWithEllipsis(String value) {

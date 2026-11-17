@@ -104,6 +104,33 @@ void main() {
           r13("FrostText('a', 'b…');") == 0,
       'nested calls and positional position',
     );
+    int r6(String source) => audit
+        .scanSource(source, 'a.dart')
+        .where((h) => h.rule == audit.Rule.r6)
+        .length;
+    check(
+      r6(
+                'class Metrics {\n  const Metrics({required this.fontSize});\n'
+                '  final double fontSize;\n}\n\nfinal metrics = Metrics(fontSize: 12);',
+              ) ==
+              0 &&
+          r6(
+                "BubbleBox(\n  fontSize: m['fontSize'] is num ? _double(m['fontSize']) : null,\n)",
+              ) ==
+              0,
+      'fontSize of a data class is not text styling',
+    );
+    check(
+      r6('TextStyle(fontSize: 12)') == 2 &&
+          r6('TextStyle(fontWeight: FontWeight.bold)') == 2 &&
+          r6('Theme.of(context)') == 1 &&
+          r6('base.copyWith(fontSize: 14)') == 1 &&
+          r6('base.merge(fontWeight: w)') == 1 &&
+          r6('StrutStyle(fontSize: 14)') == 1 &&
+          r6('FooTextStyle(fontSize: f(1), x: 2)') == 1 &&
+          r6('TextStyle(color: c, fontSize: g(a, b))') == 2,
+      'fontSize/fontWeight in text styling calls',
+    );
     final firstText = hits.firstWhere((h) => h.rule == audit.Rule.r11);
     check(firstText.line == 14 && firstText.column == 1, 'source line/column');
     final cases = [
