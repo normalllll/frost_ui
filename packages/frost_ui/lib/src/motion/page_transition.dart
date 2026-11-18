@@ -157,16 +157,26 @@ class _PointerPageTransition extends StatelessWidget {
   );
 }
 
-/// The plain fill a page rests on, such as the compact shell's canvas, or null
-/// where it rests on the window backdrop.
-Color? _restingFill(BuildContext context) => context.dependOnInheritedWidgetOfExactType<FrostBackdropVeilScope>()?.veil?.solidColor;
+/// The plain fill a page rests on: the compact shell's canvas or an opaque
+/// panel, or a translucent window layer over the window backdrop; null where
+/// the page rests on the window backdrop itself.
+Color? _restingFill(BuildContext context) => context.dependOnInheritedWidgetOfExactType<FrostBackdropVeilScope>()?.veil?.groundFill;
 
-/// What a moving page carries beneath it: the fill it rests on, or else the
-/// window backdrop, at [opacity].
-Widget _carriedGround(BuildContext context, double opacity) => switch (_restingFill(context)) {
-  final fill? => ColoredBox(color: fill.withValues(alpha: fill.a * opacity)),
-  null => FrostFadingAmbientBackdrop(opacity: opacity),
-};
+/// What a moving page carries beneath it at [opacity]: the window backdrop
+/// with the fill it rests on laid over it. Drawn as two alphas whose result
+/// equals that ground at [opacity] over what lies below, with no layer.
+Widget _carriedGround(BuildContext context, double opacity) {
+  final fill = _restingFill(context);
+  if (fill == null) return FrostFadingAmbientBackdrop(opacity: opacity);
+  final over = opacity * fill.a;
+  final backdrop = over >= 1 ? 0.0 : opacity * (1 - fill.a) / (1 - over);
+  final layer = ColoredBox(color: fill.withValues(alpha: over));
+  if (backdrop <= 0) return layer;
+  return Stack(
+    fit: StackFit.expand,
+    children: [FrostFadingAmbientBackdrop(opacity: backdrop), layer],
+  );
+}
 
 // A Frost page paints over what it rests on, which the opaque route below
 // covers until this route settles. While moving, the page carries that ground
@@ -225,9 +235,11 @@ class _PageTransition extends StatelessWidget {
         final moving = animation.status != AnimationStatus.completed;
         final opacity = animation.value.clamp(0.0, 1.0);
         final carried = moving && route?.opaque != false;
-        // A page resting on a plain fill fades over it; only the window backdrop
-        // hides an opaque page's content behind a dip.
-        final dip = carried && _restingFill(context) == null && frostAmbientBackdropCovers(context);
+        // A page resting on an opaque fill fades over it; where the window
+        // backdrop shows, alone or under a window layer, the content dips
+        // through that ground.
+        final restingFill = _restingFill(context);
+        final dip = carried && (restingFill == null || restingFill.a < 1) && frostAmbientBackdropCovers(context);
         final emerged = dip ? ((opacity - _dipSplit) / (1 - _dipSplit)).clamp(0.0, 1.0) : 1.0;
         // The children keep their places whichever way the page moves, so the
         // content keeps its state.
@@ -251,7 +263,7 @@ class _PageTransition extends StatelessWidget {
             ),
             Positioned.fill(
               child: dip && emerged < 1 && opacity >= _dipSplit
-                  ? IgnorePointer(child: FrostFadingAmbientBackdrop(opacity: 1 - emerged))
+                  ? IgnorePointer(child: _carriedGround(context, 1 - emerged))
                   : const SizedBox.shrink(),
             ),
           ],

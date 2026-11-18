@@ -11,12 +11,19 @@ abstract class FrostBackdropVeil {
   /// The opaque backdrop drawn by one colour.
   const factory FrostBackdropVeil.solid(Color color) = _SolidVeil;
 
+  /// A translucent [fill] laid over the window backdrop, which [below]
+  /// reproduces. Its fill follows the art's fade, so an edge over it keeps
+  /// its mask; a moving page still carries it as its ground.
+  const factory FrostBackdropVeil.windowLayer(Color fill, FrostBackdropVeil? below) = _WindowLayerVeil;
+
   /// Whether this veil reproduces the backdrop below [context]. A veil that
   /// cannot (a system backdrop shows through) leaves the edge to a mask.
   bool reproducesBelow(BuildContext context) => true;
 
-  /// The one opaque colour this veil paints, when the backdrop is a plain fill.
-  Color? get solidColor => null;
+  /// The plain colour this backdrop lays over the window backdrop: opaque for
+  /// a solid fill, translucent for a window layer, or null where content lies
+  /// on the window backdrop itself.
+  Color? get groundFill => null;
 
   /// Notifies when the backdrop changes.
   Listenable? get repaint => null;
@@ -77,7 +84,7 @@ class _SolidVeil extends FrostBackdropVeil {
   final Color color;
 
   @override
-  Color get solidColor => color;
+  Color get groundFill => color;
 
   @override
   void paint(Canvas canvas, RenderBox box, Offset offset, Rect strip, Offset opaqueAt, Offset clearAt) =>
@@ -88,6 +95,33 @@ class _SolidVeil extends FrostBackdropVeil {
 
   @override
   int get hashCode => color.hashCode;
+}
+
+class _WindowLayerVeil extends FrostBackdropVeil {
+  const _WindowLayerVeil(this.fill, this.below);
+  final Color fill;
+  final FrostBackdropVeil? below;
+
+  @override
+  bool reproducesBelow(BuildContext context) => false;
+
+  @override
+  Color get groundFill => fill;
+
+  @override
+  Listenable? get repaint => below?.repaint;
+
+  @override
+  void paint(Canvas canvas, RenderBox box, Offset offset, Rect strip, Offset opaqueAt, Offset clearAt) {
+    below?.paint(canvas, box, offset, strip, opaqueAt, clearAt);
+    FrostBackdropVeil.drawColor(canvas, strip, opaqueAt, clearAt, fill);
+  }
+
+  @override
+  bool operator ==(Object other) => other is _WindowLayerVeil && other.fill == fill && other.below == below;
+
+  @override
+  int get hashCode => Object.hash(fill, below);
 }
 
 /// Says what lies directly behind the content below it. Whatever paints a
