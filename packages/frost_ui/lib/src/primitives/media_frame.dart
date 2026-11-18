@@ -267,8 +267,11 @@ class _ProviderImageState extends State<_ProviderImage> {
         child: displayed,
       );
     },
+    // Image asks again after every chunk, also once a frame shows: a
+    // progressive picture keeps loading after its first scan, which stays
+    // drawn until the next scan replaces it. The frame builder runs first.
     loadingBuilder: (context, imageChild, progress) {
-      if (progress == null || _outgoing != null) return imageChild;
+      if (progress == null || _outgoing != null || _hasFrame) return imageChild;
       final total = progress.expectedTotalBytes;
       return _placeholder(context, total == null || total == 0 ? null : (progress.cumulativeBytesLoaded / total).clamp(0.0, 1.0));
     },
