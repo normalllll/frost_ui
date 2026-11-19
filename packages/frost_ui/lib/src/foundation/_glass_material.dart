@@ -66,6 +66,31 @@ ImageFilter frostGlassFilter({required double sigma, required double opacity}) {
 Color frostWindowLayerFill(bool dark) => dark ? const Color(0x4C3A3A3A) : const Color(0x80FFFFFF);
 Color frostWindowCardFill(bool dark) => dark ? const Color(0x0DFFFFFF) : const Color(0xB3FFFFFF);
 
+// Dark Mica over a dark desktop stays below this; the content layer is solved
+// against it where the system backdrop's colour is not known.
+const _darkSystemBackdropCeiling = Color(0xFF2C2C2C);
+
+/// The dark content area's layer over a translucent window: black at the
+/// least alpha that keeps [behind] (the window's colour, or a dark system
+/// backdrop's ceiling when unknown) no lighter than [canvas]. The content
+/// area is then the window's darkest layer while the art or Mica still shows
+/// through it.
+Color frostDarkContentLayer(Color canvas, Color? behind) {
+  final base = behind ?? _darkSystemBackdropCeiling;
+  final target = canvas.computeLuminance();
+  if (base.computeLuminance() <= target) return const Color(0x00000000);
+  var low = 0.0, high = 1.0;
+  for (var step = 0; step < 16; step++) {
+    final middle = (low + high) / 2;
+    if (Color.alphaBlend(Color.fromRGBO(0, 0, 0, middle), base).computeLuminance() <= target) {
+      high = middle;
+    } else {
+      low = middle;
+    }
+  }
+  return Color.fromRGBO(0, 0, 0, high);
+}
+
 // Navigation stays legible over moving text even when a platform sampler is
 // weak or temporarily deferred. Bound the residual black/white contrast, not
 // just the foreground ink contrast. This is a conservative cross-platform floor.

@@ -240,12 +240,20 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
         continuous ? RoundedSuperellipseBorder(borderRadius: radius, side: side) : RoundedRectangleBorder(borderRadius: radius, side: side);
     // WinUI LayerFillColorDefault / CardBackgroundFillColorDefault. These
     // layers tint a shared ambient/Mica base without another blur.
+    // In the dark theme the content sheet (the panel that owns the page
+    // outline) is the window's darkest layer, never lighter than the window
+    // base beside it: artwork and long reading read best on it, and a lighter
+    // grey over that area looks washed out. Its layer over a translucent window
+    // darkens instead of lifting, which already gives light ink more contrast
+    // than the window it covers.
+    final darkContent = role == FrostSurfaceRole.panel && outline != null && !outline.channelClaimed && tokens.isDark;
     final referenceFill = switch (role) {
+      FrostSurfaceRole.panel when translucentWindow && darkContent => frostDarkContentLayer(tokens.canvas, actualWindow),
       FrostSurfaceRole.panel when translucentWindow => frostWindowLayerFill(tokens.isDark),
       FrostSurfaceRole.module when translucentWindow => frostWindowCardFill(tokens.isDark),
       _ => null,
     };
-    final windowFill = referenceFill == null || actualWindow == null
+    final windowFill = referenceFill == null || actualWindow == null || darkContent
         ? referenceFill
         : frostReadableWindowFill(tokens, referenceFill, behind, tokens.textSecondary);
     final opaqueFill = switch (role) {
@@ -253,14 +261,15 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
       FrostSurfaceRole.module => _moduleFill(tokens, behind),
       // Sidebar touch pages share the canvas used by bottom navigation,
       // keeping light groups visibly above their page as well.
-      FrostSurfaceRole.panel when channel > 0 && !FrostDensity.of(context).usesPointer => tokens.canvas,
+      FrostSurfaceRole.panel when darkContent || channel > 0 && !FrostDensity.of(context).usesPointer => tokens.canvas,
       FrostSurfaceRole.onMediaChrome => frostOnMediaChromeBase(tokens),
       _ => tokens.surface,
     };
     final surfaceColor = windowFill == null ? opaqueFill : frostLerpColorPremultiplied(opaqueFill, windowFill, windowWeight)!;
-    // A nested panel must not reset a lifted module to a darker base. Compare
-    // the composed fill so the same rule covers an actual translucent window.
-    final color = role == FrostSurfaceRole.panel && Color.alphaBlend(surfaceColor, behind).computeLuminance() < behind.computeLuminance()
+    // A nested light panel must not reset a lifted module to a darker base.
+    // Compare the composed fill so the same rule covers an actual translucent
+    // window.
+    final color = role == FrostSurfaceRole.panel && !darkContent && Color.alphaBlend(surfaceColor, behind).computeLuminance() < behind.computeLuminance()
         ? (tokens.surfaceRaised.computeLuminance() >= behind.computeLuminance() ? tokens.surfaceRaised : behind)
         : surfaceColor;
     final glass = mediaChrome || role == FrostSurfaceRole.chrome || role == FrostSurfaceRole.glassPanel || role == FrostSurfaceRole.overlay;
@@ -333,7 +342,10 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
             FrostSurfaceRole.chrome || FrostSurfaceRole.glassPanel => solid ? tokens.panelEdge : null,
             FrostSurfaceRole.overlay => solid ? tokens.line : tokens.edgeHairline,
             FrostSurfaceRole.sheet => tokens.edgeHairline,
-            FrostSurfaceRole.panel || FrostSurfaceRole.reading || FrostSurfaceRole.base || FrostSurfaceRole.module => null,
+            // The dark content panel can match the base beside it; a hairline
+            // keeps their boundary.
+            FrostSurfaceRole.panel => darkContent ? tokens.edgeHairline : null,
+            FrostSurfaceRole.reading || FrostSurfaceRole.base || FrostSurfaceRole.module => null,
           };
     final borderColor = targetBorderColor?.withValues(alpha: targetBorderColor.a * materialProgress);
     // The upper piece of a joined panel would shade the lower one.
