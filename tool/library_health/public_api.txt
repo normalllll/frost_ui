@@ -231,6 +231,7 @@ class	FrostTag	display/tag.dart	-	baseline-20261102
 class	FrostTaskAction	lists/task_row.dart	-	baseline-20261102
 class	FrostTaskRow	lists/task_row.dart	-	baseline-20261102
 class	FrostText	primitives/text.dart	-	baseline-20261102
+class	FrostOverlayRegion	overlays/overlay_region.dart	-	reviewed:20261119:a page part such as a fixed player has to stay usable while the layers its body opens are shown
 class	FrostTextField	controls/text_field.dart	-	baseline-20261102
 class	FrostTextRun	display/expandable_text.dart	-	reviewed:20261108:value type for .linked runs; no existing carrier
 class	FrostTheme	foundation/theme.dart	-	baseline-20261102
@@ -533,6 +534,7 @@ ctor	FrostTaskAction.new	lists/task_row.dart	icon,label,onPressed	baseline-20261
 ctor	FrostTaskRow.new	lists/task_row.dart	actions,contentTitle,contextMenu,detail,key,onPressed,progress,progressPlacement,selected,showsStatusDot,status,thumbnail,title,trailing	baseline-20261102
 ctor	FrostText.new	primitives/text.dart	content,data,key,maxLines,numeric,overflow,role,selectable,semanticsLabel,tabular,textAlign,tone,weight	reviewed:20261106:pass: w500/w600 at body size are only reachable through TextStyle; a closed two-value enum adds no type step
 ctor	FrostText.rich	primitives/text.dart	content,key,maxLines,numeric,overflow,role,selectable,semanticsLabel,span,tabular,textAlign,tone,weight	reviewed:20261106:pass: w500/w600 at body size are only reachable through TextStyle; a closed two-value enum adds no type step
+ctor	FrostOverlayRegion.new	overlays/overlay_region.dart	child,key	reviewed:20261119:a page part such as a fixed player has to stay usable while the layers its body opens are shown
 ctor	FrostTextField.new	controls/text_field.dart	appearance,autofocus,clearable,controller,enabled,error,focusNode,help,key,keyboardType,label,leading,maxLines,minLines,monospace,obscureText,onChanged,onEditingComplete,onSubmitted,onTap,onTapOutside,placeholder,readOnly,scrollController,size,textInputAction,trailing	baseline-20261102
 ctor	FrostTextField.secure	controls/text_field.dart	appearance,autofocus,controller,enabled,error,focusNode,help,key,label,leading,onChanged,onEditingComplete,onSubmitted,onTap,onTapOutside,placeholder,readOnly,scrollController,size,textInputAction,trailing	baseline-20261102
 ctor	FrostTextRun.new	display/expandable_text.dart	link,text	reviewed:20261108:minimal text and optional link pair

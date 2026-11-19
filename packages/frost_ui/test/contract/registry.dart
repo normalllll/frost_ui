@@ -172,6 +172,7 @@ const _scope = [
   'FrostFontWarmUp',
   'FrostInputFeedback',
   'FrostLayoutScope',
+  'FrostOverlayRegion',
   'FrostMediaSystemChrome',
   'FrostMediaSystemChromeHost',
   'FrostPageTitle',

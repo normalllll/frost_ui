@@ -137,6 +137,7 @@ export 'src/overlays/dialogs.dart' show showFrostDialog, FrostDialogAction, Fros
 export 'src/overlays/form_dialog.dart' show FrostFormDialogController, showFrostFormDialog;
 export 'src/overlays/menu_anchor.dart' show FrostMenuAnchor;
 export 'src/overlays/menu_entry.dart' show FrostMenuEntry, FrostMenuAction, FrostMenuSection, FrostMenuSubmenu, FrostMenuDivider;
+export 'src/overlays/overlay_region.dart' show FrostOverlayRegion;
 export 'src/overlays/panel_action.dart' show closeFrostPanelThen;
 export 'src/overlays/popover.dart' show FrostPopover;
 export 'src/overlays/sheet.dart' show FrostSheetDetent, FrostSheetPresentation, showFrostSheet;

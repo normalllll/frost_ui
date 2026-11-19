@@ -44,6 +44,41 @@ class FrostOverlayBounds extends ChangeNotifier {
   }
 }
 
+/// Confines the layers opened from inside [child] (sheets, dialogs, menus,
+/// pickers, toasts and their scrims) to [child]'s area, within any region an
+/// enclosing shell already sets. For a part of a page that has to stay usable
+/// while a layer is open, such as a fixed player above the body that opens
+/// the layers: wrap the body, not the player.
+class FrostOverlayRegion extends StatefulWidget {
+  const FrostOverlayRegion({required this.child, super.key});
+  final Widget child;
+
+  @override
+  State<FrostOverlayRegion> createState() => _FrostOverlayRegionState();
+}
+
+class _FrostOverlayRegionState extends State<FrostOverlayRegion> {
+  final _bounds = FrostOverlayBounds();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _bounds.setParent(FrostOverlayRegionData.maybeOf(context));
+  }
+
+  @override
+  void dispose() {
+    _bounds.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FrostOverlayRegionData(
+    bounds: _bounds,
+    child: FrostOverlayRegionGeometry(onChanged: _bounds.update, child: widget.child),
+  );
+}
+
 class FrostOverlayRegionData extends InheritedNotifier<FrostOverlayBounds> {
   const FrostOverlayRegionData({required FrostOverlayBounds bounds, required super.child, super.key}) : super(notifier: bounds);
   static FrostOverlayBounds? maybeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<FrostOverlayRegionData>()?.notifier;
