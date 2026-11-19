@@ -158,7 +158,7 @@ silent	primitives/keyline.dart	FrostBleed.snappedOf	maybeOf-fallback	1	baseline-
 silent	primitives/keyline.dart	FrostRowTrailingAlignment.createRenderObject	maybeOf-fallback	1	baseline-20261102
 silent	primitives/keyline.dart	FrostRowTrailingAlignment.updateRenderObject	maybeOf-fallback	1	baseline-20261102
 silent	primitives/surface.dart	_FrostSurfaceState.build	maybeOf-fallback	3	baseline-20261102
-silent	primitives/text.dart	frostTextStyle	maybeOf-fallback	1	baseline-20261102
+silent	primitives/text.dart	_toneColor	maybeOf-fallback	1	reviewed:20261119:moved unchanged from frostTextStyle so toned spans share it
 silent	social/thread.dart	FrostThreadItem.build	maybeOf-fallback	2	baseline-20261102
 silent	social/thread.dart	_ThreadState.build	maybeOf-fallback	1	baseline-20261102
 silent	surface/_window_background.dart	FrostAmbientCardRegistry.overlaps	catch	2	baseline-20261102

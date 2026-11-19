@@ -36,6 +36,12 @@ void main() {
             actual.toString(),
       );
     }
+    final toned = hits.where((h) => h.path.endsWith('toned_summary.dart'));
+    check(
+      toned.isEmpty,
+      'toned spans in a feature need no TextStyle: ' +
+          toned.map((h) => h.rule.name).join(','),
+    );
     final ellipsis = hits.where((h) => h.rule == audit.Rule.r13).toList();
     List<String> entries(String path) => [
       for (final h in ellipsis)

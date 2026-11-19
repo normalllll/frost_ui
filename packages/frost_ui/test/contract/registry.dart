@@ -108,6 +108,7 @@ const _data = [
   'FrostShellBrand',
   'FrostShellSecondary',
   'FrostShellTabs',
+  'FrostToneSpan',
   'FrostShellTaskEntry',
   'FrostShellTaskPanel',
   'FrostShortcut',

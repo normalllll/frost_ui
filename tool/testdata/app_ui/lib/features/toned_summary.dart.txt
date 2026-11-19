@@ -1,0 +1,20 @@
+import 'package:frost_ui/frost_ui.dart';
+
+class Summary extends StatelessWidget {
+  const Summary({super.key});
+
+  @override
+  Widget build(BuildContext context) => const FrostText.rich(
+    TextSpan(
+      children: [
+        TextSpan(text: 'Queued '),
+        FrostToneSpan('3', tone: FrostTextTone.primary),
+        TextSpan(text: ' items'),
+      ],
+    ),
+    role: FrostTextRole.callout,
+    tone: FrostTextTone.secondary,
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+  );
+}
