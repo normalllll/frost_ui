@@ -14,13 +14,21 @@ class FrostSliderMediaScope extends InheritedWidget {
     required this.step,
     required this.onInteractionChanged,
     required super.child,
+    this.trackDecoration,
     super.key,
   });
   final Color ink;
   final double buffered, step;
   final ValueChanged<bool> onInteractionChanged;
+
+  /// Painted behind the track and laid out to the track's exact rect.
+  final Widget Function(BuildContext context, Size trackSize)? trackDecoration;
   static FrostSliderMediaScope? of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<FrostSliderMediaScope>();
   @override
   bool updateShouldNotify(FrostSliderMediaScope oldWidget) =>
-      ink != oldWidget.ink || buffered != oldWidget.buffered || step != oldWidget.step || onInteractionChanged != oldWidget.onInteractionChanged;
+      ink != oldWidget.ink ||
+      buffered != oldWidget.buffered ||
+      step != oldWidget.step ||
+      onInteractionChanged != oldWidget.onInteractionChanged ||
+      trackDecoration != oldWidget.trackDecoration;
 }

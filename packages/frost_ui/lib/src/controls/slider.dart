@@ -277,6 +277,13 @@ class _SliderState extends State<FrostSlider> with SingleTickerProviderStateMixi
                                         clipBehavior: Clip.none,
                                         alignment: Alignment.center,
                                         children: [
+                                          if (media?.trackDecoration case final decoration?)
+                                            Positioned(
+                                              left: inset,
+                                              right: inset,
+                                              height: 3,
+                                              child: IgnorePointer(child: LayoutBuilder(builder: (context, box) => decoration(context, box.biggest))),
+                                            ),
                                           Positioned(
                                             left: inset,
                                             right: inset,

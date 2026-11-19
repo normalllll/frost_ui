@@ -33,6 +33,9 @@ const _secondsPerHour = _secondsPerMinute * _secondsPerMinute;
 const _microsecondsPerSecond = Duration.microsecondsPerSecond;
 const _clockSeparator = ':';
 const _clockZero = '0';
+// The preview floats this far above the slider's centre line, clear of the
+// pressed thumb's radius.
+const _previewClearance = 16.0;
 
 /// Player-free media controls. Give the frame finite width and height; [video]
 /// owns decoding, fitting and playback. Only releasing a seek calls [onSeek].
@@ -50,6 +53,8 @@ class FrostVideoFrame extends StatefulWidget {
     this.topLeading,
     this.actions = const [],
     this.moreActions = const [],
+    this.seekPreviewBuilder,
+    this.trackDecorationBuilder,
     super.key,
   });
   final Widget video;
@@ -76,6 +81,16 @@ class FrostVideoFrame extends StatefulWidget {
   final VoidCallback? onMuteToggle;
   final VoidCallback? onFullscreenToggle;
 
+  /// Builds a preview of the position a seek drag would land on. It is placed
+  /// above the slider thumb, centred on it and kept inside the frame, and is
+  /// built only while a drag is pending. Never shown for a live stream.
+  final Widget Function(BuildContext context, Duration position)? seekPreviewBuilder;
+
+  /// Builds a decoration (chapter ticks, an intensity curve) behind the seek
+  /// track, under the thumb. It is laid out to the track's exact size and
+  /// position. Never shown for a live stream.
+  final Widget Function(BuildContext context, Size trackSize)? trackDecorationBuilder;
+
   @override
   State<FrostVideoFrame> createState() => _VideoFrameState();
 }
@@ -86,6 +101,11 @@ class _VideoFrameState extends State<FrostVideoFrame> {
   final _barPointers = <int>{};
   bool _visible = true, _dragging = false, _barHover = false;
   double? _preview;
+  final _sliderKey = GlobalKey();
+  // The slider's box in frame coordinates, measured outside layout so the
+  // preview never reads a box that is still being laid out.
+  Rect? _sliderBox;
+  bool get _live => widget.state.live;
   bool get _enabled => FrostControlScope.enabledOf(context);
   double get _duration => math.max(0, widget.state.duration.inMicroseconds / _microsecondsPerSecond);
   double get _position => (widget.state.position.inMicroseconds / _microsecondsPerSecond).clamp(0.0, _duration);
@@ -123,14 +143,21 @@ class _VideoFrameState extends State<FrostVideoFrame> {
   }
 
   void _seek(double seconds) {
-    if (!_enabled || _duration <= 0) return;
+    if (!_enabled || _live || _duration <= 0) return;
     final target = seconds.clamp(0.0, _duration);
     setState(() => _preview = null);
     _activity();
     widget.onSeek(Duration(microseconds: (target * _microsecondsPerSecond).round()));
   }
 
+  Rect? _measureSlider() {
+    final box = _sliderKey.currentContext?.findRenderObject(), origin = context.findRenderObject();
+    if (box is! RenderBox || origin is! RenderBox || !box.attached || !box.hasSize) return null;
+    return box.localToGlobal(Offset.zero, ancestor: origin) & box.size;
+  }
+
   void _interaction(bool active) {
+    if (active) _sliderBox = _measureSlider();
     setState(() {
       _dragging = active;
       if (!active) _preview = null;
@@ -163,8 +190,8 @@ class _VideoFrameState extends State<FrostVideoFrame> {
   @override
   void didUpdateWidget(FrostVideoFrame oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final cancelledDrag = _dragging && _duration == 0;
-    if (_duration == 0) {
+    final cancelledDrag = _dragging && (_duration == 0 || _live);
+    if (_duration == 0 || _live) {
       _dragging = false;
       _preview = null;
     }
@@ -191,24 +218,35 @@ class _VideoFrameState extends State<FrostVideoFrame> {
     final labels = FrostScope.labelsOf(context), icons = FrostIconSet.of(context), tokens = FrostThemeTokens.of(context);
     final current = _preview ?? _position;
     final safe = MediaQuery.paddingOf(context);
+    if (_preview != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _preview == null) return;
+        final box = _measureSlider();
+        if (box != null && box != _sliderBox) setState(() => _sliderBox = box);
+      });
+    }
     final play = _button(widget.state.playing ? icons.pause : icons.play, widget.state.playing ? labels.pause : labels.play, widget.onPlayPause);
-    final slider = Directionality(
-      textDirection: TextDirection.ltr,
-      child: FrostSliderMediaScope(
-        ink: tokens.onMediaInk,
-        buffered: _duration == 0 ? 0 : _buffered / _duration,
-        step: _videoSeekStep.inSeconds.toDouble(),
-        onInteractionChanged: _interaction,
-        child: FrostSlider(
-          value: current,
-          max: math.max(1, _duration),
-          semanticLabel: labels.seek,
-          valueLabel: _clock,
-          onChanged: _enabled && _duration > 0 ? (value) => setState(() => _preview = value) : null,
-          onChangeEnd: _seek,
-        ),
-      ),
-    );
+    final slider = _live
+        ? const SizedBox.shrink()
+        : Directionality(
+            key: _sliderKey,
+            textDirection: TextDirection.ltr,
+            child: FrostSliderMediaScope(
+              trackDecoration: widget.trackDecorationBuilder,
+              ink: tokens.onMediaInk,
+              buffered: _duration == 0 ? 0 : _buffered / _duration,
+              step: _videoSeekStep.inSeconds.toDouble(),
+              onInteractionChanged: _interaction,
+              child: FrostSlider(
+                value: current,
+                max: math.max(1, _duration),
+                semanticLabel: labels.seek,
+                valueLabel: _clock,
+                onChanged: _enabled && _duration > 0 ? (value) => setState(() => _preview = value) : null,
+                onChangeEnd: _seek,
+              ),
+            ),
+          );
     Widget frame = Focus(
       focusNode: _focus,
       onKeyEvent: (_, event) {
@@ -342,8 +380,9 @@ class _VideoFrameState extends State<FrostVideoFrame> {
                         },
                         child: FrostVideoBar(
                           play: play,
-                          current: _clock(current),
-                          total: _clock(_duration),
+                          current: _live ? '' : _clock(current),
+                          total: _live ? '' : _clock(_duration),
+                          liveLabel: _live ? labels.live : null,
                           slider: slider,
                           custom: widget.controls,
                           trailing: [
@@ -375,6 +414,15 @@ class _VideoFrameState extends State<FrostVideoFrame> {
                 ),
               ),
             ),
+            if (_preview != null && _sliderBox != null && !_live && widget.seekPreviewBuilder != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomSingleChildLayout(
+                    delegate: _SeekPreviewLayout(slider: _sliderBox!, fraction: (_preview! / math.max(1, _duration)).clamp(0.0, 1.0)),
+                    child: widget.seekPreviewBuilder!(context, Duration(microseconds: (_preview! * _microsecondsPerSecond).round())),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -383,15 +431,17 @@ class _VideoFrameState extends State<FrostVideoFrame> {
     final bindings = <FrostShortcut, VoidCallback>{
       const FrostShortcut(LogicalKeyboardKey.space): () => _invoke(widget.onPlayPause),
       const FrostShortcut(LogicalKeyboardKey.keyK): () => _invoke(widget.onPlayPause),
-      const FrostShortcut(LogicalKeyboardKey.arrowLeft): () => _seek((_preview ?? _position) - _videoSeekStep.inSeconds),
-      const FrostShortcut(LogicalKeyboardKey.arrowRight): () => _seek((_preview ?? _position) + _videoSeekStep.inSeconds),
+      if (!_live) ...{
+        const FrostShortcut(LogicalKeyboardKey.arrowLeft): () => _seek((_preview ?? _position) - _videoSeekStep.inSeconds),
+        const FrostShortcut(LogicalKeyboardKey.arrowRight): () => _seek((_preview ?? _position) + _videoSeekStep.inSeconds),
+      },
       if (widget.onMuteToggle != null) const FrostShortcut(LogicalKeyboardKey.keyM): () => _invoke(widget.onMuteToggle),
       if (widget.onFullscreenToggle != null) const FrostShortcut(LogicalKeyboardKey.keyF): () => _invoke(widget.onFullscreenToggle),
     };
     for (final binding in bindings.entries) {
       frame = frame.frostShortcut(binding.key, binding.value);
     }
-    return frame;
+    return _live ? Semantics(container: true, value: labels.live, child: frame) : frame;
   }
 }
 
@@ -403,4 +453,26 @@ class _VideoTopChrome extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => gradient ? FrostVideoChrome(top: true, child: child) : child;
+}
+
+// The preview is centred on the thumb, which travels the slider's full width,
+// and stays above it and inside the frame.
+class _SeekPreviewLayout extends SingleChildLayoutDelegate {
+  const _SeekPreviewLayout({required this.slider, required this.fraction});
+  final Rect slider;
+  final double fraction;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) => constraints.loosen();
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final thumbX = slider.left + slider.width * fraction;
+    final x = (thumbX - childSize.width / 2).clamp(0.0, math.max(0.0, size.width - childSize.width)).toDouble();
+    final y = (slider.center.dy - _previewClearance - childSize.height).clamp(0.0, math.max(0.0, size.height - childSize.height)).toDouble();
+    return Offset(x, y);
+  }
+
+  @override
+  bool shouldRelayout(_SeekPreviewLayout oldDelegate) => slider != oldDelegate.slider || fraction != oldDelegate.fraction;
 }

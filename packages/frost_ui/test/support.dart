@@ -225,6 +225,7 @@ FrostLabels testLabels(BuildContext context) => const FrostLabels(
   taskCancelled: 'L.taskCancelled',
   remove: 'L.remove',
   seek: 'L.seek',
+  live: 'L.live',
   showReplies: _showReplies,
   moreMedia: _moreMedia,
 );

@@ -7,6 +7,7 @@ import '../foundation/_media_contrast.dart';
 import '../foundation/_touch_targets.dart';
 import '../foundation/density.dart';
 import '../foundation/sizes.dart';
+import '../foundation/spacing.dart';
 import '../foundation/tokens.dart';
 import '../foundation/typography.dart';
 import '../motion/_material_reveal.dart';
@@ -21,6 +22,7 @@ const _topGradientExtent = 64.0;
 // with it. The scroll view holds them whole: it takes no hits outside itself.
 const _commandOutset = 7.0;
 const _commandInset = 5.0;
+const _liveDotSize = 6.0;
 
 /// How long on-media controls stay without input, for video and viewer chrome.
 const frostMediaChromeIdleDelay = Duration(milliseconds: 2500);
@@ -32,15 +34,19 @@ double frostVideoControlScrimOpacity(FrostThemeTokens tokens) => frostOnMediaScr
 class FrostVideoBar extends StatelessWidget {
   const FrostVideoBar({
     required this.play,
-    required this.current,
-    required this.total,
     required this.slider,
     required this.trailing,
+    this.current = '',
+    this.total = '',
+    this.liveLabel,
     this.custom = const [],
     super.key,
   });
   final Widget play, slider;
+
+  /// The playback clock. A [liveLabel] replaces it with a live indicator.
   final String current, total;
+  final String? liveLabel;
   final List<Widget> trailing, custom;
   @override
   Widget build(BuildContext context) {
@@ -60,16 +66,34 @@ class FrostVideoBar extends StatelessWidget {
     // One numeric phrase prevents current/total from reading as unrelated labels.
     final clock = '$current / $total';
     final inkInset = FrostDensity.of(context).usesPointer ? 4.0 : 12.0;
-    final time = SizedBox(
-      width: textWidth('$total / $total'),
-      child: Directionality(
-        textDirection: TextDirection.ltr,
-        child: Padding(
-          padding: EdgeInsets.only(top: inkInset),
-          child: FrostRollingText(clock, style: style),
-        ),
-      ),
-    );
+    final live = liveLabel;
+    final time = live != null
+        ? Padding(
+            padding: EdgeInsets.only(top: inkInset, left: FrostGap.related, right: FrostGap.related),
+            child: ExcludeSemantics(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(color: tokens.accent, shape: BoxShape.circle),
+                    child: const SizedBox.square(dimension: _liveDotSize),
+                  ),
+                  const SizedBox(width: FrostGap.related),
+                  Text(live, style: style, maxLines: 1, softWrap: false),
+                ],
+              ),
+            ),
+          )
+        : SizedBox(
+            width: textWidth('$total / $total'),
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: Padding(
+                padding: EdgeInsets.only(top: inkInset),
+                child: FrostRollingText(clock, style: style),
+              ),
+            ),
+          );
     final controls = [play, time, ...custom, ...trailing];
     final safe = MediaQuery.paddingOf(context);
     final content = FrostOnMediaChromeScope(

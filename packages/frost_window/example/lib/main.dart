@@ -143,6 +143,7 @@ final _config = FrostConfig(
     taskCancelled: 'Cancelled',
     remove: 'Remove',
     seek: 'Playback position',
+    live: 'Live',
     showReplies: _showReplies,
     moreMedia: _moreMedia,
   ),

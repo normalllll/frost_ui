@@ -85,6 +85,7 @@ class FrostLabels {
     required this.taskCancelled,
     required this.remove,
     required this.seek,
+    required this.live,
     required this.showReplies,
     required this.moreMedia,
   });
@@ -186,6 +187,9 @@ class FrostLabels {
 
   /// Search removal and playback position.
   final String remove, seek;
+
+  /// The indicator of a stream without length.
+  final String live;
 
   final String Function(int count) showReplies, moreMedia;
   final String Function(int position, int total) itemPosition;
