@@ -51,14 +51,14 @@ Widget frostOwnedPageTransition(
     final page = ClipPath(
       clipBehavior: panel ? Clip.antiAlias : Clip.none,
       clipper: panel
-          ? FrostPageViewportClip(radius: outline.radius, continuous: FrostScope.configOf(context).continuousCorners, channel: outline.scrollbarChannel)
+          ? FrostPageViewportClip(radius: outline.radius, continuous: FrostScope.configOf(context).continuousCorners)
           : null,
       child: _MovingBackdrop(animation: animation, opaque: route.opaque, child: child),
     );
     final media = MediaQuery.of(context);
-    // A moving panel owns its outline, including the scrollbar channel and
-    // continuous corners. Android's predictive transition otherwise applies
-    // physical display corners to this inset viewport a second time. Scope the
+    // A moving panel owns its outline and continuous corners. Android's
+    // predictive transition otherwise applies physical display corners to
+    // this inset viewport a second time. Scope the
     // rectangular native clip to the transition; page content keeps real device
     // metrics, and fullscreen routes keep Flutter's display-corner behavior.
     final native = platform == TargetPlatform.android

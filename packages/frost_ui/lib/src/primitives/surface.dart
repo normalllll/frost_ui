@@ -246,7 +246,8 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
     // grey over that area looks washed out. Its layer over a translucent window
     // darkens instead of lifting, which already gives light ink more contrast
     // than the window it covers.
-    final darkContent = role == FrostSurfaceRole.panel && outline != null && !outline.channelClaimed && tokens.isDark;
+    final contentSheet = role == FrostSurfaceRole.panel && outline != null && !outline.channelClaimed;
+    final darkContent = contentSheet && tokens.isDark;
     final referenceFill = switch (role) {
       FrostSurfaceRole.panel when translucentWindow && darkContent => frostDarkContentLayer(tokens.canvas, actualWindow),
       FrostSurfaceRole.panel when translucentWindow => frostWindowLayerFill(tokens.isDark),
@@ -429,18 +430,20 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
     }
     final targetFill = color.withValues(alpha: solid ? 1 : alpha);
     final fill = targetFill.withValues(alpha: targetFill.a * materialProgress);
-    // A joined surface leaves its edge lines open on the joined side, which
-    // a box border cannot do; other surfaces use plain borders.
+    // A joined surface leaves its edge lines open on the joined side, and the
+    // content sheet draws its edge only where it meets the window base, on
+    // its top and start sides; a box border can do neither. Other surfaces
+    // use plain borders.
     Widget decorate(Color fill, Widget body) {
-      if (join != FrostSurfaceJoin.none) {
+      if (join != FrostSurfaceJoin.none || contentSheet) {
+        final strokes = [if (borderColor != null) (color: borderColor, width: borderWidth), if (highlight) (color: highlightColor, width: highlightWidth)];
+        final resolved = radius.resolve(Directionality.of(context));
         return DecoratedBox(
           decoration: BoxDecoration(color: fill, borderRadius: radius),
           child: CustomPaint(
-            foregroundPainter: _JoinedEdgePainter(
-              radius: radius.resolve(Directionality.of(context)),
-              join: join,
-              strokes: [if (borderColor != null) (color: borderColor, width: borderWidth), if (highlight) (color: highlightColor, width: highlightWidth)],
-            ),
+            foregroundPainter: contentSheet
+                ? _SheetEdgePainter(radius: resolved, rtl: Directionality.of(context) == TextDirection.rtl, strokes: strokes)
+                : _JoinedEdgePainter(radius: resolved, join: join, strokes: strokes),
             child: body,
           ),
         );
@@ -469,22 +472,13 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
       );
     }
 
-    Widget buildContent(Color fill) => channel == 0
-        ? decorate(fill, inner)
-        : Stack(
-            fit: StackFit.passthrough,
-            children: [
-              Positioned.fill(right: channel, child: decorate(fill, const SizedBox.expand())),
-              inner,
-            ],
-          );
     final content = windowFill == null
-        ? buildContent(fill)
+        ? decorate(fill, inner)
         : TweenAnimationBuilder<Color?>(
             tween: FrostPremultipliedColorTween(end: fill),
             duration: FrostMotion.duration(context, FrostMotion.hover),
             curve: FrostMotion.hoverCurve,
-            builder: (context, color, _) => buildContent(color!),
+            builder: (context, color, _) => decorate(color!, inner),
           );
     Widget layered = content;
     if (glass) {
@@ -499,12 +493,7 @@ class _FrostSurfaceState extends State<FrostSurface> with SingleTickerProviderSt
     }
     Widget shaded = DecoratedBox(
       decoration: ShapeDecoration(shape: shapeFor(), shadows: shadow),
-      child: channel > 0
-          ? ClipPath(
-              clipper: FrostPageViewportClip(radius: radius.resolve(Directionality.of(context)), continuous: continuous, channel: channel),
-              child: layered,
-            )
-          : continuous
+      child: continuous
           ? ClipRSuperellipse(borderRadius: radius, clipBehavior: Clip.antiAlias, child: layered)
           : ClipRRect(borderRadius: radius, clipBehavior: Clip.antiAlias, child: layered),
     );
@@ -602,6 +591,41 @@ class _JoinedEdgePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_JoinedEdgePainter oldDelegate) => radius != oldDelegate.radius || strokes != oldDelegate.strokes || join != oldDelegate.join;
+}
+
+/// The content sheet's edge: up its start side from the window's bottom
+/// border, around its rounded top-start corner and along its top to the
+/// window's end border.
+class _SheetEdgePainter extends CustomPainter {
+  const _SheetEdgePainter({required this.radius, required this.rtl, required this.strokes});
+
+  final BorderRadius radius;
+  final bool rtl;
+  final List<({Color color, double width})> strokes;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final stroke in strokes) {
+      final inset = stroke.width / 2;
+      final corner = rtl ? radius.topRight.x : radius.topLeft.x;
+      final side = rtl ? size.width - inset : inset, away = rtl ? -1.0 : 1.0;
+      final path = Path()
+        ..moveTo(side, size.height)
+        ..lineTo(side, inset + corner)
+        ..arcToPoint(Offset(side + away * corner, inset), radius: Radius.circular(corner), clockwise: !rtl)
+        ..lineTo(rtl ? 0 : size.width, inset);
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = stroke.width
+          ..color = stroke.color,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_SheetEdgePainter oldDelegate) => radius != oldDelegate.radius || rtl != oldDelegate.rtl || strokes != oldDelegate.strokes;
 }
 
 class _BelowTopEdge extends CustomClipper<Rect> {

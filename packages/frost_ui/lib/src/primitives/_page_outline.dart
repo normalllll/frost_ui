@@ -1,8 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
-/// The page's panel and the physical-right scrollbar channel share one viewport.
-/// The surface consumes only paint ownership; columns retain the channel budget.
+/// The page's panel and its scrollbar channel: a strip at the panel's
+/// physical right, inside the panel, where the page's scrollbar paints.
+/// The surface consumes only paint ownership; columns keep the channel clear.
 class FrostPageOutline extends InheritedWidget {
   const FrostPageOutline({super.key, required this.radius, this.scrollbarChannel = 0, this.channelClaimed = false, required super.child});
   final BorderRadius radius;
@@ -21,21 +22,17 @@ class FrostPageOutline extends InheritedWidget {
       radius != oldWidget.radius || scrollbarChannel != oldWidget.scrollbarChannel || channelClaimed != oldWidget.channelClaimed;
 }
 
-/// Images keep the panel's curved corners; the adjoining scrollbar channel is
-/// part of the same clip so a normal Scrollbar can paint at the viewport edge.
+/// Images keep the panel's curved corners while a page moves inside it.
 class FrostPageViewportClip extends CustomClipper<Path> {
-  const FrostPageViewportClip({required this.radius, required this.continuous, required this.channel});
+  const FrostPageViewportClip({required this.radius, required this.continuous});
   final BorderRadius radius;
   final bool continuous;
-  final double channel;
   @override
   Path getClip(Size size) {
-    final width = math.max(0.0, size.width - channel);
-    final panel = Rect.fromLTWH(0, 0, width, size.height);
     final shape = continuous ? RoundedSuperellipseBorder(borderRadius: radius) : RoundedRectangleBorder(borderRadius: radius);
-    return Path.combine(PathOperation.union, shape.getOuterPath(panel), Path()..addRect(Rect.fromLTRB(width, 0, size.width, size.height)));
+    return shape.getOuterPath(Offset.zero & size);
   }
 
   @override
-  bool shouldReclip(FrostPageViewportClip oldClipper) => radius != oldClipper.radius || continuous != oldClipper.continuous || channel != oldClipper.channel;
+  bool shouldReclip(FrostPageViewportClip oldClipper) => radius != oldClipper.radius || continuous != oldClipper.continuous;
 }

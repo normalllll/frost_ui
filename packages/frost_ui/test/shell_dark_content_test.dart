@@ -93,15 +93,16 @@ void main() {
   testWidgets('under Mica the dark content panel paints the darkening layer and a hairline edge', (tester) async {
     final tokens = await _shell(tester, brightness: Brightness.dark, tone: FrostTone.neutral, material: _Material.mica);
     final panel = find.byWidgetPredicate((widget) => widget is FrostSurface && widget.role == FrostSurfaceRole.panel);
-    final shapes = tester
+    final fill = tester
         .widgetList<DecoratedBox>(find.descendant(of: panel, matching: find.byType(DecoratedBox)))
         .map((box) => box.decoration)
-        .whereType<ShapeDecoration>()
-        .toList();
-    final fill = shapes.map((shape) => shape.color).whereType<Color>().first;
+        .whereType<BoxDecoration>()
+        .map((box) => box.color)
+        .whereType<Color>()
+        .first;
     expect(fill, frostDarkContentLayer(tokens.canvas, null));
-    final sides = shapes.map((shape) => (shape.shape as OutlinedBorder).side).where((side) => side.style != BorderStyle.none);
-    expect(sides.map((side) => side.color), contains(tokens.edgeHairline));
+    final edge = find.descendant(of: panel, matching: find.byWidgetPredicate((widget) => widget is CustomPaint && widget.foregroundPainter != null)).first;
+    expect(edge, paints..path(color: tokens.edgeHairline));
   });
 
   testWidgets('light content keeps its surface', (tester) async {

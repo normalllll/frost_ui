@@ -106,16 +106,16 @@ class _Navigation {
       final bytes = (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
       int red(double x, double y) => bytes.getUint8(((origin.dy + y).round() * image.width + (origin.dx + x).round()) * 4);
       final rtl = Directionality.of(pageContext) == TextDirection.rtl;
-      final edge = rect.width - FrostPageOutline.channelOf(pageContext);
-      final corner = rtl ? edge - 2 : 1.0;
-      final inside = rtl ? edge - 25 : 24.0;
+      // The panel holds its scrollbar channel; its rounded corner is the top-start one.
+      final corner = rtl ? rect.width - 2 : 1.0;
+      final inside = rtl ? rect.width - 25 : 24.0;
       final values = [red(corner, 1), red(inside, 2), red(corner, rect.height - 2), red(inside, rect.height - 3)];
       image.dispose();
       return values;
     }))!;
     expect(samples[0], lessThan(10), reason: 'the upper moving corner must expose the underlay');
     expect(samples[1], greaterThan(15), reason: 'the panel edge must not be cut by the physical screen radius');
-    expect(samples[2], lessThan(10), reason: 'the lower moving corner must expose the underlay');
+    expect(samples[2], greaterThan(15), reason: 'the lower corner lies on the window edge and stays square');
     expect(samples[3], greaterThan(15));
     expect(MediaQuery.displayCornerRadiiOf(pageContext), _deviceCorners, reason: 'page content must retain real device geometry');
   }

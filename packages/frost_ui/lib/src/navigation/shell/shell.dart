@@ -716,7 +716,6 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
                                         ? sidebarTop
                                         : 0,
                                     right: showSidebar && rtl ? frame.right + railWidth : 0,
-                                    bottom: showSidebar ? FrostGap.related : 0,
                                     child: MediaQuery(
                                       data: _pageMedia(
                                         MediaQuery.of(context)
@@ -728,7 +727,6 @@ class _FrostShellState extends State<FrostShell> with SingleTickerProviderStateM
                                       child: FrostCaptionClearance(
                                         child: _ContentSheet(
                                           enabled: showSidebar,
-                                          radius: FrostRadius.borderRadius(FrostRadius.lg),
                                           child: FrostContentViewport(
                                             key: _pageKey,
                                             navigationReserve: besidePage ? expandedWidth - railWidth : 0,

@@ -60,20 +60,14 @@ void main() {
           findsOneWidget,
           reason: 'the scroll view owns its ordinary automatic scrollbar',
         );
-        final clip = tester.widget<ClipPath>(find.byWidgetPredicate((w) => w is ClipPath && w.clipper is FrostPageViewportClip));
-        final size = tester.getSize(find.byWidget(clip));
-        final outline = clip.clipper!.getClip(size);
-        expect(outline.contains(const Offset(1, 1)), false);
-        expect(outline.contains(Offset(size.width - 9, 1)), false, reason: 'the panel keeps its upper-right rounded corner');
-        expect(outline.contains(Offset(size.width - 1, 1)), true, reason: 'the same clip includes the physical-right scrollbar channel');
-        expect(outline.contains(Offset(size.width - 9, size.height - 1)), false, reason: 'the panel keeps its lower-right rounded corner');
-        expect(outline.contains(Offset(size.width - 1, size.height - 1)), true);
         final surface = find.byWidgetPredicate((w) => w is FrostSurface && w.role == FrostSurfaceRole.panel);
+        final clip = find.descendant(of: surface, matching: find.byWidgetPredicate((w) => w is ClipRSuperellipse || w is ClipRRect)).first;
+        expect(tester.getRect(clip).right, edge, reason: 'the panel clip includes the physical-right scrollbar channel');
         final background = find.descendant(
           of: surface,
-          matching: find.byWidgetPredicate((w) => w is DecoratedBox && w.decoration is ShapeDecoration && (w.decoration as ShapeDecoration).color != null),
+          matching: find.byWidgetPredicate((w) => w is DecoratedBox && w.decoration is BoxDecoration && (w.decoration as BoxDecoration).color != null),
         );
-        expect(tester.getRect(background.first).right, edge - 8, reason: 'only the viewport expands; the painted panel keeps its 8-point margin');
+        expect(tester.getRect(background.first).right, edge, reason: 'the painted panel holds the scrollbar channel');
         final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
         await gesture.addPointer(location: Offset(edge - 2, 600));
         await tester.pump();
@@ -127,9 +121,9 @@ void main() {
   });
   for (final continuous in [true, false]) {
     test('viewport clip uses the configured panel corners, continuous=$continuous', () {
-      final clip = FrostPageViewportClip(radius: FrostRadius.borderRadius(FrostRadius.lg), continuous: continuous, channel: 8).getClip(const Size(400, 300));
+      final clip = FrostPageViewportClip(radius: const BorderRadius.only(topLeft: Radius.circular(FrostRadius.lg)), continuous: continuous).getClip(const Size(400, 300));
       expect(clip.contains(const Offset(1, 1)), false);
-      expect(clip.contains(const Offset(391, 299)), false);
+      expect(clip.contains(const Offset(399, 1)), true);
       expect(clip.contains(const Offset(399, 299)), true);
       expect(clip.contains(const Offset(200, 150)), true);
     });

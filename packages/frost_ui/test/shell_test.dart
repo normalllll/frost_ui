@@ -220,7 +220,7 @@ void main() {
         ),
       );
       final rect = tester.getRect(find.byKey(pageKey));
-      expect(rect, Rect.fromLTRB(176, 40, 1400, 892));
+      expect(rect, Rect.fromLTRB(176, 40, 1400, 900));
       expect(findFrostTooltip('L.collapseNavigation'), findsOneWidget);
       expect(findFrostTooltip('L.back'), findsOneWidget);
       final scope = tester.widget<FrostShellNavigationScope>(find.byType(FrostShellNavigationScope));
@@ -228,9 +228,9 @@ void main() {
       final sheets = find.byWidgetPredicate((w) => w is FrostSurface && w.role == FrostSurfaceRole.panel);
       expect(sheets, findsOneWidget);
       final surface = tester.widget<FrostSurface>(sheets);
-      expect(surface.borderRadius, BorderRadius.circular(FrostRadius.lg));
+      expect(surface.borderRadius, const BorderRadius.only(topLeft: Radius.circular(FrostRadius.lg)));
       expect(find.descendant(of: sheets, matching: find.byType(FrostKeyline)), findsWidgets);
-      expect(find.descendant(of: sheets, matching: find.byType(ClipPath)), findsWidgets);
+      expect(find.descendant(of: sheets, matching: find.byWidgetPredicate((w) => w is ClipRSuperellipse || w is ClipRRect)), findsWidgets);
       if (caption) {
         expect(tester.getSize(find.byType(FrostCaptionButtons)).height, 40);
         final toggle = tester.getCenter(findFrostTooltip('L.collapseNavigation'));

@@ -52,10 +52,8 @@ void main() {
           final image = await (boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary).toImage();
           final data = (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
           final result = <int>[];
-          for (final x in [pane.left.toInt(), pane.right.toInt() - 9]) {
-            final index = (pane.top.toInt() * image.width + x) * 4;
-            result.addAll(data.buffer.asUint8List().sublist(index, index + 4));
-          }
+          final index = (pane.top.toInt() * image.width + pane.left.toInt()) * 4;
+          result.addAll(data.buffer.asUint8List().sublist(index, index + 4));
           image.dispose();
           return result;
         }
@@ -73,7 +71,7 @@ void main() {
             matching: find.byWidgetPredicate((w) => w is FrostSurface && w.role == FrostSurfaceRole.chrome),
           ),
         );
-        expect(band.borderRadius, const BorderRadius.vertical(top: Radius.circular(FrostRadius.lg)));
+        expect(band.borderRadius, const BorderRadius.only(topLeft: Radius.circular(FrostRadius.lg)), reason: 'the band follows the page outline');
         expect(pane.right, 1000, reason: 'Viewport includes the physical-right scrollbar channel.');
         expect(FrostPageOutline.channelOf(tester.element(find.byType(FrostContentViewport))), 8);
         expect(tester.takeException(), isNull);
@@ -101,19 +99,16 @@ void main() {
       );
 
       final panel = find.byWidgetPredicate((w) => w is FrostSurface && w.role == FrostSurfaceRole.panel);
-      final squareRight = (tester.widget<FrostSurface>(panel).borderRadius as BorderRadius).topRight == Radius.zero;
-      expect(squareRight, isFalse);
+      final rtl = direction == TextDirection.rtl;
       void check(double width) {
         final pane = tester.getRect(find.byType(FrostContentViewport));
         // The page runs to the window edge opposite the sidebar.
         expect(direction == TextDirection.rtl ? pane.left : pane.right, direction == TextDirection.rtl ? 0 : width);
         expect(FrostPageOutline.channelOf(tester.element(find.byType(FrostContentViewport))), 8);
-        expect(pane.bottom, 892);
+        expect(pane.bottom, 900, reason: 'the page reaches the window bottom');
         final radius = tester.widget<FrostSurface>(panel).borderRadius as BorderRadius;
-        expect(radius.topLeft, const Radius.circular(FrostRadius.lg));
-        expect(radius.bottomLeft, const Radius.circular(FrostRadius.lg));
-        expect(radius.topRight, const Radius.circular(FrostRadius.lg));
-        expect(radius.bottomRight, radius.topRight);
+        // Only the corner between the title row and the sidebar is rounded.
+        expect(radius, rtl ? const BorderRadius.only(topRight: Radius.circular(FrostRadius.lg)) : const BorderRadius.only(topLeft: Radius.circular(FrostRadius.lg)));
         expect(initializations, 1);
       }
 
