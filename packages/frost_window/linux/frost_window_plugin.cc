@@ -329,6 +329,9 @@ static void handle(FrostWindowPlugin* self, FlMethodCall* call) {
   } else if (strcmp(method, "minimize") == 0) gtk_window_iconify(self->window);
   else if (strcmp(method, "toggleMaximized") == 0) toggle_maximized(self);
   else if (strcmp(method, "close") == 0) gtk_window_close(self->window);
+  else if (strcmp(method, "setAlwaysOnTop") == 0 || strcmp(method, "setFrame") == 0) {
+    fl_method_call_respond_error(call, "unsupported", "Not available on Linux.", nullptr, nullptr); return;
+  }
   else { fl_method_call_respond_not_implemented(call, nullptr); return; }
   if (valid) fl_method_call_respond_success(call, nullptr, nullptr);
   else fl_method_call_respond_error(call, "invalid_arguments", "Invalid window request.", nullptr, nullptr);

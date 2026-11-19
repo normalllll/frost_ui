@@ -46,6 +46,8 @@ class FrostWindowPlugin : public flutter::Plugin {
   static LRESULT CALLBACK ContentProc(HWND, UINT, WPARAM, LPARAM, UINT_PTR,
                                       DWORD_PTR);
   static LRESULT CALLBACK GetMessageHook(int, WPARAM, LPARAM);
+  static void CALLBACK OcclusionEvent(HWINEVENTHOOK, DWORD, HWND, LONG, LONG,
+                                      DWORD, DWORD);
 
   void HandleMethodCall(
       const flutter::MethodCall<flutter::EncodableValue>& call,
@@ -58,6 +60,12 @@ class FrostWindowPlugin : public flutter::Plugin {
   void NavigateBack();
   int HitTest(POINT screen_point) const;
   bool SetFullscreen(bool target);
+  bool SetAlwaysOnTop(bool target);
+  bool IsOccluded() const;
+  void ScheduleOcclusionCheck();
+  void UpdateOcclusion();
+  void InstallOcclusionHooks();
+  void RemoveOcclusionHooks();
   bool FitFullscreenMonitor();
   void UpdateRegions(const flutter::EncodableValue* arguments);
   void ApplyBackdrop();
@@ -103,6 +111,13 @@ class FrostWindowPlugin : public flutter::Plugin {
   double minimum_width_ = 0;
   double minimum_height_ = 0;
   double resize_border_width_ = 4;
+  // Smallest logical size a direct frame may use; 0 keeps the configured
+  // minimum. Cleared whenever a placement is applied.
+  double lowered_minimum_width_ = 0;
+  double lowered_minimum_height_ = 0;
+  bool occluded_ = false;
+  bool occlusion_check_pending_ = false;
+  std::vector<HWINEVENTHOOK> occlusion_hooks_;
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;
 };
 

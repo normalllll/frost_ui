@@ -83,7 +83,7 @@ Value WindowEnvironment() {
                    {Value("positionSupported"), Value(true)}});
 }
 
-Value WindowGeometry(HWND window, bool fullscreen, const WINDOWPLACEMENT* fullscreen_restore) {
+Value WindowGeometry(HWND window, bool fullscreen, const WINDOWPLACEMENT* fullscreen_restore, bool occluded) {
   RECT frame{};
   GetWindowRect(window, &frame);
   WINDOWPLACEMENT placement{sizeof(WINDOWPLACEMENT)};
@@ -107,8 +107,47 @@ Value WindowGeometry(HWND window, bool fullscreen, const WINDOWPLACEMENT* fullsc
     {Value("maximized"), Value(fullscreen ? placement.showCmd == SW_SHOWMAXIMIZED :
         IsZoomed(window) != FALSE || (IsIconic(window) && (placement.flags & WPF_RESTORETOMAXIMIZED) != 0))},
     {Value("minimized"), Value(IsIconic(window) != FALSE)}, {Value("fullscreen"), Value(fullscreen)},
+    {Value("alwaysOnTop"), Value((GetWindowLongPtr(window, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0)},
+    {Value("occluded"), Value(occluded)},
   });
 }
+
+namespace {
+// Reads a validated rectangle row [left, top, right, bottom].
+bool ReadRow(const Value& value, double (&out)[4]) {
+  const auto* row = std::get_if<List>(&value);
+  if (!row || row->size() != 4) return false;
+  for (int i = 0; i < 4; ++i) {
+    out[i] = Number((*row)[i]);
+    if (!std::isfinite(out[i]) || std::abs(out[i]) > 1000000) return false;
+  }
+  return out[2] > out[0] && out[3] > out[1];
+}
+
+bool FindDisplay(const std::string& id, Display* found) {
+  std::vector<Display> displays;
+  EnumDisplayMonitors(nullptr, nullptr, Collect, reinterpret_cast<LPARAM>(&displays));
+  const auto display = std::find_if(displays.begin(), displays.end(), [&](const auto& d) { return d.id == id; });
+  if (display == displays.end()) return false;
+  *found = *display;
+  return true;
+}
+
+// Moves a window to a work-area-relative logical rectangle on `display`.
+bool PlaceOnDisplay(HWND window, const Display& display, const double (&values)[4]) {
+  const auto& work = display.info.rcWork;
+  const double scale = display.scale;
+  RECT normal{static_cast<LONG>(std::lround(work.left + values[0] * scale)),
+              static_cast<LONG>(std::lround(work.top + values[1] * scale)),
+              static_cast<LONG>(std::lround(work.left + values[2] * scale)),
+              static_cast<LONG>(std::lround(work.top + values[3] * scale))};
+  if (IsWindowVisible(window) && (IsZoomed(window) || IsIconic(window))) ShowWindow(window, SW_RESTORE);
+  // Hidden startup never shows even a single frame at the runner's template
+  // size. show() applies the maximize target as its first visible state.
+  return SetWindowPos(window, nullptr, normal.left, normal.top, normal.right-normal.left, normal.bottom-normal.top,
+                      SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER) != FALSE;
+}
+}  // namespace
 
 bool ApplyWindowPlacement(HWND window, const Map& arguments, bool* show_maximized) {
   const auto id = arguments.find(Value("displayId"));
@@ -116,32 +155,30 @@ bool ApplyWindowPlacement(HWND window, const Map& arguments, bool* show_maximize
   const auto maximized = arguments.find(Value("maximized"));
   if (id == arguments.end() || rect == arguments.end() || maximized == arguments.end()) return false;
   const auto* name = std::get_if<std::string>(&id->second);
-  const auto* row = std::get_if<List>(&rect->second);
   const auto* zoomed = std::get_if<bool>(&maximized->second);
-  if (!name || !row || row->size() != 4 || !zoomed) return false;
   double values[4];
-  for (int i = 0; i < 4; ++i) {
-    values[i] = Number((*row)[i]);
-    if (!std::isfinite(values[i]) || std::abs(values[i]) > 1000000) return false;
-  }
-  if (values[2] <= values[0] || values[3] <= values[1]) return false;
-  std::vector<Display> displays;
-  EnumDisplayMonitors(nullptr, nullptr, Collect, reinterpret_cast<LPARAM>(&displays));
-  const auto display = std::find_if(displays.begin(), displays.end(), [&](const auto& d) { return d.id == *name; });
-  if (display == displays.end()) return false;
-  const auto& work = display->info.rcWork;
-  RECT normal{static_cast<LONG>(std::lround(work.left + values[0] * display->scale)),
-              static_cast<LONG>(std::lround(work.top + values[1] * display->scale)),
-              static_cast<LONG>(std::lround(work.left + values[2] * display->scale)),
-              static_cast<LONG>(std::lround(work.top + values[3] * display->scale))};
-  const bool visible = IsWindowVisible(window) != FALSE;
-  if (visible && (IsZoomed(window) || IsIconic(window))) ShowWindow(window, SW_RESTORE);
-  // Hidden startup never shows even a single frame at the runner's template
-  // size. show() applies the maximize target as its first visible state.
-  if (!SetWindowPos(window, nullptr, normal.left, normal.top, normal.right-normal.left, normal.bottom-normal.top,
-                    SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER)) return false;
+  Display display{};
+  if (!name || !zoomed || !ReadRow(rect->second, values) || !FindDisplay(*name, &display)) return false;
+  if (!PlaceOnDisplay(window, display, values)) return false;
   *show_maximized = *zoomed;
-  if (visible && *zoomed) ShowWindow(window, SW_MAXIMIZE);
+  if (IsWindowVisible(window) && *zoomed) ShowWindow(window, SW_MAXIMIZE);
+  return true;
+}
+
+bool ApplyWindowFrame(HWND window, const Map& arguments, bool* show_maximized) {
+  const auto rect = arguments.find(Value("rect"));
+  if (rect == arguments.end()) return false;
+  double values[4];
+  if (!ReadRow(rect->second, values)) return false;
+  Display display{};
+  if (const auto id = arguments.find(Value("displayId")); id != arguments.end()) {
+    const auto* name = std::get_if<std::string>(&id->second);
+    if (!name || !FindDisplay(*name, &display)) return false;
+  } else {
+    display = ReadDisplay(MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST));
+  }
+  if (!PlaceOnDisplay(window, display, values)) return false;
+  *show_maximized = false;
   return true;
 }
 }  // namespace frost_window

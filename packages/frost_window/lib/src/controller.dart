@@ -40,6 +40,15 @@ class FrostWindowFailure implements Exception {
   const FrostWindowFailure();
 }
 
+/// The native platform does not provide [method]. The controller stays healthy.
+class FrostWindowUnsupportedFailure extends FrostWindowFailure {
+  const FrostWindowUnsupportedFailure(this.method);
+  final String method;
+
+  @override
+  String toString() => 'FrostWindowUnsupportedFailure($method)';
+}
+
 /// Sanitised native diagnostics: method, failure code and native frame step.
 /// Never contains window contents, input or titles.
 typedef FrostWindowDiagnosticWriter = Future<void> Function(Map<String, Object?> diagnostic);
@@ -447,6 +456,29 @@ class FrostWindowController extends ChangeNotifier implements ValueListenable<Fr
     await _invoke<void>('applyPlacement', placement.toMap());
   }
 
+  /// Moves and resizes the window to [frame], in the logical pixels and
+  /// work-area-relative coordinates of [FrostWindowGeometry.frame], on
+  /// [displayId] or, by default, the display the window is on. A maximized or
+  /// minimized window is restored first. The size may be below the controller's
+  /// minimum size, which stays lowered until the next [applyPlacement]; capture
+  /// the previous placement with `(await queryGeometry()).placement` to return
+  /// to it. Windows only: other platforms throw [FrostWindowUnsupportedFailure].
+  Future<void> setFrame(Rect frame, {String? displayId}) async {
+    await initialize();
+    await _invoke<void>('setFrame', {
+      'displayId': ?displayId,
+      'rect': [frame.left, frame.top, frame.right, frame.bottom],
+    });
+  }
+
+  /// Keeps the window above all non-topmost windows while [value] is true; the
+  /// actual state is [FrostWindowGeometry.alwaysOnTop]. Windows only: other
+  /// platforms throw [FrostWindowUnsupportedFailure].
+  Future<void> setAlwaysOnTop(bool value) async {
+    await initialize();
+    await _invoke<void>('setAlwaysOnTop', value);
+  }
+
   /// The App calls this after its first correctly sized frame is rasterized.
   /// Existing runners that show on first frame must opt into hidden startup.
   Future<void> show() => _invoke<void>('show');
@@ -484,6 +516,7 @@ class FrostWindowController extends ChangeNotifier implements ValueListenable<Fr
     try {
       return await channel.invokeMethod<T>(method, arguments);
     } on PlatformException catch (error) {
+      if (error.code == 'unsupported') throw FrostWindowUnsupportedFailure(method);
       final code = switch (error.code) {
         'window_unavailable' || 'invalid_arguments' || 'clipboard_unavailable' => error.code,
         _ => 'platform_error',

@@ -19,6 +19,8 @@ namespace frost_window {
 namespace {
 constexpr UINT_PTR kWindowSubclass = 0x46524f53;   // 'FROS'
 constexpr UINT_PTR kContentSubclass = 0x46524f54;  // 'FROT'
+constexpr UINT_PTR kOcclusionTimer = 0x46524f55;
+constexpr UINT kOcclusionDelayMs = 150;
 
 // RtlGetVersion avoids compatibility-manifest version virtualization.
 bool SupportsSystemBackdrop() {
@@ -252,10 +254,12 @@ void FrostWindowPlugin::DetachWindow() {
     UnhookWindowsHookEx(message_hook_);
     message_hook_ = nullptr;
   }
+  RemoveOcclusionHooks();
   if (content_ != nullptr && IsWindow(content_)) {
     RemoveWindowSubclass(content_, ContentProc, kContentSubclass);
   }
   if (window_ != nullptr && IsWindow(window_)) {
+    KillTimer(window_, kOcclusionTimer);
     RemoveWindowSubclass(window_, WindowProc, kWindowSubclass);
   }
   content_ = nullptr;
@@ -270,8 +274,13 @@ bool FrostWindowPlugin::Attach() {
   if (root == nullptr || root == content_) return false;
   window_ = root;
   ready_ = InstallFrame();
-  if (!ready_) window_ = nullptr;
-  return ready_;
+  if (!ready_) {
+    window_ = nullptr;
+    return false;
+  }
+  occluded_ = IsOccluded();
+  InstallOcclusionHooks();
+  return true;
 }
 
 bool FrostWindowPlugin::InstallFrame() {
@@ -347,6 +356,51 @@ void FrostWindowPlugin::HandleMethodCall(
       result->Error("placement_unavailable", "Leave fullscreen before restoring placement.");
     } else if (map == nullptr || !ApplyWindowPlacement(window_, *map, &show_maximized_)) {
       result->Error("invalid_arguments", "Invalid placement or display no longer available.");
+    } else {
+      lowered_minimum_width_ = lowered_minimum_height_ = 0;
+      PublishState();
+      result->Success();
+    }
+    return;
+  }
+  if (method == "setFrame") {
+    double lowered_width = 0, lowered_height = 0;
+    if (map != nullptr) {
+      if (const auto it = map->find(flutter::EncodableValue("rect")); it != map->end()) {
+        if (const auto* row = std::get_if<flutter::EncodableList>(&it->second); row != nullptr && row->size() == 4) {
+          lowered_width = Number((*row)[2]) - Number((*row)[0]);
+          lowered_height = Number((*row)[3]) - Number((*row)[1]);
+        }
+      }
+    }
+    if (fullscreen_ || fullscreen_transitioning_) {
+      result->Error("placement_unavailable", "Leave fullscreen before setting the frame.");
+    } else if (map == nullptr || !(lowered_width > 0 && lowered_height > 0)) {
+      result->Error("invalid_arguments", "Invalid window frame.");
+    } else {
+      // The frame may be smaller than the configured minimum; keep the
+      // minimum from clamping it until a placement is applied again.
+      const double previous_width = lowered_minimum_width_;
+      const double previous_height = lowered_minimum_height_;
+      lowered_minimum_width_ = lowered_width;
+      lowered_minimum_height_ = lowered_height;
+      if (!ApplyWindowFrame(window_, *map, &show_maximized_)) {
+        lowered_minimum_width_ = previous_width;
+        lowered_minimum_height_ = previous_height;
+        result->Error("invalid_arguments", "Invalid frame or display no longer available.");
+      } else {
+        PublishState();
+        result->Success();
+      }
+    }
+    return;
+  }
+  if (method == "setAlwaysOnTop") {
+    const auto* target = call.arguments() == nullptr ? nullptr : std::get_if<bool>(call.arguments());
+    if (target == nullptr) {
+      result->Error("invalid_arguments", "Invalid always-on-top target.");
+    } else if (!SetAlwaysOnTop(*target)) {
+      result->Error("always_on_top_failed", "Native always-on-top change failed.", Diagnostics());
     } else {
       PublishState();
       result->Success();
@@ -479,6 +533,126 @@ bool FrostWindowPlugin::FitFullscreenMonitor() {
   return positioned && GetWindowRect(window_, &actual) && EqualRect(&actual, &bounds);
 }
 
+
+bool FrostWindowPlugin::SetAlwaysOnTop(bool target) {
+  return SetWindowPos(window_, target ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0,
+                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE) != FALSE;
+}
+
+namespace {
+bool Cloaked(HWND window) {
+  DWORD cloaked = 0;
+  return SUCCEEDED(DwmGetWindowAttribute(window, DWMWA_CLOAKED, &cloaked, sizeof(cloaked))) &&
+         cloaked != 0;
+}
+
+// The rectangle a window paints, without the invisible resize frame.
+RECT VisibleBounds(HWND window) {
+  RECT bounds{};
+  if (FAILED(DwmGetWindowAttribute(window, DWMWA_EXTENDED_FRAME_BOUNDS, &bounds, sizeof(bounds)))) {
+    GetWindowRect(window, &bounds);
+  }
+  return bounds;
+}
+
+// Only a window known to paint every pixel of its rectangle can hide ours.
+// Layered windows with per-pixel alpha, color keys or partial opacity, and
+// click-through overlays, are treated as see-through.
+bool CoversOpaquely(HWND window) {
+  if (!IsWindowVisible(window) || IsIconic(window) || Cloaked(window)) return false;
+  const LONG_PTR ex_style = GetWindowLongPtr(window, GWL_EXSTYLE);
+  if ((ex_style & WS_EX_TRANSPARENT) != 0) return false;
+  if ((ex_style & WS_EX_LAYERED) != 0) {
+    BYTE alpha = 0;
+    DWORD flags = 0;
+    if (!GetLayeredWindowAttributes(window, nullptr, &alpha, &flags) ||
+        (flags & LWA_COLORKEY) != 0 || ((flags & LWA_ALPHA) != 0 && alpha != 255)) {
+      return false;
+    }
+  }
+  return true;
+}
+}  // namespace
+
+// Occluded means certain: the window is cloaked (for example on another
+// virtual desktop) or the visible, opaque windows above it in Z-order leave no
+// pixel of its client area uncovered. A minimized window is reported by
+// `minimized` instead.
+bool FrostWindowPlugin::IsOccluded() const {
+  if (window_ == nullptr || !IsWindowVisible(window_) || IsIconic(window_)) return false;
+  if (Cloaked(window_)) return true;
+  RECT client{};
+  if (!GetClientRect(window_, &client)) return false;
+  MapWindowPoints(window_, nullptr, reinterpret_cast<POINT*>(&client), 2);
+  if (IsRectEmpty(&client)) return false;
+  HRGN remaining = CreateRectRgnIndirect(&client);
+  HRGN cover = CreateRectRgn(0, 0, 0, 0);
+  if (remaining == nullptr || cover == nullptr) {
+    if (remaining != nullptr) DeleteObject(remaining);
+    if (cover != nullptr) DeleteObject(cover);
+    return false;
+  }
+  bool occluded = false;
+  for (HWND above = GetWindow(window_, GW_HWNDPREV); above != nullptr && !occluded;
+       above = GetWindow(above, GW_HWNDPREV)) {
+    if (!CoversOpaquely(above)) continue;
+    const RECT bounds = VisibleBounds(above);
+    if (IsRectEmpty(&bounds)) continue;
+    SetRectRgn(cover, bounds.left, bounds.top, bounds.right, bounds.bottom);
+    occluded = CombineRgn(remaining, remaining, cover, RGN_DIFF) == NULLREGION;
+  }
+  DeleteObject(remaining);
+  DeleteObject(cover);
+  return occluded;
+}
+
+// Other windows move constantly; coalesce the events into one evaluation.
+void FrostWindowPlugin::ScheduleOcclusionCheck() {
+  if (window_ == nullptr || shutting_down_ || occlusion_check_pending_) return;
+  occlusion_check_pending_ = SetTimer(window_, kOcclusionTimer, kOcclusionDelayMs, nullptr) != 0;
+}
+
+void FrostWindowPlugin::UpdateOcclusion() {
+  occlusion_check_pending_ = false;
+  if (window_ != nullptr) KillTimer(window_, kOcclusionTimer);
+  const bool occluded = IsOccluded();
+  if (occluded == occluded_) return;
+  occluded_ = occluded;
+  PublishState();
+}
+
+void FrostWindowPlugin::InstallOcclusionHooks() {
+  if (!occlusion_hooks_.empty()) return;
+  // Events from other windows decide whether ours stays visible: foreground
+  // changes, minimize, show/hide, cloaking and moves or resizes.
+  struct Range { DWORD min, max; };
+  for (const Range range : {Range{EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND},
+                            Range{EVENT_SYSTEM_MINIMIZESTART, EVENT_SYSTEM_MINIMIZEEND},
+                            Range{EVENT_OBJECT_SHOW, EVENT_OBJECT_HIDE},
+                            Range{EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE},
+                            Range{EVENT_OBJECT_CLOAKED, EVENT_OBJECT_UNCLOAKED}}) {
+    if (const HWINEVENTHOOK hook = SetWinEventHook(range.min, range.max, nullptr, OcclusionEvent, 0, 0,
+                                                   WINEVENT_OUTOFCONTEXT)) {
+      occlusion_hooks_.push_back(hook);
+    }
+  }
+}
+
+void FrostWindowPlugin::RemoveOcclusionHooks() {
+  for (const HWINEVENTHOOK hook : occlusion_hooks_) UnhookWinEvent(hook);
+  occlusion_hooks_.clear();
+}
+
+// static
+void CALLBACK FrostWindowPlugin::OcclusionEvent(HWINEVENTHOOK, DWORD event, HWND hwnd, LONG object,
+                                                LONG, DWORD, DWORD) {
+  if (instance_ == nullptr || hwnd == nullptr || object != OBJID_WINDOW) return;
+  // Location events also describe child windows; only top-level ones change
+  // what covers us.
+  if (event == EVENT_OBJECT_LOCATIONCHANGE && GetAncestor(hwnd, GA_PARENT) != GetDesktopWindow()) return;
+  instance_->ScheduleOcclusionCheck();
+}
+
 bool FrostWindowPlugin::SetFullscreen(bool target) {
   if (fullscreen_ == target) return true;
   const auto old_style = GetWindowLongPtr(window_, GWL_STYLE);
@@ -500,7 +674,9 @@ bool FrostWindowPlugin::SetFullscreen(bool target) {
   SetHover(HTNOWHERE);
   PublishState();
   const auto style = target ? (old_style & ~(WS_OVERLAPPEDWINDOW | WS_MAXIMIZE | WS_MINIMIZE)) | WS_POPUP : restore_style_;
-  const auto ex_style = target ? old_ex_style & ~(WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE) : restore_ex_style_;
+  // Always-on-top may change while fullscreen; restoring must not undo it.
+  const auto current_topmost = GetWindowLongPtr(window_, GWL_EXSTYLE) & WS_EX_TOPMOST;
+  const auto ex_style = target ? old_ex_style & ~(WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE) : (restore_ex_style_ & ~WS_EX_TOPMOST) | current_topmost;
   auto set_style = [this](int index, LONG_PTR value) {
     SetLastError(0);
     return SetWindowLongPtr(window_, index, value) != 0 || GetLastError() == 0;
@@ -711,7 +887,7 @@ int FrostWindowPlugin::HitTest(POINT point) const {
 
 flutter::EncodableValue FrostWindowPlugin::State() const {
   return flutter::EncodableValue(flutter::EncodableMap{
-      {flutter::EncodableValue("geometry"), WindowGeometry(window_, fullscreen_, fullscreen_ ? &restore_placement_ : nullptr)},
+      {flutter::EncodableValue("geometry"), WindowGeometry(window_, fullscreen_, fullscreen_ ? &restore_placement_ : nullptr, occluded_)},
       {flutter::EncodableValue("captionMode"), flutter::EncodableValue("client")},
       {flutter::EncodableValue("leftButtons"), flutter::EncodableValue(flutter::EncodableList{})},
       {flutter::EncodableValue("rightButtons"), flutter::EncodableValue(flutter::EncodableList{
@@ -945,8 +1121,10 @@ LRESULT FrostWindowPlugin::HandleMessage(HWND hwnd, UINT message, WPARAM wparam,
       auto* info = reinterpret_cast<MINMAXINFO*>(lparam);
       const double scale = static_cast<double>(GetDpiForWindow(hwnd)) /
                            USER_DEFAULT_SCREEN_DPI;
-      info->ptMinTrackSize = {static_cast<LONG>(minimum_width_ * scale),
-                              static_cast<LONG>(minimum_height_ * scale)};
+      const double width = lowered_minimum_width_ > 0 ? (std::min)(minimum_width_, lowered_minimum_width_) : minimum_width_;
+      const double height = lowered_minimum_height_ > 0 ? (std::min)(minimum_height_, lowered_minimum_height_) : minimum_height_;
+      info->ptMinTrackSize = {static_cast<LONG>(width * scale),
+                              static_cast<LONG>(height * scale)};
       return 0;
     }
     case WM_NCHITTEST:
@@ -1019,8 +1197,18 @@ LRESULT FrostWindowPlugin::HandleMessage(HWND hwnd, UINT message, WPARAM wparam,
       }
       PublishState();
       break;
+    case WM_TIMER:
+      if (wparam == kOcclusionTimer) {
+        UpdateOcclusion();
+        return 0;
+      }
+      break;
+    case WM_SHOWWINDOW:
+      ScheduleOcclusionCheck();
+      break;
     case WM_WINDOWPOSCHANGED:
     case WM_STYLECHANGED:
+      ScheduleOcclusionCheck();
       if (!fullscreen_transitioning_) {
         if (fullscreen_ && !IsIconic(hwnd)) {
           RECT bounds{};
@@ -1043,6 +1231,7 @@ LRESULT FrostWindowPlugin::HandleMessage(HWND hwnd, UINT message, WPARAM wparam,
       PublishState();
       break;
     case WM_ACTIVATE:
+      ScheduleOcclusionCheck();
       if (LOWORD(wparam) == WA_INACTIVE) {
         back_key_down_ = false;
         system_menu_key_down_ = false;

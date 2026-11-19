@@ -183,6 +183,9 @@ public final class FrostWindowPlugin: NSObject, FlutterPlugin {
       }
       guard let args = call.arguments as? [String: Any], geometryBridge?.apply(args) == true else { invalid(); return }
       publish()
+    case "setAlwaysOnTop", "setFrame":
+      result(FlutterError(code: "unsupported", message: "\(call.method) is not available on macOS.", details: nil))
+      return
     case "show": geometryBridge?.show(); publish()
     case "setFullscreen":
       guard let target = call.arguments as? Bool else { invalid(); return }

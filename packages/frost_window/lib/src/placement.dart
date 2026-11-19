@@ -101,13 +101,15 @@ class FrostWindowPlacement {
 
 @immutable
 class FrostWindowGeometry {
-  const FrostWindowGeometry({required this.placement, required this.frame, required this.positionSupport, this.minimized = false, this.fullscreen = false});
+  const FrostWindowGeometry({required this.placement, required this.frame, required this.positionSupport, this.minimized = false, this.fullscreen = false, this.alwaysOnTop = false, this.occluded});
   factory FrostWindowGeometry.fromMap(Map<Object?, Object?> map) => FrostWindowGeometry(
     placement: FrostWindowPlacement.fromMap(map),
     frame: _rect(map['frame']),
     positionSupport: map['positionSupported'] == false ? FrostWindowPositionSupport.compositorControlled : FrostWindowPositionSupport.supported,
     minimized: map['minimized'] == true,
     fullscreen: map['fullscreen'] == true,
+    alwaysOnTop: map['alwaysOnTop'] == true,
+    occluded: map['occluded'] as bool?,
   );
   final FrostWindowPlacement placement;
 
@@ -116,6 +118,13 @@ class FrostWindowGeometry {
   final FrostWindowPositionSupport positionSupport;
   Offset? get position => positionSupport == FrostWindowPositionSupport.supported ? frame.topLeft : null;
   final bool minimized, fullscreen;
+
+  /// Actual native always-on-top state; false where the platform has none.
+  final bool alwaysOnTop;
+
+  /// Whether other windows completely cover the window. Null when the
+  /// platform cannot tell. A minimized window is not reported as occluded.
+  final bool? occluded;
   @override
   bool operator ==(Object other) =>
       other is FrostWindowGeometry &&
@@ -123,9 +132,11 @@ class FrostWindowGeometry {
       frame == other.frame &&
       positionSupport == other.positionSupport &&
       minimized == other.minimized &&
-      fullscreen == other.fullscreen;
+      fullscreen == other.fullscreen &&
+      alwaysOnTop == other.alwaysOnTop &&
+      occluded == other.occluded;
   @override
-  int get hashCode => Object.hash(placement, frame, positionSupport, minimized, fullscreen);
+  int get hashCode => Object.hash(placement, frame, positionSupport, minimized, fullscreen, alwaysOnTop, occluded);
 }
 
 @immutable
