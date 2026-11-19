@@ -11,18 +11,27 @@ enum FrostDividerInset { none, keyline }
 /// One physical pixel. Keyline alignment changes paint, never layout.
 class FrostDivider extends StatelessWidget {
   const FrostDivider({this.axis = Axis.horizontal, this.inset = FrostDividerInset.none, this.length, super.key})
-    : assert(axis != Axis.vertical || inset != FrostDividerInset.keyline, 'Vertical dividers do not support keyline insets.');
+    : _pane = false,
+      assert(axis != Axis.vertical || inset != FrostDividerInset.keyline, 'Vertical dividers do not support keyline insets.');
+
+  /// The edge between two panes that run the full height (or width) of a
+  /// view, such as a side column and its content: drawn in the stronger line
+  /// tone, so it stays visible at that length. Dividers inside content keep
+  /// the quieter separator.
+  const FrostDivider.pane({this.axis = Axis.vertical, super.key}) : inset = FrostDividerInset.none, length = null, _pane = true;
   final Axis axis;
   final FrostDividerInset inset;
   final double? length;
+  final bool _pane;
   @override
   Widget build(BuildContext context) {
     final keyline = axis == Axis.horizontal && inset == FrostDividerInset.keyline ? FrostKeyline.maybeOf(context) : null;
+    final tokens = FrostThemeTokens.of(context);
     return _DividerLine(
       axis: axis,
       length: length,
       dpr: MediaQuery.devicePixelRatioOf(context),
-      color: FrostThemeTokens.of(context).separator,
+      color: _pane ? tokens.line : tokens.separator,
       direction: Directionality.of(context),
       contentStart: keyline?.contentStart ?? 0,
       textAnchor: inset == FrostDividerInset.keyline ? FrostMeasuredKeyline.of(context) : null,

@@ -299,7 +299,7 @@ class _WideSplit extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SizedBox(width: width, child: view.primary),
-                  const FrostDivider(axis: Axis.vertical),
+                  const FrostDivider.pane(),
                   Expanded(child: view.secondary ?? const SizedBox.shrink()),
                 ],
               ),

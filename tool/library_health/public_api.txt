@@ -328,6 +328,7 @@ ctor	FrostDialog.new	overlays/dialogs.dart	actions,content,key,leadingAction,scr
 ctor	FrostDialogAction.new	overlays/dialogs.dart	enabled,isDefault,label,onPressed,role,value	baseline-20261102
 ctor	FrostDisclosure.new	display/disclosure.dart	child,expanded,initiallyExpanded,key,onExpansionChanged,title	baseline-20261102
 ctor	FrostDivider.new	primitives/divider.dart	axis,inset,key,length	baseline-20261102
+ctor	FrostDivider.pane	primitives/divider.dart	axis,key	reviewed:20261119:full-height pane edges need the line tone to stay visible; content dividers keep the separator
 ctor	FrostEmptyState.new	feedback/empty_state.dart	actionLabel,details,icon,key,message,onAction,title	baseline-20261102
 ctor	FrostEmptyState.search	feedback/empty_state.dart	key,onClear,query	baseline-20261102
 ctor	FrostErrorAction.new	foundation/scope.dart	icon,label,onPressed	baseline-20261102
