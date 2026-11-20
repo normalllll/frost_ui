@@ -290,6 +290,7 @@ ctor	FrostButton.icon	controls/buttons.dart	edgeAlignment,icon,key,label,onPress
 ctor	FrostButton.iconFilled	controls/buttons.dart	icon,key,label,onPressed,role,selected,shape,size,state,tooltip	baseline-20261102
 ctor	FrostButton.iconOnMedia	controls/buttons.dart	icon,key,label,onPressed,role,selected,shape,size,state,tooltip	baseline-20261102
 ctor	FrostButton.new	controls/buttons.dart	chevron,icon,key,label,labelWidget,onPressed,role,selected,shape,size,state,tooltip	baseline-20261102
+ctor	FrostButton.onMedia	controls/buttons.dart	icon,key,label,onPressed,shape,size,state,tooltip	reviewed:20261120:choices over a playing video need the on-media scrim and ink without the accent fill of a primary action
 ctor	FrostButton.outlined	controls/buttons.dart	chevron,icon,key,label,labelWidget,onPressed,role,shape,size,state,tooltip	baseline-20261102
 ctor	FrostButton.plain	controls/buttons.dart	chevron,edgeAlignment,icon,key,label,labelWidget,onPressed,role,shape,size,state,tooltip	baseline-20261102
 ctor	FrostButton.prominent	controls/buttons.dart	chevron,icon,key,label,labelWidget,onPressed,role,shape,size,state,tooltip	baseline-20261102

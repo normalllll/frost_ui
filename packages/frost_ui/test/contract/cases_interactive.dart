@@ -101,6 +101,13 @@ final interactiveCases = <InteractiveCase>[
     start: _icon(FrostButton),
     end: _text(longLabel),
   ),
+  InteractiveCase(
+    'FrostButton.onMedia',
+    FrostButton,
+    (go) => FrostButton.onMedia(label: longLabel, icon: _edit, onPressed: go),
+    start: _icon(FrostButton),
+    end: _text(longLabel),
+  ),
   InteractiveCase('FrostButton.quiet', FrostButton, (go) => FrostButton.quiet(label: longLabel, onPressed: go)),
   InteractiveCase('FrostButton.icon', FrostButton, (go) => FrostButton.icon(icon: _edit, label: 'Edit', onPressed: go)),
   InteractiveCase('FrostButton.iconFilled', FrostButton, (go) => FrostButton.iconFilled(icon: _edit, label: 'Edit', onPressed: go)),

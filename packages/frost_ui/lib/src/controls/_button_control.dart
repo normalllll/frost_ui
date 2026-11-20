@@ -53,6 +53,7 @@ class FrostButtonControl extends StatefulWidget {
     this.geometry,
     this.presentation = FrostButtonPresentation.action,
     this.wrapsLabel = false,
+    this.onMediaChrome = false,
     super.key,
   });
   final String label;
@@ -81,6 +82,10 @@ class FrostButtonControl extends StatefulWidget {
   final FrostButtonPresentation presentation;
   final bool wrapsLabel;
 
+  /// Gives a text action the on-media scrim and ink an [iconStyle] of
+  /// [FrostIconButtonStyle.onMedia] gives an icon.
+  final bool onMediaChrome;
+
   /// Whether the action shows its spinner.
   bool get loading => activity.loading;
 
@@ -103,7 +108,7 @@ class _FrostButtonControlState extends State<FrostButtonControl> with FrostButto
     final media = FrostButtonMedia.of(
       context,
       bare: widget.presentation == FrostButtonPresentation.media,
-      chrome: widget.iconStyle == FrostIconButtonStyle.onMedia,
+      chrome: widget.onMediaChrome || widget.iconStyle == FrostIconButtonStyle.onMedia,
       iconContent: iconOnly || !widget.showsLabel && (widget.icon != null || widget.iconWidget != null),
     );
     final variant = switch (widget.iconStyle) {

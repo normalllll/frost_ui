@@ -43,6 +43,7 @@ class FrostButton extends StatefulWidget {
   }) : _variant = FrostButtonVariant.standard,
        _style = null,
        _quiet = false,
+       _onMedia = false,
        edgeAlignment = null;
 
   /// The one primary action of a view.
@@ -61,6 +62,7 @@ class FrostButton extends StatefulWidget {
   }) : _variant = FrostButtonVariant.prominent,
        _style = null,
        _quiet = false,
+       _onMedia = false,
        selected = null,
        edgeAlignment = null;
 
@@ -80,6 +82,7 @@ class FrostButton extends StatefulWidget {
   }) : _variant = FrostButtonVariant.tinted,
        _style = null,
        _quiet = false,
+       _onMedia = false,
        selected = null,
        edgeAlignment = null;
 
@@ -99,6 +102,7 @@ class FrostButton extends StatefulWidget {
   }) : _variant = FrostButtonVariant.outlined,
        _style = null,
        _quiet = false,
+       _onMedia = false,
        selected = null,
        edgeAlignment = null;
 
@@ -119,6 +123,7 @@ class FrostButton extends StatefulWidget {
   }) : _variant = FrostButtonVariant.plain,
        _style = null,
        _quiet = false,
+       _onMedia = false,
        selected = null;
 
   /// A secondary text action with ordinary button typography and no resting fill.
@@ -139,7 +144,8 @@ class FrostButton extends StatefulWidget {
        selected = null,
        _variant = FrostButtonVariant.plain,
        _style = null,
-       _quiet = true;
+       _quiet = true,
+       _onMedia = false;
 
   /// An icon without a resting fill; [label] is its tooltip and semantics.
   /// [selected] shows a toggled state, such as looping on.
@@ -159,7 +165,8 @@ class FrostButton extends StatefulWidget {
        chevron = FrostButtonChevron.none,
        _variant = FrostButtonVariant.plain,
        _style = FrostIconButtonStyle.plain,
-       _quiet = false;
+       _quiet = false,
+       _onMedia = false;
 
   /// An icon on the standard filled surface.
   const FrostButton.iconFilled({
@@ -178,7 +185,8 @@ class FrostButton extends StatefulWidget {
        edgeAlignment = null,
        _variant = FrostButtonVariant.plain,
        _style = FrostIconButtonStyle.standard,
-       _quiet = false;
+       _quiet = false,
+       _onMedia = false;
 
   /// An icon over images and video, with its own legible chrome.
   const FrostButton.iconOnMedia({
@@ -197,7 +205,31 @@ class FrostButton extends StatefulWidget {
        edgeAlignment = null,
        _variant = FrostButtonVariant.plain,
        _style = FrostIconButtonStyle.onMedia,
-       _quiet = false;
+       _quiet = false,
+       _onMedia = false;
+
+  /// A text action over images and video, such as the choices a video asks
+  /// for at a branch point: the on-media scrim and ink of
+  /// [FrostButton.iconOnMedia], so it stays legible over bright and dark
+  /// frames without the accent fill of a primary action.
+  const FrostButton.onMedia({
+    required this.label,
+    this.onPressed,
+    this.icon,
+    this.size,
+    this.shape = FrostButtonShape.rounded,
+    this.state = FrostActionState.idle,
+    this.tooltip,
+    super.key,
+  }) : labelWidget = null,
+       role = FrostButtonRole.normal,
+       chevron = FrostButtonChevron.none,
+       selected = null,
+       edgeAlignment = null,
+       _variant = FrostButtonVariant.standard,
+       _style = null,
+       _quiet = false,
+       _onMedia = true;
 
   /// Aligns visible content to a shared content/container keyline while the
   /// surface, hit target and focus ring extend into the outside padding. Null
@@ -225,7 +257,7 @@ class FrostButton extends StatefulWidget {
   final bool? selected;
   final FrostButtonVariant _variant;
   final FrostIconButtonStyle? _style;
-  final bool _quiet;
+  final bool _quiet, _onMedia;
 
   @override
   State<FrostButton> createState() => _FrostButtonState();
@@ -346,6 +378,7 @@ class _FrostButtonState extends State<FrostButton> {
       tooltip: widget.tooltip,
       edgeAlignment: widget.edgeAlignment,
       iconStyle: widget._style,
+      onMediaChrome: widget._onMedia,
       selected: widget.selected,
       shape: widget.shape,
     );

@@ -430,9 +430,11 @@ mixin FrostButtonInteractionState<T extends StatefulWidget> on State<T> implemen
 // Frame
 
 /// How a button sits over media. [ink] is the ambient on-media ink; a [media]
-/// button paints on-media chrome, which a [bare] one leaves transparent.
+/// button paints on-media chrome, which a [bare] one leaves transparent. The
+/// chrome is a circle round [icon] content and the button's own shape round
+/// a label.
 class FrostButtonMedia {
-  const FrostButtonMedia._(this.ink, this.media, this.bare);
+  const FrostButtonMedia._(this.ink, this.media, this.bare, this.icon);
 
   /// [bare] asks for bare media paint, [chrome] for the on-media icon style;
   /// [iconContent] lets an ambient on-media scope turn an icon into chrome.
@@ -440,10 +442,10 @@ class FrostButtonMedia {
     final ink =
         FrostOnMediaChromeScope.inkOf(context) ?? (iconContent && FrostChromeOverMedia.activeOf(context) ? FrostThemeTokens.of(context).onMediaInk : null);
     final isBare = bare || ink != null && FrostMediaControlsScope.of(context);
-    return FrostButtonMedia._(ink, isBare || chrome || ink != null && iconContent, isBare);
+    return FrostButtonMedia._(ink, isBare || chrome || ink != null && iconContent, isBare, iconContent);
   }
   final Color? ink;
-  final bool media, bare;
+  final bool media, bare, icon;
 }
 
 /// What a [FrostButtonFrame] paints, one subtype per kind of button.
@@ -689,7 +691,7 @@ class FrostButtonFrame extends StatelessWidget {
         : media.media || (destructive && feedbackRole == FrostFeedbackRole.primary)
         ? solidWashColor(fill).withValues(alpha: !interaction.interactive ? 0 : solidOverlayAlpha(fill, _washAlpha()))
         : frostButtonStateLayer(tokens, interaction.states, feedbackRole);
-    final shape = media.media && !media.bare
+    final shape = media.media && !media.bare && media.icon
         ? const CircleBorder()
         : style.shape == FrostButtonShape.pill
         ? const StadiumBorder()
