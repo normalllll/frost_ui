@@ -52,17 +52,6 @@ class FrostVideoBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = FrostThemeTokens.of(context);
     final style = FrostTypography.of(context).style(FrostTextRole.caption, numeric: true).copyWith(color: tokens.onMediaInk, shadows: frostMediaInkShadows);
-    double textWidth(String text) {
-      final painter = TextPainter(
-        text: TextSpan(text: text, style: style),
-        textDirection: TextDirection.ltr,
-        textScaler: MediaQuery.textScalerOf(context),
-      )..layout();
-      final width = painter.width;
-      painter.dispose();
-      return width;
-    }
-
     // One numeric phrase prevents current/total from reading as unrelated labels.
     final clock = '$current / $total';
     final inkInset = FrostDensity.of(context).usesPointer ? 4.0 : 12.0;
@@ -85,7 +74,8 @@ class FrostVideoBar extends StatelessWidget {
             ),
           )
         : SizedBox(
-            width: textWidth('$total / $total'),
+            // The reserve is measured slot by slot, as the rolling clock lays out.
+            width: frostRollingTextWidth(context, '$total / $total', style),
             child: Directionality(
               textDirection: TextDirection.ltr,
               child: Padding(

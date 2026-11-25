@@ -118,7 +118,7 @@ export 'src/media/video_frame.dart' show FrostVideoFrame;
 export 'src/media/video_state.dart' show FrostVideoState;
 export 'src/motion/layout_crossfade.dart' hide FrostTimedLayoutCrossfade, FrostMotionSize;
 export 'src/motion/page_transition.dart' hide FrostPageTransitionsBuilder, frostOwnedPageTransition, frostPageTransitionsBuilder;
-export 'src/motion/rolling_text.dart';
+export 'src/motion/rolling_text.dart' show FrostRollingText;
 export 'src/motion/spring.dart';
 export 'src/navigation/back.dart';
 export 'src/navigation/detail_page.dart';

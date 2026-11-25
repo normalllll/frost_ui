@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
@@ -100,3 +102,32 @@ class _FrostRollingTextState extends State<FrostRollingText> {
     );
   }
 }
+
+/// The width [FrostRollingText] takes for any text shaped like [template].
+/// It lays out one slot per character, each its own [Text], so a slot is that
+/// character's advance rounded up as a [Text] rounds it, not its share of the
+/// shaped phrase. A digit's slot may hold any digit, so each digit position
+/// takes the widest one; a reserve built from this keeps one width while the
+/// digits change.
+double frostRollingTextWidth(BuildContext context, String template, TextStyle style) {
+  final painter = TextPainter(textDirection: TextDirection.ltr, textScaler: MediaQuery.textScalerOf(context), maxLines: 1);
+  double advance(String character) {
+    painter
+      ..text = TextSpan(text: character, style: style)
+      ..layout();
+    return painter.width;
+  }
+
+  var digit = 0.0;
+  for (var value = 0; value < 10; value++) {
+    digit = math.max(digit, advance('$value'));
+  }
+  var width = 0.0;
+  for (final character in template.characters) {
+    width += _digit.hasMatch(character) ? digit : advance(character);
+  }
+  painter.dispose();
+  return width;
+}
+
+final _digit = RegExp(r'^\d$');
