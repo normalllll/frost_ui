@@ -9,6 +9,7 @@ import '../foundation/scope.dart';
 import '../navigation/back.dart';
 import '../navigation/window_caption.dart';
 import 'window_caption_scope.dart';
+import 'window_move_area.dart';
 
 /// Native window behaviour without a drawn frame. Install above the Navigator
 /// so caption controls can stay outside route and dialog barriers.
@@ -243,7 +244,7 @@ class _FrostWindowHostState extends State<FrostWindowHost> with WidgetsBindingOb
               window: _actions,
               systemBackdropAvailable: widget.controller.state.backdropAvailable,
               systemBackdropActive: widget.controller.state.backdropActive && !_reduceTransparency && !widget.controller.state.reduceTransparency,
-              child: child!,
+              child: FrostWindowMoveScope(startMove: widget.controller.startMove, child: child!),
             ),
           ),
         ),

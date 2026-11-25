@@ -262,6 +262,7 @@ class	FrostWaterfallGrid	layout/waterfall_grid.dart	-	baseline-20261102
 class	FrostWindowActions	layout/window_caption_scope.dart	-	baseline-20261102
 class	FrostWindowCaptionScope	layout/window_caption_scope.dart	-	baseline-20261102
 class	FrostWindowHost	layout/window_host.dart	-	baseline-20261102
+class	FrostWindowMoveArea	layout/window_move_area.dart	-	reviewed:20261126:a window whose content covers its title row has to move by the system window move from that content
 class	FrostWindowTitleContribution	navigation/window_title.dart	-	baseline-20261102
 class	FrostWindowTitleRegistry	navigation/window_title.dart	-	baseline-20261102
 class	FrostWindowTitleScope	navigation/window_title.dart	-	baseline-20261102
@@ -569,6 +570,7 @@ ctor	FrostVideoState.new	media/video_state.dart	buffered,buffering,duration,full
 ctor	FrostWaterfallGrid.new	layout/waterfall_grid.dart	columns,controller,crossAxisSpacing,itemBuilder,items,key,mainAxisSpacing,maxColumns,minTileWidth,padding,physics,preferredTileWidth,shrinkWrap,sliverHeader	reviewed:20261114:adds the card column rule (as many columns as fit at a minimum width, down to one) to a variable-height waterfall, which no public component gives without an app-side SliverLayoutBuilder rebuilding every scroll frame; consistent with FrostSliverDataGrid.minTileWidth and FrostSliverList.columns
 ctor	FrostWindowCaptionScope.new	layout/window_caption_scope.dart	child,key,systemBackdropActive,systemBackdropAvailable,window	baseline-20261102
 ctor	FrostWindowHost.new	layout/window_host.dart	backdrop,child,controller,key,resizeBorderWidth,title	baseline-20261102
+ctor	FrostWindowMoveArea.new	layout/window_move_area.dart	child,key	reviewed:20261126:a window whose content covers its title row has to move by the system window move from that content
 ctor	FrostWindowTitleContribution.new	navigation/window_title.dart	child,key,page,path	baseline-20261102
 ctor	FrostWindowTitleScope.new	navigation/window_title.dart	child,key,registry	baseline-20261102
 ctor	FrostWrap.new	layout/wrap.dart	children,compact,key	baseline-20261102

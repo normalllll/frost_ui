@@ -479,6 +479,19 @@ class FrostWindowController extends ChangeNotifier implements ValueListenable<Fr
     await _invoke<void>('setAlwaysOnTop', value);
   }
 
+  /// Hands the primary button that is down now to the system's own window
+  /// move, as a press on a native caption does: the window follows the
+  /// pointer with the system's snapping and display rules until the button is
+  /// released, and the future completes then. The press's release is
+  /// delivered to the Flutter view, so the gesture that started the move ends.
+  /// Nothing happens when the button is already up or the window is
+  /// fullscreen. Windows only: other platforms throw
+  /// [FrostWindowUnsupportedFailure].
+  Future<void> startMove() async {
+    await initialize();
+    await _invoke<void>('startMove');
+  }
+
   /// The App calls this after its first correctly sized frame is rasterized.
   /// Existing runners that show on first frame must opt into hidden startup.
   Future<void> show() => _invoke<void>('show');

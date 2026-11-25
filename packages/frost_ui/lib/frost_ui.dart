@@ -96,6 +96,7 @@ export 'src/layout/sliver_expand.dart';
 export 'src/layout/waterfall_grid.dart' hide FrostCrossAxisSliverBuilder, FrostWaterfallGridItemBuilder, frostBrowseGridPadding, frostFittedColumnCount;
 export 'src/layout/window_caption_scope.dart' hide FrostCaptionRegion, FrostCaptionSide, FrostHitKind;
 export 'src/layout/window_host.dart';
+export 'src/layout/window_move_area.dart' show FrostWindowMoveArea;
 export 'src/layout/wrap.dart' show FrostWrap;
 export 'src/lists/_row_scope.dart' show FrostRowLeadingExtent;
 export 'src/lists/grouped_section.dart';

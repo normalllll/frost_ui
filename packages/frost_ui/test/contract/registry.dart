@@ -187,6 +187,7 @@ const _scope = [
   'FrostToastHost',
   'FrostWindowCaptionScope',
   'FrostWindowHost',
+  'FrostWindowMoveArea',
   'FrostWindowTitleContribution',
   'FrostWindowTitleScope',
 ];

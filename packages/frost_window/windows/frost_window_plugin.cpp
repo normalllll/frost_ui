@@ -407,6 +407,25 @@ void FrostWindowPlugin::HandleMethodCall(
     }
     return;
   }
+  if (method == "startMove") {
+    const int button = GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON;
+    if (!fullscreen_ && !fullscreen_transitioning_ && (GetAsyncKeyState(button) & 0x8000) != 0) {
+      POINT cursor{};
+      GetCursorPos(&cursor);
+      ReleaseCapture();
+      // A press on the caption: the system's modal move loop runs inside this
+      // call and consumes the button's release.
+      SendMessage(window_, WM_NCLBUTTONDOWN, HTCAPTION, MAKELPARAM(cursor.x, cursor.y));
+      // The view saw the press but not its release; give it the release so
+      // the gesture that started the move ends.
+      GetCursorPos(&cursor);
+      ScreenToClient(content_, &cursor);
+      PostMessage(content_, WM_LBUTTONUP, 0, MAKELPARAM(cursor.x, cursor.y));
+      PublishState();
+    }
+    result->Success();
+    return;
+  }
   if (method == "show") {
     if (!IsWindowVisible(window_)) ShowWindow(window_, show_maximized_ ? SW_SHOWMAXIMIZED : SW_SHOWNOACTIVATE);
     PublishState();
